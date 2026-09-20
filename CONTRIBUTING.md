@@ -16,3 +16,4 @@ The verification script runs, in order: lint, format check, tests, local Markdow
 - Add failure-path tests for fail-closed behavior.
 - Never add credentials, tokens or provider SDK dependencies.
 - Conventional Commits; one issue per PR ([docs/development/pull-requests.md](docs/development/pull-requests.md)).
+- Versions, Core compatibility and releases: [docs/development/versioning-and-releases.md](docs/development/versioning-and-releases.md).

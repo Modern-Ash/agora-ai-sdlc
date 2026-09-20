@@ -2,7 +2,7 @@ schema: agora/flavor/v1
 id: agora-ai-sdlc
 name: Agora AI-SDLC
 version: 0.1.0
-supported_core: ">=0.8.2,<0.9"
+supported_core: ">=0.8.2,<0.10"
 method_packs:
   - ai-sdlc
 profiles:

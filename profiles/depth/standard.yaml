@@ -1,0 +1,4 @@
+schema: agora-ai-sdlc/depth-profile/v1
+id: standard
+default: true
+# Baseline: exactly the obligations of the AI-SDLC Method Pack gates (verified by tests).

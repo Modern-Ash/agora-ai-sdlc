@@ -1,0 +1,10 @@
+schema: agora-ai-sdlc/depth-profile/v1
+id: minimal
+extends: standard
+remove:
+  # Explicit, justified reductions of optional obligations. Human ownership of intent is never removable.
+  justification: Small, low-risk, reversible work does not need a security scan record or an operational-readiness review.
+  gates:
+    completion:
+      artifacts: [operational-readiness]
+      evidence: [security-scan]

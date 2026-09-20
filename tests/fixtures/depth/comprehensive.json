@@ -1,0 +1,72 @@
+{
+  "id": "comprehensive",
+  "gates": {
+    "architecture-approved": {
+      "artifacts": [
+        "requirements",
+        "architecture",
+        "domain-model",
+        "threat-model"
+      ],
+      "evidence": [],
+      "approvals": [
+        "architect",
+        "product-owner"
+      ]
+    },
+    "build-verified": {
+      "artifacts": [
+        "implementation-plan",
+        "test-strategy"
+      ],
+      "evidence": [
+        "test-suite"
+      ],
+      "approvals": [
+        "quality-reviewer",
+        "security-reviewer"
+      ]
+    },
+    "completion": {
+      "artifacts": [
+        "deployment-plan",
+        "rollback-procedure",
+        "operational-readiness",
+        "learning-record"
+      ],
+      "evidence": [
+        "deployment",
+        "security-scan"
+      ],
+      "approvals": [
+        "product-owner"
+      ]
+    },
+    "intent-framed": {
+      "artifacts": [
+        "intent"
+      ],
+      "evidence": [],
+      "approvals": [
+        "product-owner"
+      ]
+    },
+    "readiness-approved": {
+      "artifacts": [
+        "readiness-assessment"
+      ],
+      "evidence": [],
+      "approvals": [
+        "product-owner"
+      ]
+    },
+    "rework-recorded": {
+      "artifacts": [
+        "rework-record"
+      ],
+      "evidence": [],
+      "approvals": []
+    }
+  },
+  "requires": {}
+}

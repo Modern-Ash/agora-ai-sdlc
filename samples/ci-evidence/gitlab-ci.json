@@ -1,0 +1,35 @@
+[
+  {
+    "schema": "agora-ai-sdlc/ci-evidence/v1",
+    "provider": "gitlab-ci",
+    "repository": "https://github.com/example/product",
+    "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "environment": "ci",
+    "run_id": "200-integration",
+    "category": "integration",
+    "status": "success",
+    "evidence_refs": ["https://gitlab.com/example/product/-/jobs/2001"]
+  },
+  {
+    "schema": "agora-ai-sdlc/ci-evidence/v1",
+    "provider": "gitlab-ci",
+    "repository": "https://github.com/example/product",
+    "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "environment": "ci",
+    "run_id": "200-quality",
+    "category": "quality",
+    "status": "success",
+    "evidence_refs": ["https://gitlab.com/example/product/-/jobs/2002"]
+  },
+  {
+    "schema": "agora-ai-sdlc/ci-evidence/v1",
+    "provider": "gitlab-ci",
+    "repository": "https://github.com/example/product",
+    "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "environment": "ci",
+    "run_id": "200-security",
+    "category": "security",
+    "status": "success",
+    "evidence_refs": ["https://gitlab.com/example/product/-/jobs/2003"]
+  }
+]

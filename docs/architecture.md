@@ -27,7 +27,7 @@ flowchart TB
 - **Gates and evidence**: no transition without required evidence; missing evidence, unresolved clarification or missing approval fail closed.
 - **Policies**: producer/reviewer separation, data classification and runtime eligibility, budgets and fallback, provenance.
 - **Profiles**: Starter, Enterprise, Modernization, Regulated depth/adoption profiles composed from shared assets.
-- **Integrations**: the implemented GitHub delivery profile composes Core's provider-neutral Tool Pack operations; generic CI/CD, security findings, observability, and GitLab/Jira remain planned. External systems remain operational sources.
+- **Integrations**: the implemented GitHub delivery and generic CI/CD evidence profiles compose Core's provider-neutral Tool Pack and evidence operations; security findings, observability, and GitLab/Jira work-management remain planned. External systems remain operational sources.
 
 ## Allowed dependencies
 

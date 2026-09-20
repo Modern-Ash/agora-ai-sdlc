@@ -59,13 +59,20 @@ def check_manifest(root: Path = ROOT) -> None:
 
 
 def check_packs(root: Path = ROOT) -> str:
+    """Install each Method Pack into a throwaway Agora project and run `agora validate`."""
     methods = root / "registry" / "methods"
-    if not methods.is_dir():
-        return "no method packs yet (issue #13); nothing to validate"
-    agora = ["uv", "run", "agora"]
-    for pack in sorted(p for p in methods.iterdir() if p.is_dir()):
-        run(agora + ["pack", "validate", str(pack)], f"run: uv run agora pack validate {pack}")
-    return "validated"
+    packs = sorted(p for p in methods.iterdir() if p.is_dir()) if methods.is_dir() else []
+    if not packs:
+        return "no method packs; nothing to validate"
+    agora = [sys.executable, "-m", "agora"]
+    for pack in packs:
+        with tempfile.TemporaryDirectory() as tmp:
+            recovery = f"reproduce: agora method install --source {pack} --scope project, then agora validate"
+            run(["git", "init", "--quiet", tmp], "install git")
+            run([*agora, "init", "--path", tmp], recovery, cwd=Path(tmp))
+            run([*agora, "method", "install", "--source", str(pack), "--scope", "project"], recovery, cwd=Path(tmp))
+            run([*agora, "validate"], recovery, cwd=Path(tmp))
+    return f"validated {len(packs)} pack(s)"
 
 
 def check_samples(root: Path = ROOT) -> str:
@@ -115,7 +122,7 @@ def main() -> int:
         except PhaseError as error:
             print(f"[verify] FAILED phase: {name}\n{error}\nrecovery: {error.recovery}", file=sys.stderr)
             return 1
-        suffix = f" ({note})" if name in ("packs", "samples") and isinstance(note, str) else ""
+        suffix = f" ({note})" if isinstance(note, str) and note else ""
         print(f"[verify] {name} ok{suffix}")
     print("[verify] all phases passed")
     return 0

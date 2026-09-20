@@ -1,0 +1,38 @@
+[
+  {
+    "id": "codex-to-claude",
+    "producer": {"actor": "producer", "kind": "ai-agent", "runtime": {"integration": "codex", "provider": "openai", "model": "codex-model"}},
+    "reviewer": {"actor": "reviewer", "kind": "ai-agent", "runtime": {"integration": "claude", "provider": "anthropic", "model": "claude-model"}},
+    "profiles": {"distinct-actor": true, "distinct-runtime": true, "distinct-provider": true, "human-final": false, "regulated": false}
+  },
+  {
+    "id": "claude-to-codex",
+    "producer": {"actor": "producer", "kind": "ai-agent", "runtime": {"integration": "claude", "provider": "anthropic", "model": "claude-model"}},
+    "reviewer": {"actor": "reviewer", "kind": "ai-agent", "runtime": {"integration": "codex", "provider": "openai", "model": "codex-model"}},
+    "profiles": {"distinct-actor": true, "distinct-runtime": true, "distinct-provider": true, "human-final": false, "regulated": false}
+  },
+  {
+    "id": "local-generic-to-codex",
+    "producer": {"actor": "producer", "kind": "ai-agent", "runtime": {"integration": "generic", "provider": "local", "model": "local-model"}},
+    "reviewer": {"actor": "reviewer", "kind": "ai-agent", "runtime": {"integration": "codex", "provider": "openai", "model": "codex-model"}},
+    "profiles": {"distinct-actor": true, "distinct-runtime": true, "distinct-provider": true, "human-final": false, "regulated": false}
+  },
+  {
+    "id": "same-provider-distinct-actor",
+    "producer": {"actor": "producer", "kind": "ai-agent", "runtime": {"integration": "codex", "provider": "shared-provider", "model": "model-a"}},
+    "reviewer": {"actor": "reviewer", "kind": "ai-agent", "runtime": {"integration": "codex", "provider": "shared-provider", "model": "model-b"}},
+    "profiles": {"distinct-actor": true, "distinct-runtime": false, "distinct-provider": false, "human-final": false, "regulated": false}
+  },
+  {
+    "id": "human-review",
+    "producer": {"actor": "producer", "kind": "ai-agent", "runtime": {"integration": "codex", "provider": "openai", "model": "codex-model"}},
+    "reviewer": {"actor": "reviewer", "kind": "human", "runtime": {"integration": "claude", "provider": "anthropic", "model": "claude-model"}},
+    "profiles": {"distinct-actor": true, "distinct-runtime": true, "distinct-provider": true, "human-final": true, "regulated": true}
+  },
+  {
+    "id": "same-actor-review",
+    "producer": {"actor": "worker", "kind": "ai-agent", "runtime": {"integration": "codex", "provider": "openai", "model": "codex-model"}},
+    "reviewer": {"actor": "worker", "kind": "ai-agent", "runtime": {"integration": "claude", "provider": "anthropic", "model": "claude-model"}},
+    "profiles": {"distinct-actor": false, "distinct-runtime": true, "distinct-provider": true, "human-final": false, "regulated": false}
+  }
+]

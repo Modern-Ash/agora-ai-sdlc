@@ -123,13 +123,26 @@ class Lifecycle:
     def to_operations(self) -> None:
         self.stage("build", "built")
         self.stage("qa", "verified")
+        self.artifact("build", "implementation")
+        self.artifact("build", "test-strategy")
         self.evidence("build", "test-suite")
         self.approve("qa", "quality-reviewer")
         assert self.move("qa", "operations") == "operations"
 
+    def prepare_completion(self, skip: str | None = None) -> None:
+        for kind in ("deployment-plan", "rollback-procedure", "operational-readiness"):
+            if skip != kind:
+                self.artifact("ops", kind)
+        if skip != "criterion":
+            self.stage("ops", "deployed")
+            self.stage("po", "accepted")
+        if skip != "deployment":
+            self.evidence("ops", "deployment")
+        if skip != "security-scan":
+            self.evidence("ops", "security-scan")
+        if skip != "approval":
+            self.approve("po", "product-owner")
+
     def to_completed(self) -> None:
-        self.stage("ops", "deployed")
-        self.stage("po", "accepted")
-        self.evidence("ops", "deployment")
-        self.approve("po", "product-owner")
+        self.prepare_completion()
         assert self.move("po", "completed") == "completed"

@@ -10,8 +10,9 @@ PACKAGES = {
     "starter-pilot.md": "starter-pilot",
     "enterprise-adoption.md": "enterprise-adoption",
     "modernization.md": "legacy-modernization",
+    "regulated-readiness.md": "regulated-readiness",
 }
-REFERENCE_DOCS = {"reference-architecture.md", "security-and-responsibility.md"}
+REFERENCE_DOCS = {"reference-architecture.md", "security-and-responsibility.md", "statement-of-work-template.md"}
 REQUIRED_HEADINGS = {
     "Customer problem",
     "Entry criteria and prerequisites",
@@ -89,3 +90,32 @@ def test_every_package_links_the_common_software_services_boundary():
     for name in PACKAGES:
         _front, body = document(name)
         assert "[package overview](README.md)" in body
+
+
+def test_statement_of_work_template_covers_contracting_topics_without_prices_or_guarantees():
+    text = (COMMERCIAL / "statement-of-work-template.md").read_text(encoding="utf-8")
+    headings = set(re.findall(r"^## \d+\. (.+)$", text, re.MULTILINE))
+    assert {
+        "Parties and documents",
+        "Objective and scope",
+        "Deliverables",
+        "Roles and responsibilities",
+        "Baseline, success measures, and goals",
+        "Schedule and assumptions",
+        "Data handling and security",
+        "Acceptance",
+        "Change control",
+        "Claims and endorsement",
+        "Commercial terms",
+    } <= headings
+    assert "Implemented capability" in text and "Consulting work" in text
+    assert "not a schedule commitment" in text and "[package overview]" not in text
+    assert "[professional-services packages](README.md)" in text
+
+
+def test_regulated_readiness_never_claims_certification_or_compliance():
+    _front, body = document("regulated-readiness.md")
+    lowered = body.casefold()
+    assert "certification" in lowered and "not legal advice" in lowered
+    assert "no output states that the software, the organization, or a deployment is certified or compliant" in lowered
+    assert "[Regulated profile](../profiles/regulated.md)" in body

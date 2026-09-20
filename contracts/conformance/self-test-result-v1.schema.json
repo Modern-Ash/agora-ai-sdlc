@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modern-ash.github.io/agora-ai-sdlc/contracts/self-test-result-v1.schema.json",
+  "title": "Agora AI-SDLC self-test result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "ok", "assets", "role_conformance", "checks", "failures", "workspace"],
+  "properties": {
+    "schema": {"const": "agora-ai-sdlc/self-test-result/v1"},
+    "ok": {"type": "boolean"},
+    "assets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["methods", "profiles", "policies", "templates", "contracts", "samples"],
+      "properties": {
+        "methods": {"$ref": "#/$defs/names"},
+        "profiles": {"$ref": "#/$defs/names"},
+        "policies": {"$ref": "#/$defs/names"},
+        "templates": {"$ref": "#/$defs/names"},
+        "contracts": {"$ref": "#/$defs/names"},
+        "samples": {"$ref": "#/$defs/names"}
+      }
+    },
+    "role_conformance": {"type": "object"},
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "kind", "status"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "kind": {"type": "string", "minLength": 1},
+          "status": {"enum": ["passed", "failed"]}
+        }
+      }
+    },
+    "failures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["check", "type", "message"],
+        "properties": {
+          "check": {"type": "string"},
+          "type": {"type": "string"},
+          "message": {"type": "string"}
+        }
+      }
+    },
+    "workspace": {"type": ["string", "null"]}
+  },
+  "$defs": {
+    "names": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true}
+  }
+}

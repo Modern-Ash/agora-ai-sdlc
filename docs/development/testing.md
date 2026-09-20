@@ -5,4 +5,5 @@
 - Fail-closed behavior requires negative tests.
 - Default checks must not need network, LLM accounts or cloud accounts.
 - Full validation: `uv run python scripts/verify_all.py` (also run by CI on Python 3.11/3.12/3.13). Focused: `uv run pytest tests/<file>`.
+- Installed-distribution conformance: `uv run agora-ai-sdlc self-test --json`; see [self-test](../reference/self-test.md).
 - Never invent commands; add new ones here only when they exist.

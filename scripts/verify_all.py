@@ -4,6 +4,7 @@ Runs every phase in order, stops at the first failure and prints the phase and a
 Needs no network after dependencies are installed and never prints environment variables.
 """
 
+import json
 import re
 import subprocess
 import sys
@@ -125,6 +126,13 @@ def check_package() -> None:
                   "the built wheel fails to run the bundled sample", cwd=Path(tmp))  # fmt: skip
         if '"final_state": "completed"' not in out:
             raise PhaseError("wheel-installed sample did not complete", "inspect the bundled sample")
+        self_test = run(
+            [str(venv / ("Scripts" if sys.platform == "win32" else "bin") / "agora-ai-sdlc"), "self-test", "--json"],
+            "the built wheel fails its bundled conformance self-test",
+            cwd=Path(tmp),
+        )
+        if not json.loads(self_test).get("ok"):
+            raise PhaseError("wheel-installed conformance self-test failed", "inspect the self-test failures")
 
 
 PHASES: list[tuple[str, Callable[[], object]]] = [

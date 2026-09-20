@@ -32,9 +32,6 @@ def test_empty_packs_and_samples_are_explicit(tmp_path):
     assert "nothing" in verify_all.check_packs(tmp_path)
     (tmp_path / "samples").mkdir()
     assert "nothing" in verify_all.check_samples(tmp_path)
-    (tmp_path / "samples" / "s1").mkdir()
-    with pytest.raises(verify_all.PhaseError):
-        verify_all.check_samples(tmp_path)
 
 
 def test_failure_names_phase_and_recovery(monkeypatch, capsys):

@@ -76,10 +76,24 @@ def check_packs(root: Path = ROOT) -> str:
 
 
 def check_samples(root: Path = ROOT) -> str:
-    samples = [p for p in sorted((root / "samples").glob("*")) if p.name != "README.md"]
+    """Run every sample under samples/ via the CLI and assert its JSON summary."""
+    import json
+
+    samples = [p for p in sorted((root / "samples").glob("*")) if p.is_dir()]
     if not samples:
-        return "no samples yet (issue #21); nothing to run"
-    raise PhaseError("samples exist but no runner is defined", "define a sample runner before adding samples")
+        return "no samples; nothing to run"
+    for sample in samples:
+        out = run(
+            ["uv", "run", "agora-ai-sdlc", "run-sample", sample.name],
+            f"reproduce: uv run agora-ai-sdlc run-sample {sample.name}",
+            cwd=root,
+        )
+        summary = json.loads(out)
+        if summary.get("final_state") != "completed" or summary.get("validate") != "ok":
+            raise PhaseError(
+                f"sample {sample.name} ended in {summary.get('final_state')!r}", "inspect the sample summary"
+            )
+    return f"ran {len(samples)} sample(s)"
 
 
 def check_package() -> None:
@@ -100,6 +114,11 @@ def check_package() -> None:
             "the built wheel fails to load its manifest; inspect pyproject.toml packaging",
             cwd=Path(tmp),
         )
+        # The bundled sample must also pass from the installed wheel.
+        out = run([str(venv / ("Scripts" if sys.platform == "win32" else "bin") / "agora-ai-sdlc"), "run-sample", "new-product"],
+                  "the built wheel fails to run the bundled sample", cwd=Path(tmp))  # fmt: skip
+        if '"final_state": "completed"' not in out:
+            raise PhaseError("wheel-installed sample did not complete", "inspect the bundled sample")
 
 
 PHASES: list[tuple[str, Callable[[], object]]] = [

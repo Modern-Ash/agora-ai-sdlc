@@ -5,5 +5,6 @@ Credential-free executable scenarios shipped in the wheel and source distributio
 - `new-product`: complete AI-SDLC lifecycle with clarification and rework.
 - `github-delivery`: read-only GitHub delivery profile with normalized offline facts.
 - `ci-evidence`: generic CI/CD evidence from GitHub Actions, GitLab CI, and Jenkins fixtures.
+- `security-findings`: normalized findings, accountable decisions, and security gate evidence.
 
 Run one with `agora-ai-sdlc run-sample <name>`.

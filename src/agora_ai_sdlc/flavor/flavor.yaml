@@ -8,6 +8,7 @@ method_packs:
 profiles:
   - github-delivery
   - generic-ci-evidence
+  - security-findings
 policies:
   - data-classification
   - independent-review

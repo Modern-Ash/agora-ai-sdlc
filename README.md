@@ -30,9 +30,12 @@ uv build
 uv run agora-ai-sdlc run-sample new-product
 uv run agora-ai-sdlc run-sample github-delivery
 uv run agora-ai-sdlc run-sample ci-evidence
+uv run agora-ai-sdlc run-sample security-findings
 ```
 
 The [GitHub delivery profile](docs/integrations/github.md) is read-only by default and uses Agora
 Core's reviewed CLI Tool Packs without requiring credentials for its offline sample.
 The [generic CI/CD evidence profile](docs/integrations/ci.md) applies the same commit-bound gate
 semantics to GitHub Actions, GitLab CI, Jenkins, or another reviewed neutral adapter.
+The [security finding profile](docs/integrations/security.md) normalizes scanner metadata and applies
+depth-aware blocking with explicit resolution, false-positive, and human risk-acceptance authority.

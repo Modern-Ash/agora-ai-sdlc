@@ -1,0 +1,22 @@
+schema: agora-ai-sdlc/integration-profile/v1
+id: security-findings
+provider: neutral
+core_tool: security-scanning
+categories: [sast, dependency, secret, container, iac]
+severities: [low, medium, high, critical, unknown]
+severity_rank: {low: 0, medium: 1, high: 2, critical: 3}
+thresholds:
+  minimal: critical
+  standard: high
+  comprehensive: medium
+  regulated: low
+statuses: [open, resolved, accepted-risk, false-positive]
+decisions:
+  resolved: {roles: [security-reviewer], core_status: resolved}
+  accepted-risk: {roles: [governance-owner], actor_kinds: [human], core_status: waived}
+  false-positive: {roles: [security-reviewer], core_status: waived}
+limits:
+  max_findings: 50
+  max_references: 8
+  max_reference_length: 2048
+  max_text_length: 512

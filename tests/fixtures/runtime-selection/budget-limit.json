@@ -1,0 +1,7 @@
+{
+  "scope": "work:build",
+  "limits": {"cost-micros": 1000},
+  "consumed": {"cost-micros": 900},
+  "primary_projected": {"cost-micros": 200},
+  "fallback_projected": {"cost-micros": 50}
+}

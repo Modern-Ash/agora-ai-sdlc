@@ -1,0 +1,15 @@
+{
+  "sessions": [
+    {"phase": "production", "status": "completed", "exit_code": 0},
+    {"phase": "review", "status": "completed", "exit_code": 0}
+  ],
+  "outputs": [
+    {"outcome": "success", "phase": "production", "artifact": "implementation", "tokens": {"input": 7, "output": 5}},
+    {"outcome": "success", "phase": "review", "artifact": "review-report", "tokens": {"input": 7, "output": 5}}
+  ],
+  "evidence": [
+    {"type": "runtime-conformance-production", "result": "success", "artifact": "production.json"},
+    {"type": "runtime-conformance-review", "result": "success", "artifact": "review.json"}
+  ],
+  "work": {"state": "specified", "evidence_count": 2}
+}

@@ -12,5 +12,6 @@ Credential-free executable scenarios shipped in the wheel and source distributio
 - `starter`: preview-first bootstrap of one team, one repository, and the first Unit of Work.
 - `enterprise`: signed project-registry install and transactional upgrade with provenance and recovery metadata.
 - `modernization`: one incremental legacy slice with known/unknown behavior, failed equivalence, cutover and rollback gates.
+- `existing-codebase-pilot`: maintained code change with fake multi-provider sessions, rejected review, correction, CI evidence and measured results.
 
 Run one with `agora-ai-sdlc run-sample <name>`.

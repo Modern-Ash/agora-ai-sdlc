@@ -17,6 +17,10 @@ PREFIX = {
     "test-strategy": "TST", "implementation-plan": "IMP", "deployment-plan": "DEP",
     "rollback-procedure": "RBK", "operational-readiness": "OPR", "learning-record": "LRN",
     "rework-record": "RWK",
+    "legacy-inventory": "LGI", "dependency-map": "DPM", "characterization": "CHR",
+    "target-architecture": "TAR", "migration-plan": "MGP", "migration-slice": "MGS",
+    "conversion-record": "CNV", "equivalence-report": "EQV", "cutover-plan": "CUT",
+    "stabilization-report": "STB",
 }  # fmt: skip
 # kind -> kinds it may trace to. Empty tuple = root (needs no parent); None = may trace to any kind.
 PARENTS: dict[str, tuple[str, ...] | None] = {
@@ -27,6 +31,14 @@ PARENTS: dict[str, tuple[str, ...] | None] = {
     "implementation-plan": ("architecture", "test-strategy"),
     "deployment-plan": ("implementation-plan",), "rollback-procedure": ("deployment-plan",),
     "operational-readiness": ("deployment-plan",), "learning-record": None, "rework-record": None,
+    "legacy-inventory": (), "dependency-map": ("legacy-inventory",),
+    "characterization": ("legacy-inventory",),
+    "target-architecture": ("dependency-map", "characterization"),
+    "migration-plan": ("target-architecture", "characterization"),
+    "migration-slice": ("migration-plan",), "conversion-record": ("migration-slice",),
+    "equivalence-report": ("characterization", "conversion-record", "migration-slice"),
+    "cutover-plan": ("migration-plan", "equivalence-report"),
+    "stabilization-report": ("cutover-plan",),
 }  # fmt: skip
 # Template file (without .md) per kind when it differs from the kind name.
 TEMPLATE_FILES = {"intent": "product-intent"}

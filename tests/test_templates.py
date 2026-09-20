@@ -49,6 +49,8 @@ def test_all_required_templates_exist():
         "readiness-assessment", "intent", "clarification", "unit-of-work", "requirements", "domain-model",
         "architecture", "threat-model", "test-strategy", "implementation-plan", "deployment-plan",
         "operational-readiness", "learning-record",
+        "legacy-inventory", "dependency-map", "characterization", "target-architecture", "migration-plan",
+        "migration-slice", "conversion-record", "equivalence-report", "cutover-plan", "stabilization-report",
     }  # fmt: skip
     for kind in wanted:
         assert parse_template(template_for(kind).read_text()).kind == kind

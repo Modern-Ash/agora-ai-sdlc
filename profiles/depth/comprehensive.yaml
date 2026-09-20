@@ -1,0 +1,11 @@
+schema: agora-ai-sdlc/depth-profile/v1
+id: comprehensive
+extends: standard
+add:
+  gates:
+    architecture-approved:
+      artifacts: [domain-model, threat-model]
+    build-verified:
+      approvals: [security-reviewer]
+    completion:
+      artifacts: [learning-record]

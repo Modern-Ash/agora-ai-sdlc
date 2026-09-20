@@ -1,0 +1,13 @@
+schema: agora-ai-sdlc/depth-profile/v1
+id: regulated
+extends: comprehensive
+add:
+  gates:
+    intent-framed:
+      approvals: [governance-owner]
+    completion:
+      approvals: [governance-owner]
+requires:
+  # Enforced by Agora Core signed-action support when available; reported by assessment, not verified offline.
+  signed-actions: true
+  human-final-approval: true

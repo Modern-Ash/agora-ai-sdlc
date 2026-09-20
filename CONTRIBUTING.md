@@ -7,7 +7,7 @@ uv sync
 uv run python scripts/verify_all.py
 ```
 
-The verification script runs, in order: lint, format check, tests, local Markdown links, flavor manifest validation, pack validation, samples and a wheel-install smoke test. It stops at the failing phase and prints a recovery command. It needs no network after dependencies are installed. The packs phase installs each Method Pack into a throwaway Agora project and runs `agora validate`; the samples phase reports nothing to validate until issue #21.
+The verification script runs, in order: lint, format check, tests, local Markdown links, flavor manifest validation, pack validation, samples and a wheel-install smoke test. It stops at the failing phase and prints a recovery command. It needs no network after dependencies are installed. The packs phase installs each Method Pack into a throwaway Agora project and runs `agora validate`; the samples phase runs every scenario under `samples/` and re-runs the bundled sample from the built wheel.
 
 ## Rules (humans and agents)
 

@@ -13,4 +13,4 @@ flowchart LR
 - Forward transitions are guarded by gates (`readiness-approved`, `intent-framed`, `architecture-approved`, `build-verified`, `completion`); rework transitions are ungated but explicit and preserve history.
 - Pattern per phase: plan, clarify, human decision, execute, validate ([PROTOCOL](../../registry/methods/ai-sdlc/PROTOCOL.md)).
 - Roles: product-owner, architect, builder, operator, quality-reviewer. The full role/capability matrix is issue #15; gate refinement is #17/#18.
-- Verification here is structural (graph and Core install/validate). The end-to-end lifecycle sample is issue #21.
+- Verification: structural checks, Core-driven lifecycle tests and the executable [new-product sample](../../samples/new-product/README.md).

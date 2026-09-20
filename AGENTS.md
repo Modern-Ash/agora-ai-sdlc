@@ -44,7 +44,7 @@ Do not decide architecture, contracts or scope implicitly. Record a `CLARIFICATI
 
 - During development run focused checks for the touched area; run the full validation before opening the PR ([testing](docs/development/testing.md)).
 - Record exact commands, results, omitted checks and reasons in `TESTS.md`.
-- Validation command: `uv run python scripts/verify_all.py` (single entry point; see [CONTRIBUTING.md](CONTRIBUTING.md)). It runs lint, format, tests, links, manifest, packs, samples and a wheel smoke test. The packs phase installs registry Method Packs into a throwaway project and runs `agora validate`; samples currently report nothing to validate. Do not claim other checks that were not executed.
+- Validation command: `uv run python scripts/verify_all.py` (single entry point; see [CONTRIBUTING.md](CONTRIBUTING.md)). It runs lint, format, tests, links, manifest, packs, samples and a wheel smoke test. The packs phase installs registry Method Packs into a throwaway project and runs `agora validate`; the samples phase runs every `samples/*` scenario via `agora-ai-sdlc run-sample` (also from the built wheel). Do not claim other checks that were not executed.
 - Add failure-path tests for behavior that must fail closed.
 
 ## 8. Security

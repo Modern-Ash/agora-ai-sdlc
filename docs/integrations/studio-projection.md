@@ -52,11 +52,16 @@ Consumers may continue to render sections whose known required fields are valid 
 
 | Component | Version | Contract status |
 | --- | --- | --- |
-| Agora AI-SDLC | 0.1.x | Publishes projection v1 requirements, schema and fixtures |
-| Agora Core | 0.8.2 | Partial sources only: lifecycle v3, traceability v2, session v1, project/activity/evidence/usage facts; aggregate and extension boundary absent |
-| Agora Studio | 0.5.0 | Consumes Core 0.8 application DTOs and dynamic lifecycle states; AI-SDLC aggregate and path-free selection absent |
-| Future Core release | unreleased | Must implement the generic aggregate/extension boundary and contract tests before being listed compatible |
-| Future Studio release | unreleased | Must consume projection v1, use opaque selection, and pass fixture plus browser tests before being listed compatible |
+| Agora AI-SDLC | 0.1.x | Publishes projection v1 requirements, schema and fixtures and provides the provider `agora_ai_sdlc.studio_projection:projector` |
+| Agora Core | 0.9.0 | Provides the generic flavor projection boundary (`AgoraReadService.flavor_projection`), clarification projection and session provenance; lifecycle v3 and traceability v2 remain the sources |
+| Agora Core | 0.8.2 | Partial sources only: no aggregate or extension boundary; the provider module imports but cannot project |
+| Agora Studio | 0.6.0 | Consumes projection v1 with opaque `selection_id`; loads a provider only from startup configuration (`--flavor-projector`) |
+
+The provider fills `flavor` from the packaged manifest and `provenance` from Core session provenance (bases stay `declared`; nothing is upgraded to `observed`). `profiles`, `separation` and `metrics` are explicit `unavailable` sections because Core does not yet transport active-profile, reviewed-artifact or metric-window facts to a flavor. Run Studio with:
+
+```console
+agora-studio --project <path> --flavor-projector agora_ai_sdlc.studio_projection:projector
+```
 
 Compatibility is asserted only after tests in each owning repository pass against these exact fixtures. A future Core or Studio version is not compatible merely because its version is newer.
 

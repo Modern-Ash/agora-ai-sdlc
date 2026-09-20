@@ -19,7 +19,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "agora-framework", specifier = ">=0.8.2,<0.9" },
+    { name = "agora-framework", specifier = ">=0.8.2,<0.10" },
     { name = "packaging", specifier = ">=24" },
     { name = "pyyaml", specifier = ">=6" },
 ]

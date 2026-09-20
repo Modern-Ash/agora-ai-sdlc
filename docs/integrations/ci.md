@@ -54,6 +54,22 @@ No provider is canonical. An adapter translates provider output into the closed 
 profile evaluates it. Adapter execution errors remain provider failures; a valid fact that is stale
 or non-successful is a policy denial.
 
+## Prerequisites, permissions and failure modes
+
+**Prerequisites.** A CI/CD system reachable through a reviewed Core adapter or neutral `ci-cd/view-run` wrapper, and Agora Core 0.8.2 or later. The offline sample needs no CI account.
+
+**Permissions.** Read-only: the profile never runs pipelines or fetches logs. Credentials stay in the provider CLI or session and are never persisted by Agora.
+
+**Failure modes.**
+
+| Situation | Result |
+| --- | --- |
+| Adapter or provider execution error | Provider failure, distinct from a policy denial |
+| Stale commit, environment mismatch, or failed, cancelled or unknown status | Bundle blocked; recorded as `failure` evidence |
+| Unknown status spelling, unsafe reference, or extra fields | Schema rejection |
+| Same run identity with changed evidence | Conflict; fails closed until a new external run id is used |
+| Repeated identical observation | No-op |
+
 ## Usage
 
 Run the offline multi-provider lifecycle:

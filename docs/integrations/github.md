@@ -31,6 +31,20 @@ requires both an explicit project-local Core capability grant and confirmation. 
 environment policy, and the unchanged prepared command at launch time. Authentication in `gh`
 never grants Agora authority.
 
+## Prerequisites and failure modes
+
+**Prerequisites for live use.** Agora Core's reviewed `github-issues`, `github-pull-requests` and `github-actions` adapters, a compatible `gh` CLI (executable and minimum version come from the Core adapter contracts) and an externally managed, authenticated `gh` session. The offline sample needs no account. Installation grants no provider authority; see [Permissions](#permissions).
+
+**Failure modes.**
+
+| Situation | Result |
+| --- | --- |
+| Provider execution failure or malformed provider fact | Provider error, distinct from a policy decision |
+| Missing mode, capability grant or confirmation | Structured policy blocker |
+| Actions run absent from the current check rollup, wrong branch, or `headSha` different from the expected revision | Verification blocked (fails closed) |
+| Successful check for an older commit | Verification blocked |
+| Closed or reopened Issue | Recorded as an observation; never transitions Agora work implicitly |
+
 ## Synchronization
 
 Reads are explicit snapshots, not a background mirror. Each normalized observation has a canonical

@@ -1,0 +1,25 @@
+schema: agora-ai-sdlc/runtime-selection-policy/v1
+activity_classes: [planning, implementation, review, security-review, operations]
+routing:
+  strategy: explicit-ordered-preference
+  opaque_scoring: prohibited
+fallback:
+  core_signals: [quota, runtime-unavailable]
+  policy_signals: [budget-exhausted, budget-unavailable]
+  never_on: [ordinary-failure]
+  candidate_requirements: [data-policy-allowed, review-policy-allowed, budget-allowed]
+budgets:
+  scopes: [work, swarm]
+  unavailable_amount: unknown
+  unknown_is_zero: false
+records:
+  - activity_class
+  - selected_runtime
+  - selection_reason
+  - fallback_used
+  - fallback_reason
+  - consumed_budget
+core:
+  usage_authority: agora/usage/v1
+  budget_amendment_authority: agora/budget-amendment/v1
+  fallback_recognition: Agora Core runtime resolver

@@ -1,0 +1,6 @@
+{
+  "scope": "swarm:delivery",
+  "limits": {"cost-micros": 5000},
+  "consumed": {"cost-micros": 1200},
+  "projected": {"cost-micros": null}
+}

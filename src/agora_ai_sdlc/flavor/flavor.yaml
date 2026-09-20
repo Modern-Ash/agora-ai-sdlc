@@ -7,8 +7,10 @@ method_packs:
   - ai-sdlc
 profiles: []
 policies:
+  - data-classification
   - independent-review
   - model-provenance
+  - runtime-selection
 required_capabilities: []
 metadata:
   description: Vendor-neutral AI-first software-delivery distribution

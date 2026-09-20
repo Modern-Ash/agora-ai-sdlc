@@ -20,6 +20,21 @@ The reviewed profile supplies the inputs for Core's deterministic control-band A
 
 The installed neutral observability Tool Pack also declares incident writes. This read-only profile intentionally exposes only metric query and service-health reads; incident creation, update, and resolution are outside this profile.
 
+## Prerequisites, permissions and failure modes
+
+**Prerequisites.** A monitoring system reachable through a separately reviewed wrapper implementing Core's `observability/query-metrics` or `service-health` operation, and Agora Core 0.8.2 or later. The offline sample needs no monitoring account.
+
+**Permissions.** Read-only: only metric query and service-health reads are exposed. Incident creation, update and resolution, deployment, rollback and other production mutations are outside this profile, and monitoring facts never change lifecycle state directly.
+
+**Failure modes.**
+
+| Situation | Result |
+| --- | --- |
+| Missing unit or window, unsupported metric, non-finite value, unsafe reference | Fail closed |
+| Observation older than five minutes or from another environment | Fail closed |
+| Deployment or smoke fact that is unsuccessful, stale, or for another release, revision or environment | No `deployment` evidence |
+| Value in the `propose` band | Draft Intent that must still pass normal gates |
+
 ## Sample
 
 ```bash

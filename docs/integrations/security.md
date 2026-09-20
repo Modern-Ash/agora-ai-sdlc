@@ -50,6 +50,22 @@ cannot accept risk as governance owner. Core 0.8.2 distinguishes `resolved` and 
 record remains authoritative for the richer accepted-risk versus false-positive meaning. This is a
 finding decision, not an independent-review waiver and not a blanket gate waiver.
 
+## Prerequisites, permissions and failure modes
+
+**Prerequisites.** An external scanner (or reviewed `security-scanning` wrapper) that emits redacted metadata, and Agora Core 0.8.2 or later. No scanner account is needed for the offline sample.
+
+**Permissions.** The profile is read-only toward scanners: it never executes scans or holds scanner credentials. Resolving or waiving a finding requires the authority in the table above; an AI actor cannot accept risk. Persisting resulting artifacts and evidence needs an already assigned quality-reviewer.
+
+**Failure modes.**
+
+| Situation | Result |
+| --- | --- |
+| Unknown or unmapped scanner severity | Recorded as `unknown`; blocks while open |
+| Raw report body, URL credentials, query, fragment or non-HTTPS reference | Schema rejection; nothing is stored |
+| Decision without actor, role, reason or evidence reference, or by insufficient authority | Rejected; the finding stays open |
+| Mutation of an original finding | Detected by the original-content fingerprint |
+| Blocked assessment | Recorded as failure evidence, never as success |
+
 ## Core mapping
 
 The profile maps category to Core review pass (`security-sast`, `security-dependency`, and so on),

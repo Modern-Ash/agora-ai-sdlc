@@ -1,0 +1,28 @@
+{
+  "project": "modern-ash/agora-ai-sdlc",
+  "origin": "https://gitlab.example.com",
+  "expected_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "observed_at": "2026-09-20T15:00:00Z",
+  "issue": {
+    "iid": 30,
+    "state": "opened",
+    "web_url": "https://gitlab.example.com/modern-ash/agora-ai-sdlc/-/issues/30"
+  },
+  "merge_request": {
+    "iid": 65,
+    "state": "opened",
+    "source_branch": "feat/30-gitlab-jira-profiles",
+    "target_branch": "main",
+    "draft": false,
+    "approved": true,
+    "head_pipeline": {"id": 9001},
+    "web_url": "https://gitlab.example.com/modern-ash/agora-ai-sdlc/-/merge_requests/65"
+  },
+  "pipeline": {
+    "id": 9001,
+    "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "ref": "feat/30-gitlab-jira-profiles",
+    "status": "success",
+    "web_url": "https://gitlab.example.com/modern-ash/agora-ai-sdlc/-/pipelines/9001"
+  }
+}

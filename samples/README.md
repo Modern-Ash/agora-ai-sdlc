@@ -6,5 +6,7 @@ Credential-free executable scenarios shipped in the wheel and source distributio
 - `github-delivery`: read-only GitHub delivery profile with normalized offline facts.
 - `ci-evidence`: generic CI/CD evidence from GitHub Actions, GitLab CI, and Jenkins fixtures.
 - `security-findings`: normalized findings, accountable decisions, and security gate evidence.
+- `gitlab-delivery`: read-only GitLab issue, merge-request, and pipeline facts.
+- `jira-work-items`: read-only Jira work-item facts kept separate from Agora lifecycle state.
 
 Run one with `agora-ai-sdlc run-sample <name>`.

@@ -1,0 +1,44 @@
+schema: agora-ai-sdlc/integration-profile/v1
+id: gitlab-delivery
+provider: gitlab
+default_mode: read-only
+adapters: [gitlab-issues, gitlab-merge-requests, gitlab-ci]
+read_roles:
+  product-owner: [issue.read]
+  builder: [review.read]
+  quality-reviewer: [review.read, ci.read]
+modes:
+  read-only:
+    capabilities: [issue.read, review.read, ci.read]
+  delivery-write:
+    capabilities: [issue.write, issue.transition, review.write]
+    confirmation_required: true
+  pipeline-control:
+    capabilities: [ci.cancel]
+    confirmation_required: true
+operations:
+  issue-search: {adapter: gitlab-issues, operation: search, capability: issue.read, risk: read}
+  issue-view: {adapter: gitlab-issues, operation: view, capability: issue.read, risk: read}
+  issue-comment: {adapter: gitlab-issues, operation: comment, capability: issue.write, risk: write}
+  issue-transition: {adapter: gitlab-issues, operation: transition, capability: issue.transition, risk: write}
+  merge-request-view: {adapter: gitlab-merge-requests, operation: view, capability: review.read, risk: read}
+  merge-request-checks: {adapter: gitlab-merge-requests, operation: checks, capability: review.read, risk: read}
+  merge-request-create: {adapter: gitlab-merge-requests, operation: create, capability: review.write, risk: write}
+  merge-request-comment: {adapter: gitlab-merge-requests, operation: comment, capability: review.write, risk: write}
+  pipeline-list: {adapter: gitlab-ci, operation: list-runs, capability: ci.read, risk: read}
+  pipeline-view: {adapter: gitlab-ci, operation: view-run, capability: ci.read, risk: read}
+  pipeline-cancel: {adapter: gitlab-ci, operation: cancel-run, capability: ci.cancel, risk: destructive}
+state_mapping:
+  opened: open
+  closed: closed
+evidence:
+  unit_of_work: gitlab-issue-url
+  implementation: gitlab-merge-request-url
+  review: gitlab-merge-request-approval
+  verification: gitlab-pipeline-url-at-commit
+unsupported:
+  - issue-create
+  - merge-request-approve
+  - merge-request-request-changes
+  - merge-request-merge
+  - pipeline-trigger

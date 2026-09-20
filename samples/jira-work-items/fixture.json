@@ -1,0 +1,10 @@
+{
+  "scope": "https://modern-ash.atlassian.net",
+  "observed_at": "2026-09-20T15:00:00Z",
+  "item": {
+    "key": "AGORA-30",
+    "fields": {
+      "status": {"name": "To Do"}
+    }
+  }
+}

@@ -7,6 +7,7 @@ method_packs:
   - ai-sdlc
 profiles:
   - github-delivery
+  - generic-ci-evidence
 policies:
   - data-classification
   - independent-review

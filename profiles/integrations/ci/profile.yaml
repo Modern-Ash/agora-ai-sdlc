@@ -1,0 +1,18 @@
+schema: agora-ai-sdlc/integration-profile/v1
+id: generic-ci-evidence
+provider: neutral
+core_tool: ci-cd
+statuses: [success, failure, cancelled, unknown]
+categories: [build, unit, integration, security, quality, deployment, smoke-test]
+bundles:
+  test-suite: [build, unit, integration, quality]
+  security-scan: [security]
+  deployment: [deployment, smoke-test]
+limits:
+  max_references: 8
+  max_reference_length: 2048
+  max_identity_length: 128
+provider_examples:
+  github-actions: github-actions/view-run
+  gitlab-ci: gitlab-ci/view-run
+  jenkins: ci-cd/view-run

@@ -1,0 +1,24 @@
+[
+  {
+    "schema": "agora-ai-sdlc/ci-evidence/v1",
+    "provider": "jenkins",
+    "repository": "https://github.com/example/product",
+    "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "environment": "staging",
+    "run_id": "product-deploy-300",
+    "category": "deployment",
+    "status": "success",
+    "evidence_refs": ["https://ci.example.com/job/product-deploy/300"]
+  },
+  {
+    "schema": "agora-ai-sdlc/ci-evidence/v1",
+    "provider": "jenkins",
+    "repository": "https://github.com/example/product",
+    "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "environment": "staging",
+    "run_id": "product-smoke-301",
+    "category": "smoke-test",
+    "status": "success",
+    "evidence_refs": ["https://ci.example.com/job/product-smoke/301"]
+  }
+]

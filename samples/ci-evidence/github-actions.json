@@ -1,0 +1,24 @@
+[
+  {
+    "schema": "agora-ai-sdlc/ci-evidence/v1",
+    "provider": "github-actions",
+    "repository": "https://github.com/example/product",
+    "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "environment": "ci",
+    "run_id": "100-build",
+    "category": "build",
+    "status": "success",
+    "evidence_refs": ["https://github.com/example/product/actions/runs/100/jobs/1"]
+  },
+  {
+    "schema": "agora-ai-sdlc/ci-evidence/v1",
+    "provider": "github-actions",
+    "repository": "https://github.com/example/product",
+    "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "environment": "ci",
+    "run_id": "100-unit",
+    "category": "unit",
+    "status": "success",
+    "evidence_refs": ["https://github.com/example/product/actions/runs/100/jobs/2"]
+  }
+]

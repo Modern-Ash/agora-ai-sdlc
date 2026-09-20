@@ -13,6 +13,7 @@ profiles:
   - jira-work-management
   - operational-evidence
   - starter
+  - enterprise
 policies:
   - data-classification
   - independent-review

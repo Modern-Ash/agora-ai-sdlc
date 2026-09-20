@@ -26,7 +26,7 @@ flowchart TB
 - **Roles**: authority and capability matrix; the accountable role holder is preserved when execution is delegated to AI.
 - **Gates and evidence**: no transition without required evidence; missing evidence, unresolved clarification or missing approval fail closed.
 - **Policies**: producer/reviewer separation, data classification and runtime eligibility, budgets and fallback, provenance.
-- **Profiles**: the implemented Starter adoption profile and planned Enterprise, Modernization, and Regulated profiles compose shared assets without forking Core.
+- **Profiles**: the implemented Starter and Enterprise adoption profiles and planned Modernization and Regulated profiles compose shared assets without forking Core. Enterprise delegates Ed25519 verification, SHA-256 archive checks, project snapshots, provenance, and transactional registry updates to Core.
 - **Integrations**: the implemented GitHub and GitLab delivery, Jira work-management, generic CI/CD, security-finding, and operational-evidence profiles compose Core's provider-neutral Tool Pack, evidence, control-band, and structured-finding operations. External systems remain operational sources, while Core remains lifecycle authority.
 
 ## Allowed dependencies
@@ -38,5 +38,4 @@ Agora Core (`agora-framework`, compatible range) and development-only test/lint 
 - Final compatible Agora Core range (depends on a released Core boundary).
 - Manifest field normative/presentation split (#11).
 - Depth-profile defaults (#20).
-- Registry signing approach for Enterprise (#33).
 - ADRs for separate flavor repo, no embedded LLM SDK and provider-neutral naming (#12).

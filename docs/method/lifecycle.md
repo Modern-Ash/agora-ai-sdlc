@@ -43,7 +43,7 @@ Limits in Core 0.8.2 (verified by tests): approvals are per work revision, not p
 
 Issue #18 names three gates for two transitions, so `operational-readiness` is folded into `completion` (same approach as #17).
 
-- `build-verified` (construction -> operations): `implementation` and `test-strategy` artifacts, criteria `verified`, successful `test-suite` evidence, Quality Reviewer approval.
+- `build-verified` (construction -> operations): `implementation-plan` and `test-strategy` artifacts, criteria `verified`, successful `test-suite` evidence, Quality Reviewer approval.
 - `completion` (operations -> completed): `deployment-plan`, `rollback-procedure`, `operational-readiness` artifacts, criteria `accepted`, successful `deployment` and `security-scan` evidence, Product Owner approval (acceptance and accountable actor are recorded in the approvals register).
 
 Templates: [test-strategy](../../templates/test-strategy.md), [deployment-plan](../../templates/deployment-plan.md), [rollback-procedure](../../templates/rollback-procedure.md), [operational-readiness](../../templates/operational-readiness.md).

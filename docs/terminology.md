@@ -23,4 +23,4 @@ One canonical term per concept. Extend this file, do not fork definitions elsewh
 | Clarification | Recorded question resolved by the accountable human before execution. |
 | Execution folder | `.agora/execution/<issue>/`, per-issue working artifacts. |
 
-Deprecated: the dotted repository name `agora-ai-sdlc.` (use `agora-ai-sdlc`).
+Deprecated: the former dotted repository name (use `agora-ai-sdlc`).

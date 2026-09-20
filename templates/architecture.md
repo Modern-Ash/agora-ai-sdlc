@@ -6,6 +6,7 @@ id: ""
 work: ""
 revision: 1
 traces-to: []
+separation-policy: ["distinct-actor"]
 required-sections: ["Context and constraints", "Components and interfaces", "Decisions", "Requirements coverage", "Risks and mitigations"]
 ---
 # Architecture

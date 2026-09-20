@@ -7,6 +7,7 @@ work: ""
 revision: 1
 traces-to: []
 criteria: []
+separation-policy: ["distinct-actor"]
 required-sections: ["Functional requirements", "Non-functional requirements", "Acceptance criteria", "Open questions"]
 ---
 # Requirements

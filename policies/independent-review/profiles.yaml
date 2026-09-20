@@ -1,0 +1,27 @@
+schema: agora-ai-sdlc/independent-review-profiles/v1
+profiles:
+  distinct-actor:
+    separation_dimensions: [actor]
+    waiver_allowed: true
+  distinct-runtime:
+    separation_dimensions: [runtime]
+    waiver_allowed: true
+  distinct-provider:
+    separation_dimensions: [provider]
+    waiver_allowed: true
+  human-final:
+    requires_human_final: true
+    waiver_allowed: true
+  regulated:
+    separation_dimensions: [actor, provider]
+    requires_human_final: true
+    default_min_source: observed
+    human_final_waivable: false
+waivers:
+  authorized_roles: [governance-owner]
+  required_fields: [actor, reason, evidence]
+rules:
+  - reviews bind to exact artifact kind, id, revision and digest
+  - a new artifact revision or content digest makes prior reviews stale
+  - unknown provenance never counts as independent
+  - regulated human final approval cannot be waived

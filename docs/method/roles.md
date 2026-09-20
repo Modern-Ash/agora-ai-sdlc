@@ -16,8 +16,8 @@ Roles live in [registry/methods/ai-sdlc/roles](../../registry/methods/ai-sdlc/ro
 
 ## Combinations
 
-- **Small team / Starter:** one human plus one AI may hold all five required roles, provided the builder's output is approved by a different role-holder identity where the profile demands independence (profiles #32, policies #22).
-- **Prohibited in Regulated profile (to be enforced by #22/#34):** builder with quality-reviewer or security-reviewer on the same change; product-owner with governance-owner for an exception on its own work; any AI actor as governance-owner (already enforced by actor kinds).
+- **Small team / Starter:** one human plus one AI may hold all five required roles, provided the builder's output is approved by a different role-holder identity where the active independent-review profile demands it.
+- **Prohibited in Regulated profile:** builder with quality-reviewer or security-reviewer on the same change when provenance is not independently observed; product-owner with governance-owner for an exception on its own work; any AI actor as governance-owner (already enforced by actor kinds).
 
 ## Scope of what is verified
 

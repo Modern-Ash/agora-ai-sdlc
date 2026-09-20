@@ -1,0 +1,10 @@
+{
+  "schema": "agora-ai-sdlc/provenance/v1",
+  "actor": "builder",
+  "runtime": {"source": "unavailable"},
+  "runtime_version": {"source": "unavailable"},
+  "provider": {"source": "unavailable"},
+  "model": {"source": "unavailable"},
+  "selection_reason": {"source": "unavailable"},
+  "fallback": {"source": "unavailable"}
+}

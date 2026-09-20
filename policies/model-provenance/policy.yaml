@@ -2,8 +2,14 @@ schema: agora-ai-sdlc/model-provenance-policy/v1
 sources: [observed, declared, unavailable]   # trust order, highest first
 default_min_source: declared
 fields: [runtime, runtime_version, provider, model, selection_reason]
+fallback:
+  fields: [used, source, from, reason]
+  from_fields: [runtime, provider, model]
 separation_dimensions: [actor, runtime, provider, model]
 rules:
   - unavailable provenance never counts as distinct
   - model names never imply provider identity
   - credentials, tokens and endpoint URLs are never accepted
+  - Core session values are declared unless the runtime independently observes them
+upstream_gaps:
+  - https://github.com/Modern-Ash/agora/issues/54

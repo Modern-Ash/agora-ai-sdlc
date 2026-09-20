@@ -6,7 +6,9 @@ supported_core: ">=0.8.2,<0.9"
 method_packs:
   - ai-sdlc
 profiles: []
-policies: []
+policies:
+  - independent-review
+  - model-provenance
 required_capabilities: []
 metadata:
   description: Vendor-neutral AI-first software-delivery distribution

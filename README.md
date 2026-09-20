@@ -54,6 +54,7 @@ The [Enterprise profile](docs/profiles/enterprise.md) validates inherited organi
 The [Modernization profile](docs/profiles/modernization.md) keeps legacy unknowns explicit and gates incremental slices on traced conversion, equivalence, cutover, rollback and stabilization evidence.
 The [Regulated profile](docs/profiles/regulated.md) composes Core signed actions with human accountability, role segregation, observed runtime provenance, and auditable exception and retention metadata without claiming regulatory certification.
 The [Studio projection contract](docs/integrations/studio-projection.md) defines the path-free, versioned read boundary for AI-SDLC dashboards; implementation remains in Agora Core and Agora Studio.
+The [security and offline resilience suite](docs/reference/security-resilience.md) runs all packaged conformance paths with network connections denied, scans an inert secret canary, distinguishes runtime failures, and injects registry failures.
 
 ## Professional Services
 

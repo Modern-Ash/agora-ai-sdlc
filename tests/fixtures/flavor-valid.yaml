@@ -1,0 +1,11 @@
+schema: agora/flavor/v1
+id: golden
+name: Golden
+version: 1.2.3
+supported_core: ">=0.8.2,<0.9"
+method_packs: [ai-sdlc, other]
+profiles: [starter]
+policies: []
+required_capabilities: []
+metadata:
+  description: golden fixture

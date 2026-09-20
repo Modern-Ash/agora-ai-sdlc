@@ -54,3 +54,7 @@ The [Enterprise profile](docs/profiles/enterprise.md) validates inherited organi
 The [Modernization profile](docs/profiles/modernization.md) keeps legacy unknowns explicit and gates incremental slices on traced conversion, equivalence, cutover, rollback and stabilization evidence.
 The [Regulated profile](docs/profiles/regulated.md) composes Core signed actions with human accountability, role segregation, observed runtime provenance, and auditable exception and retention metadata without claiming regulatory certification.
 The [Studio projection contract](docs/integrations/studio-projection.md) defines the path-free, versioned read boundary for AI-SDLC dashboards; implementation remains in Agora Core and Agora Studio.
+
+## Professional Services
+
+The [Professional Services packages](docs/commercial/README.md) define bounded assessment, Starter pilot, Enterprise adoption, and legacy modernization engagements. They separate Apache-2.0 software from paid consulting and tie technical claims to the current release manifest.

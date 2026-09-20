@@ -26,7 +26,7 @@ flowchart TB
 - **Roles**: authority and capability matrix; the accountable role holder is preserved when execution is delegated to AI.
 - **Gates and evidence**: no transition without required evidence; missing evidence, unresolved clarification or missing approval fail closed.
 - **Policies**: producer/reviewer separation, data classification and runtime eligibility, budgets and fallback, provenance.
-- **Profiles**: the implemented Starter, Enterprise and Modernization adoption profiles and planned Regulated profile compose shared assets without forking Core. Enterprise delegates registry trust and transactions to Core; Modernization evaluates additional artifact/evidence obligations before delegating transitions to the unchanged Core lifecycle.
+- **Profiles**: the implemented Starter, Enterprise, Modernization and Regulated adoption profiles compose shared assets without forking Core. Enterprise delegates registry trust and transactions to Core; Modernization evaluates additional artifact/evidence obligations before delegating transitions; Regulated delegates actor identity, signatures, stale preconditions and lifecycle mutation to Core while the flavor owns segregation, provenance completeness and exception/retention metadata.
 - **Integrations**: the implemented GitHub and GitLab delivery, Jira work-management, generic CI/CD, security-finding, and operational-evidence profiles compose Core's provider-neutral Tool Pack, evidence, control-band, and structured-finding operations. External systems remain operational sources, while Core remains lifecycle authority.
 
 ## Allowed dependencies

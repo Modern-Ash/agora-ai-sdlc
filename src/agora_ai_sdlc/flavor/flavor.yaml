@@ -15,6 +15,7 @@ profiles:
   - starter
   - enterprise
   - modernization
+  - regulated
 policies:
   - data-classification
   - independent-review

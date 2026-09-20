@@ -51,3 +51,4 @@ The [operational-evidence profile](docs/integrations/observability.md) maps opti
 The [Starter profile](docs/profiles/starter.md) previews and bootstraps a one-team repository with explicit human accountability and at most two declared AI runtimes.
 The [Enterprise profile](docs/profiles/enterprise.md) validates inherited organization policy and consumes signed registries as project-local snapshots with Core provenance and transactional updates.
 The [Modernization profile](docs/profiles/modernization.md) keeps legacy unknowns explicit and gates incremental slices on traced conversion, equivalence, cutover, rollback and stabilization evidence.
+The [Regulated profile](docs/profiles/regulated.md) composes Core signed actions with human accountability, role segregation, observed runtime provenance, and auditable exception and retention metadata without claiming regulatory certification.

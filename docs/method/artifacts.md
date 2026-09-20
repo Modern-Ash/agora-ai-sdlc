@@ -2,6 +2,8 @@
 
 Templates live in [templates/](../../templates/) and are shipped in the wheel. Validation is implemented in `agora_ai_sdlc.artifacts` (pure functions, no network). Templates contain no provider-specific prompt syntax; every field is documented here so any actor, human or model, can fill them.
 
+Critical artifacts declare `separation-policy` in front matter. Independent review binds to artifact kind, id, revision and digest; changing revision or content requires a new review. See [independent review policy](../policies/independent-review.md).
+
 ## Front matter (schema `agora-ai-sdlc/artifact/v1`)
 
 | Field | Meaning |
@@ -12,6 +14,7 @@ Templates live in [templates/](../../templates/) and are shipped in the wheel. V
 | `id` | Traceability id `PREFIX-NNN` (empty in templates; required in filled artifacts) |
 | `work`, `revision` | Work item id and the work revision the artifact belongs to |
 | `traces-to` | Ids of parent artifacts (see chain) |
+| `separation-policy` | Independent-review profiles required for a critical artifact revision |
 | `criteria` | (requirements) acceptance-criterion ids defined by this document |
 | `covers-criteria` | (test-strategy) criterion ids the strategy covers |
 | `required-sections` | `##` headings that must exist in a filled artifact |

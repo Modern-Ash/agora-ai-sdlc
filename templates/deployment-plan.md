@@ -6,6 +6,7 @@ id: ""
 work: ""
 revision: 1
 traces-to: []
+separation-policy: ["distinct-actor", "human-final"]
 required-sections: ["Target environments and grants", "Steps", "Verification after deploy", "Responsible actors"]
 ---
 # Deployment plan

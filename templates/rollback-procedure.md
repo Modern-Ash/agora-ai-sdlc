@@ -6,6 +6,7 @@ id: ""
 work: ""
 revision: 1
 traces-to: []
+separation-policy: ["distinct-actor", "human-final"]
 required-sections: ["Triggers", "Steps", "Data considerations", "Verification after rollback"]
 ---
 # Rollback procedure

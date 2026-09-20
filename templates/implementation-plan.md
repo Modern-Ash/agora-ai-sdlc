@@ -6,6 +6,7 @@ id: ""
 work: ""
 revision: 1
 traces-to: []
+separation-policy: ["distinct-actor"]
 required-sections: ["Approach", "Work breakdown", "Code and test references", "Risks"]
 ---
 # Implementation plan

@@ -6,6 +6,7 @@ id: ""
 work: ""
 revision: 1
 traces-to: []
+separation-policy: ["distinct-actor", "human-final"]
 required-sections: ["Monitoring and alerting", "Runbooks and ownership", "Capacity and limits", "Known risks"]
 ---
 # Operational readiness

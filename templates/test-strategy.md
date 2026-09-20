@@ -7,6 +7,7 @@ work: ""
 revision: 1
 traces-to: []
 covers-criteria: []
+separation-policy: ["distinct-actor"]
 required-sections: ["Scope and risks", "Test levels and tools", "Commands and environments", "Criteria coverage", "Security testing"]
 ---
 # Test strategy

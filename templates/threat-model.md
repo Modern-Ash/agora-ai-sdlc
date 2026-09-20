@@ -6,6 +6,7 @@ id: ""
 work: ""
 revision: 1
 traces-to: []
+separation-policy: ["distinct-provider"]
 required-sections: ["Assets and trust boundaries", "Threats", "Mitigations", "Residual risk"]
 ---
 # Threat model

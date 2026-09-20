@@ -18,6 +18,7 @@ This repository was previously named with a trailing dot (`agora-ai-sdlc.`). Git
 
 ```bash
 uv sync
+uv run python scripts/verify_all.py   # full verification
 uv run pytest
 uv run agora-ai-sdlc --version
 uv build

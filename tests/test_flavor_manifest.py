@@ -6,7 +6,11 @@ from pathlib import Path
 import pytest
 
 from agora_ai_sdlc.flavor_manifest import (
-    ManifestError, check_core_compatibility, load_manifest, load_packaged_manifest, parse_manifest,
+    ManifestError,
+    check_core_compatibility,
+    load_manifest,
+    load_packaged_manifest,
+    parse_manifest,
 )
 
 GOLDEN = Path(__file__).parent / "fixtures" / "flavor-valid.yaml"
@@ -14,7 +18,10 @@ GOLDEN = Path(__file__).parent / "fixtures" / "flavor-valid.yaml"
 
 def valid(**overrides):
     lines = {
-        "schema": "agora/flavor/v1", "id": "x", "name": "X", "version": "1.0.0",
+        "schema": "agora/flavor/v1",
+        "id": "x",
+        "name": "X",
+        "version": "1.0.0",
         "supported_core": '">=0.8,<0.9"',
     }
     lines.update(overrides)
@@ -84,7 +91,13 @@ def test_compatibility_failure_names_versions():
 
 def test_no_network_imports():
     out = subprocess.run(
-        [sys.executable, "-c", "import sys, agora_ai_sdlc.flavor_manifest as m; print(any(n.split('.')[0] in ('requests','urllib3','httpx') for n in sys.modules))"],
-        capture_output=True, text=True, check=True,
+        [
+            sys.executable,
+            "-c",
+            "import sys, agora_ai_sdlc.flavor_manifest as m; print(any(n.split('.')[0] in ('requests','urllib3','httpx') for n in sys.modules))",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout.strip()
     assert out == "False"

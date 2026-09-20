@@ -15,7 +15,7 @@ dependencies = ["agora-framework>=0.8.2,<0.9", "packaging>=24", "pyyaml>=6"]
 agora-ai-sdlc = "agora_ai_sdlc.cli:main"
 
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = ["pytest>=8", "ruff>=0.11"]
 
 [tool.hatch.version]
 path = "src/agora_ai_sdlc/__init__.py"
@@ -35,3 +35,8 @@ include = ["src", "registry", "profiles", "policies", "templates", "samples", "t
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["tests/fixtures"]

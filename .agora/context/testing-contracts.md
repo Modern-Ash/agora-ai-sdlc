@@ -4,7 +4,7 @@ status: draft
 ---
 # Testing contracts
 
-- Planned single entry point `scripts/verify_all.py` (#14) and `agora-ai-sdlc self-test` (#39). **Neither exists yet.**
+- `scripts/verify_all.py` exists (#14, run with `uv run python scripts/verify_all.py`). `agora-ai-sdlc self-test` (#39) does **not** exist yet.
 - Default verification needs no LLM/cloud account or network after dependencies install.
 - Tests run in isolated temporary workspaces and never modify the caller repository.
 - Package checks must run from the built wheel, not only the source tree.

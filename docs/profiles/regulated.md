@@ -30,6 +30,14 @@ Evidence retention records require an evidence reference, owner, classification,
 
 Organization policy is the source of configured exception authorizers and retention schedules. Changes require a new record; do not edit an existing JSON audit record. Git protection and external archival can make repository records harder to remove, but this package does not provide WORM storage, legal hold enforcement, clock attestation, key custody, identity proofing, OS isolation, network controls, backup policy, or records disposition.
 
+## Executable scenario
+
+```console
+agora-ai-sdlc run-sample regulated
+```
+
+The offline sample uses ephemeral in-memory signing keys and drives a complete `readiness -> completed` lifecycle in which every critical action is prepared, signed and applied through Agora Core. It also shows an unsigned mutation, a non-human product owner and a builder/quality-reviewer combination rejected, declared provenance blocked while observed provenance is allowed, an unauthorized and a non-waivable exception rejected, and evidence retention metadata recorded. It ends with `agora validate`.
+
 ## Customer responsibilities
 
 Customers must map these controls to their actual obligations with qualified security, legal, privacy, and compliance owners. They remain responsible for risk assessment, control design, identity lifecycle, organization-managed keys, trustworthy runtime observations, retention periods, evidence preservation and deletion, repository access, branch protection, infrastructure isolation, monitoring, incident response, independent audits, and any required filings or attestations.

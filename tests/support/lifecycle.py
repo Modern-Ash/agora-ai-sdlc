@@ -76,7 +76,7 @@ class Lifecycle:
         self.ws.add_evidence(
             AddEvidenceInput(
                 swarm_id=SWARM, work_id=WORK, actor_id=actor, type=kind, result="success",
-                artifact_refs=["repo://readiness-brief.md"],
+                artifact_refs=["repo://readiness-assessment.md"],
             )
         )  # fmt: skip
 
@@ -96,22 +96,28 @@ class Lifecycle:
 
     # Phase helpers: satisfy each gate's prerequisites, then move.
     def to_intent(self) -> None:
-        self.artifact("po", "readiness-brief")
+        self.artifact("po", "readiness-assessment")
         self.ws.clarify_work(self.wa("po"), runner="/bin/true")
+        self.approve("po", "product-owner")
         assert self.move("po", "intent") == "intent"
+
+    def clarify(self, actor: str = "po") -> None:
+        self.ws.clarify_work(self.wa(actor), runner="/bin/true")
 
     def to_inception(self) -> None:
         self.stage("po", "elaborated")
         self.artifact("po", "intent")
         self.approve("po", "product-owner")
+        self.clarify()
         assert self.move("po", "inception") == "inception"
 
     def to_construction(self) -> None:
         self.stage("arch", "designed")
         self.artifact("arch", "architecture")
-        self.artifact("arch", "domain-model")
+        self.artifact("arch", "requirements")
         self.approve("arch", "architect")
         self.approve("po", "product-owner")
+        self.clarify()
         assert self.move("arch", "construction") == "construction"
 
     def to_operations(self) -> None:

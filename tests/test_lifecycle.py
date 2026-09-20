@@ -42,8 +42,9 @@ def test_rejected_gate_does_not_move_state(life, setup, actor, target):
     [("build", "intent"), ("ops", "intent"), ("qa", "intent")],
 )
 def test_unauthorized_actor_cannot_transition(life, actor, target):
-    life.artifact("po", "readiness-brief")
+    life.artifact("po", "readiness-assessment")
     life.ws.clarify_work(life.wa("po"), runner="/bin/true")
+    life.approve("po", "product-owner")
     with pytest.raises(PermissionError):
         life.move(actor, target)
     assert life.state() == "readiness"
@@ -64,7 +65,7 @@ def test_rework_inception_to_intent_needs_record_and_keeps_artifacts(life):
     life.artifact("arch", "rework-record")
     assert life.move("arch", "intent") == "intent"
     kinds = life.ws.show_work("delivery", "feature").artifact_kinds
-    assert {"readiness-brief", "intent", "rework-record"} <= set(kinds)
+    assert {"readiness-assessment", "intent", "rework-record"} <= set(kinds)
 
 
 def test_rework_construction_to_inception(life):

@@ -12,6 +12,7 @@ profiles:
   - gitlab-delivery
   - jira-work-management
   - operational-evidence
+  - starter
 policies:
   - data-classification
   - independent-review

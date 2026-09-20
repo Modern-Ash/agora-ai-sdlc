@@ -11,5 +11,6 @@ Credential-free executable scenarios shipped in the wheel and source distributio
 - `operational-evidence`: five neutral metric mappings, release readiness, and a governed control-band proposal.
 - `starter`: preview-first bootstrap of one team, one repository, and the first Unit of Work.
 - `enterprise`: signed project-registry install and transactional upgrade with provenance and recovery metadata.
+- `modernization`: one incremental legacy slice with known/unknown behavior, failed equivalence, cutover and rollback gates.
 
 Run one with `agora-ai-sdlc run-sample <name>`.

@@ -21,6 +21,8 @@ Readiness records identify data classifications and eligible runtimes. Launch ch
 | `covers-criteria` | (test-strategy) criterion ids the strategy covers |
 | `required-sections` | `##` headings that must exist in a filled artifact |
 
+Modernization templates also use structured `behaviors`, `slice-ids`, `slice-id`, `behavior-ids`, `independently-deployable`, component/dependency lists and equivalence `comparisons`. Their normative rules are documented in the [Modernization profile](../profiles/modernization.md).
+
 ## Kinds, prefixes and allowed parents
 
 | Kind | Prefix | Traces to | Template |
@@ -40,6 +42,16 @@ Readiness records identify data classifications and eligible runtimes. Launch ch
 | operational-readiness | OPR | deployment-plan | operational-readiness.md |
 | learning-record | LRN | any | learning-record.md |
 | rework-record | RWK | any | rework-record.md |
+| legacy-inventory | LGI | root | legacy-inventory.md |
+| dependency-map | DPM | legacy-inventory | dependency-map.md |
+| characterization | CHR | legacy-inventory | characterization.md |
+| target-architecture | TAR | dependency-map, characterization | target-architecture.md |
+| migration-plan | MGP | target-architecture, characterization | migration-plan.md |
+| migration-slice | MGS | migration-plan | migration-slice.md |
+| conversion-record | CNV | migration-slice | conversion-record.md |
+| equivalence-report | EQV | characterization, conversion-record, migration-slice | equivalence-report.md |
+| cutover-plan | CUT | migration-plan, equivalence-report | cutover-plan.md |
+| stabilization-report | STB | cutover-plan | stabilization-report.md |
 
 Chain: intent -> unit of work -> requirements (criteria) -> architecture / test strategy (coverage) -> implementation plan (code and test references) -> deployment plan.
 
@@ -50,5 +62,5 @@ Chain: intent -> unit of work -> requirements (criteria) -> architecture / test 
 ## Notes
 
 - Every artifact kind required by a gate has a template (tested). `build-verified` now requires `implementation-plan` (previously `implementation`): the plan is updated with code and test references as work is delivered.
-- Core gates only check that an artifact of a kind is registered; these validators are separate, local checks. They are not yet wired into a gate or into `verify_all.py`.
+- Core gates check registered base obligations. Modernization adds local parsing, traceability and digest checks through its transition wrapper; other artifact validators remain explicit local checks.
 - Code/test evidence and deployment linkage are expressed through the implementation-plan and deployment-plan references; evidence records themselves stay in Core.

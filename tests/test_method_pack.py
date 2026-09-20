@@ -67,10 +67,9 @@ def test_forward_transitions_reference_existing_gates_and_roles():
     assert set(front(PACK / "METHOD.md")["required-roles"]) <= roles
     for t in transitions():
         assert set(t["roles"]) <= roles
-        if (t["from"], t["to"]) in FORWARD:
-            assert t["gate"] in gates
-        else:
-            assert "gate" not in t
+        assert t["gate"] in gates
+        if (t["from"], t["to"]) in REWORK:
+            assert t["gate"] == "rework-recorded"
 
 
 def test_no_vendor_assumptions():

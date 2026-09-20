@@ -60,7 +60,16 @@ def test_every_criterion_stage_has_authorized_role():
 
 
 def test_every_lifecycle_action_has_an_authorized_role():
-    needed = {"work.transition", "approval.add", "criterion.satisfy", "artifact.add", "evidence.add", "work.clarify"}
+    needed = {
+        "work.create",
+        "work.reopen",
+        "work.transition",
+        "approval.add",
+        "criterion.satisfy",
+        "artifact.add",
+        "evidence.add",
+        "work.clarify",
+    }
     for action in needed:
         assert any(can(r, action) for r in ROLES), action
 
@@ -73,9 +82,13 @@ def test_no_universal_authority(role):
     assert not universal <= set(actions)
 
 
-def test_only_governance_owner_can_waive_cancel_reopen():
-    for action in ("gate.waive", "work.cancel", "work.reopen"):
+def test_only_governance_owner_can_waive_or_cancel():
+    for action in ("gate.waive", "work.cancel"):
         assert [r for r in ROLES if can(r, action)] == ["governance-owner"]
+
+
+def test_reopen_limited_to_product_owner_and_governance_owner():
+    assert sorted(r for r in ROLES if can(r, "work.reopen")) == ["governance-owner", "product-owner"]
 
 
 def test_governance_owner_is_human_only():

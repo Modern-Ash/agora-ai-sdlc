@@ -4,7 +4,7 @@ Roles live in [registry/methods/ai-sdlc/roles](../../registry/methods/ai-sdlc/ro
 
 | Role | Kinds | Key authority | Notable limits |
 |---|---|---|---|
-| product-owner | human, ai-agent | Approves intent, design, completion; accepts criteria | No waivers |
+| product-owner | human, ai-agent | Creates work; approves intent, design, completion; accepts criteria; reopens completed work | No gate waivers |
 | domain-expert | human, ai-agent | Clarifications and artifacts | Advisory: no transition, no approval |
 | architect | human, ai-agent, swarm | Design, approves design, inception transitions | |
 | builder | human, ai-agent, swarm | Marks criteria built | Never approves; no merge/release/deploy |
@@ -21,4 +21,4 @@ Roles live in [registry/methods/ai-sdlc/roles](../../registry/methods/ai-sdlc/ro
 
 ## Scope of what is verified
 
-`tests/test_role_conformance.py` checks role files structurally: every transition, gate approval and criterion stage has an authorized role; no role has universal authority; only governance-owner waives, cancels or reopens; the builder never approves. Live execution through Core (human, AI and delegated actors) is not yet exercised; it needs the end-to-end sample (#21).
+`tests/test_role_conformance.py` checks role files structurally: every transition, gate approval and criterion stage has an authorized role; no role has universal authority; only governance-owner waives or cancels; the builder never approves. Live execution through Core (human, AI and delegated actors) is not yet exercised; it needs the end-to-end sample (#21).

@@ -1,0 +1,53 @@
+schema: agora-ai-sdlc/adoption-profile/v1
+id: regulated
+extends: enterprise
+depth: regulated
+method:
+  id: ai-sdlc
+  version: 0.1.0
+critical_actions:
+  - approval.add
+  - artifact.add
+  - criterion.satisfy
+  - evidence.add
+  - gate.waive
+  - work.create
+  - work.transition
+signed_actions:
+  authority: agora-core
+  algorithm: ed25519
+  production_key_custody: organization-managed
+mandatory_human_roles: [product-owner, quality-reviewer]
+non_combinable_roles:
+  - [architect, quality-reviewer]
+  - [builder, quality-reviewer]
+  - [operator, quality-reviewer]
+  - [product-owner, quality-reviewer]
+independent_review_profile: regulated
+runtime_provenance:
+  minimum_source: observed
+  required_fields: [runtime, runtime_version, provider, model, selection_reason, fallback]
+evidence_retention_required_fields:
+  - id
+  - evidence_ref
+  - owner
+  - classification
+  - policy
+  - recorded_at
+  - retain_until
+  - disposition
+exception_required_fields:
+  - id
+  - policy
+  - reason
+  - authorized_by
+  - authorized_role
+  - created_at
+  - expires_at
+  - evidence
+exception_authorized_roles: [governance-owner]
+non_waivable_controls:
+  - signed-actions
+  - role-segregation
+  - mandatory-human-approval
+  - complete-observed-provenance

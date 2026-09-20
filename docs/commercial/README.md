@@ -8,9 +8,11 @@ Modern Ash offers bounded consulting and implementation services around the open
 | [Starter Pilot](starter-pilot.md) | One team, one repository, one accepted Unit of Work | Non-production pilot |
 | [Enterprise Adoption](enterprise-adoption.md) | Governed multi-project rollout using signed project-local snapshots | Self-managed rollout |
 | [Legacy Modernization](modernization.md) | One characterized, traced modernization slice | Bounded migration increment |
+| [Regulated Delivery Readiness](regulated-readiness.md) | Control mapping, gap register and evidence index for higher-assurance delivery | Non-production readiness; no certification |
 
 Cross-package procurement references:
 
+- [Statement of work template](statement-of-work-template.md): a drafting skeleton for any package, with no prices or guarantees.
 - [Vendor-neutral reference architecture](reference-architecture.md): logical boundaries, deployment patterns, replacement points, failure recovery, and optional cloud/on-premises mappings.
 - [Security and shared responsibility](security-and-responsibility.md): control-by-control distinction between Agora enforcement, deployment evidence, customer operation, and provider duties.
 - [Marketplace listing workspace](marketplace/README.md): draft Professional Services copy, claim substantiation, private-offer input boundaries, and a blocked pre-submission review gate.

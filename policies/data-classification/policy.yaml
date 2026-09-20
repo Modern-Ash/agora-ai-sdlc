@@ -1,0 +1,16 @@
+schema: agora-ai-sdlc/data-classification-policy/v1
+classifications: [public, internal, confidential, restricted]
+execution_boundaries: [local, customer-controlled, external]
+defaults:
+  unknown_classification: deny
+  minimum_runtime_source: declared
+  minimum_boundary_source: declared
+runtime_eligibility:
+  required_fields: [runtime, max_classification, execution_boundaries, revision, evidence]
+authorization:
+  binds: [runtime, execution_boundary, effective_classification, eligibility_revision, input_ids, input_revisions, input_classifications]
+rules:
+  - effective classification is the highest classification among referenced inputs
+  - launch fails before runtime execution when eligibility cannot be proven
+  - policy output identifies offending input references and never input contents
+  - changed input classification, input revision, boundary or eligibility revision makes authorization stale

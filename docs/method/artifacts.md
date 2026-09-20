@@ -4,6 +4,8 @@ Templates live in [templates/](../../templates/) and are shipped in the wheel. V
 
 Critical artifacts declare `separation-policy` in front matter. Independent review binds to artifact kind, id, revision and digest; changing revision or content requires a new review. See [independent review policy](../policies/independent-review.md).
 
+Readiness records identify data classifications and eligible runtimes. Launch checks calculate the effective classification from referenced inputs before invoking a runtime. See [data handling policy](../policies/data-handling.md).
+
 ## Front matter (schema `agora-ai-sdlc/artifact/v1`)
 
 | Field | Meaning |

@@ -9,7 +9,7 @@ description = "Vendor-neutral AI-SDLC distribution built on Agora Core"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
-dependencies = ["agora-framework>=0.8.2,<0.9"]
+dependencies = ["agora-framework>=0.8.2,<0.9", "packaging>=24", "pyyaml>=6"]
 
 [project.scripts]
 agora-ai-sdlc = "agora_ai_sdlc.cli:main"

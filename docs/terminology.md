@@ -21,6 +21,8 @@ One canonical term per concept. Extend this file, do not fork definitions elsewh
 | Profile | Opinionated adoption/policy configuration (Starter, Enterprise, Modernization, Regulated). |
 | Task Packet | The minimal context bundle for one issue: `TASK.md` plus referenced files. |
 | Clarification | Recorded question resolved by the accountable human before execution. |
+| Studio | Agora Studio (`Modern-Ash/agora-studio`): UI projections of Core state; holds no lifecycle policy. |
+| Control Plane | Future multi-user/enterprise service; not part of the MVP. |
 | Execution folder | `.agora/execution/<issue>/`, per-issue working artifacts. |
 
 Deprecated: the former dotted repository name (use `agora-ai-sdlc`).

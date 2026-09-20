@@ -1,5 +1,7 @@
 # Architecture
 
+Decisions: [ADR-0001](decisions/ADR-0001-separate-flavor-repository.md), [ADR-0002](decisions/ADR-0002-no-embedded-llm-sdk.md), [ADR-0003](decisions/ADR-0003-provider-neutral-naming.md). Product: [vision](product/vision.md), [positioning](product/positioning.md).
+
 Conceptual architecture of the Agora AI-SDLC flavor. Nothing here is implemented yet unless stated; see [product-scope.md](product-scope.md). Boundaries: [repository-boundaries.md](repository-boundaries.md). Terms: [terminology.md](terminology.md).
 
 ## Layers
@@ -37,6 +39,4 @@ Agora Core (`agora-framework`, compatible range) and development-only test/lint 
 ## Pending decisions
 
 - Final compatible Agora Core range (depends on a released Core boundary).
-- Manifest field normative/presentation split (#11).
-- Depth-profile defaults (#20).
-- ADRs for separate flavor repo, no embedded LLM SDK and provider-neutral naming (#12).
+

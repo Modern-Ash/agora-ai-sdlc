@@ -9,6 +9,8 @@ profiles:
   - github-delivery
   - generic-ci-evidence
   - security-findings
+  - gitlab-delivery
+  - jira-work-management
 policies:
   - data-classification
   - independent-review

@@ -31,6 +31,8 @@ uv run agora-ai-sdlc run-sample new-product
 uv run agora-ai-sdlc run-sample github-delivery
 uv run agora-ai-sdlc run-sample ci-evidence
 uv run agora-ai-sdlc run-sample security-findings
+uv run agora-ai-sdlc run-sample gitlab-delivery
+uv run agora-ai-sdlc run-sample jira-work-items
 ```
 
 The [GitHub delivery profile](docs/integrations/github.md) is read-only by default and uses Agora
@@ -39,3 +41,5 @@ The [generic CI/CD evidence profile](docs/integrations/ci.md) applies the same c
 semantics to GitHub Actions, GitLab CI, Jenkins, or another reviewed neutral adapter.
 The [security finding profile](docs/integrations/security.md) normalizes scanner metadata and applies
 depth-aware blocking with explicit resolution, false-positive, and human risk-acceptance authority.
+The [GitLab and Jira profiles](docs/integrations/gitlab-jira.md) reuse the same neutral capabilities,
+keep writes opt-in, and reconcile external facts without changing Agora lifecycle meaning.

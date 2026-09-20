@@ -1,0 +1,32 @@
+schema: agora-ai-sdlc/integration-profile/v1
+id: jira-work-management
+provider: jira
+default_mode: read-only
+adapters: [jira]
+read_roles:
+  product-owner: [issue.read]
+modes:
+  read-only:
+    capabilities: [issue.read]
+  work-write:
+    capabilities: [issue.write, issue.transition]
+    confirmation_required: true
+operations:
+  work-item-search: {adapter: jira, operation: search, capability: issue.read, risk: read}
+  work-item-view: {adapter: jira, operation: view, capability: issue.read, risk: read}
+  work-item-create: {adapter: jira, operation: create, capability: issue.write, risk: write}
+  work-item-comment: {adapter: jira, operation: comment, capability: issue.write, risk: write}
+  work-item-transition: {adapter: jira, operation: transition, capability: issue.transition, risk: write}
+state_mapping:
+  to-do: open
+  open: open
+  in-progress: open
+  done: closed
+  closed: closed
+evidence:
+  unit_of_work: jira-work-item-url
+unsupported:
+  - review-view
+  - review-approve
+  - pipeline-view
+  - lifecycle-transition

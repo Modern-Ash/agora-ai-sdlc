@@ -12,7 +12,7 @@ The canary deliberately does not resemble a real provider credential. Real token
 
 ## Network-disabled suite
 
-The complete `agora-ai-sdlc self-test` runs while Python socket connection entry points raise immediately. It discovers every shipped profile and sample, exercises real Core lifecycle state, and runs all eleven credential-free samples. A new default path that attempts a network connection fails the test instead of depending on DNS, a local service, or an external account.
+The complete `agora-ai-sdlc self-test` runs while Python socket connection entry points raise immediately. It discovers every shipped profile and sample, exercises real Core lifecycle state, and runs all twelve credential-free samples. A new default path that attempts a network connection fails the test instead of depending on DNS, a local service, or an external account.
 
 Subprocesses remain limited to repository-owned fake runners and local Git/Core commands. The network guard is a deterministic application-level test, not an operating-system firewall or proof that arbitrary third-party binaries cannot make network calls.
 

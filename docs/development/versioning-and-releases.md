@@ -24,3 +24,13 @@ Current range: `>=0.8.2,<0.10`, verified against Core 0.8.2 (locked environment)
 3. Bump the version in `pyproject.toml` and the flavor manifest in the same change, then tag `vMAJOR.MINOR.PATCH` on the merged commit.
 4. A release states its supported Core range and any contract schema version it introduces or removes. Deprecated names and contracts stay documented for at least one minor release before removal.
 5. Releases carry no credentials, provider SDKs or unverified compliance claims.
+
+## Upgrade compatibility
+
+A released Method Pack change must not corrupt work already in flight. `tests/test_upgrade_compatibility.py` exercises this against a real Core workspace:
+
+- a compatible version bump installed over an existing pack (`--force` is required) keeps work in `construction` completable through `completed`, and `agora validate` still passes;
+- replacing a pack silently is refused without `--force`;
+- an incompatible change (a state renamed while transitions still reference it) is rejected by Core, and the project stays valid and completable.
+
+Registry-distributed upgrades additionally use signed, previewed and recoverable installs (see the [Enterprise profile](../profiles/enterprise.md)). Rollback is a signed forward release, never an edit of accepted history.

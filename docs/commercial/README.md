@@ -13,6 +13,7 @@ Cross-package procurement references:
 
 - [Vendor-neutral reference architecture](reference-architecture.md): logical boundaries, deployment patterns, replacement points, failure recovery, and optional cloud/on-premises mappings.
 - [Security and shared responsibility](security-and-responsibility.md): control-by-control distinction between Agora enforcement, deployment evidence, customer operation, and provider duties.
+- [Marketplace listing workspace](marketplace/README.md): draft Professional Services copy, claim substantiation, private-offer input boundaries, and a blocked pre-submission review gate.
 
 ## Software and services boundary
 

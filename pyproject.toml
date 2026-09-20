@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agora-ai-sdlc"
+dynamic = ["version"]
+description = "Vendor-neutral AI-SDLC distribution built on Agora Core"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+dependencies = ["agora-framework>=0.8.2,<0.9"]
+
+[project.scripts]
+agora-ai-sdlc = "agora_ai_sdlc.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8"]
+
+[tool.hatch.version]
+path = "src/agora_ai_sdlc/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agora_ai_sdlc"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"registry" = "agora_ai_sdlc/registry"
+"profiles" = "agora_ai_sdlc/profiles"
+"policies" = "agora_ai_sdlc/policies"
+"templates" = "agora_ai_sdlc/templates"
+"samples" = "agora_ai_sdlc/samples"
+
+[tool.hatch.build.targets.sdist]
+include = ["src", "registry", "profiles", "policies", "templates", "samples", "tests", "docs", "README.md", "LICENSE", "CHANGELOG.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

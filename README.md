@@ -13,3 +13,12 @@ gh repo clone Modern-Ash/agora-ai-sdlc
 ## Migration note
 
 This repository was previously named with a trailing dot (`agora-ai-sdlc.`). GitHub redirects the old URL; update any remotes with `git remote set-url origin https://github.com/Modern-Ash/agora-ai-sdlc.git`. This note may be removed after the first published package.
+
+## Development
+
+```bash
+uv sync
+uv run pytest
+uv run agora-ai-sdlc --version
+uv build
+```

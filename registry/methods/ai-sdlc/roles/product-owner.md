@@ -2,12 +2,15 @@
 schema: "agora/role/v1"
 id: "product-owner"
 required-capabilities: ["specification"]
-allowed-actor-kinds: ["human", "ai-agent", "swarm"]
-allowed-actions: ["swarm.assign", "work.decompose", "criterion.satisfy", "work.transition", "work.clarify", "artifact.add", "evidence.add", "checklist.add", "checklist.check", "approval.add", "handoff.create"]
+allowed-actor-kinds: ["human", "ai-agent"]
+allowed-actions: ["work.decompose", "work.transition", "criterion.satisfy", "approval.add", "work.clarify", "artifact.add", "evidence.add", "checklist.add", "checklist.check", "handoff.create"]
 allowed-tool-capabilities: ["repository.read", "repository.governance.read", "docs.read", "docs.write"]
 allowed-environments: ["*"]
 ---
 
 # Product Owner
 
-Accountable for intent, scope and acceptance. Approves intent, design and completion; may be a human, or an AI actor delegated by an accountable human.
+**Accountable for:** intent, scope and acceptance.
+**Authority:** approves intent, design and completion; advances readiness, intent and completion; accepts criteria.
+**Delegation:** an AI actor may execute this role only under an accountable human role-holder recorded in the swarm assignment; the human stays accountable.
+**Cannot:** build, deploy or waive gates.

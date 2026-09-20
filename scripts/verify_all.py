@@ -109,7 +109,13 @@ def check_package() -> None:
             [
                 str(python),
                 "-c",
-                "from agora_ai_sdlc.flavor_manifest import *; check_core_compatibility(load_packaged_manifest())",
+                (
+                    "from agora_ai_sdlc.depth_profiles import asset_root; "
+                    "from agora_ai_sdlc.flavor_manifest import *; "
+                    "check_core_compatibility(load_packaged_manifest()); "
+                    "assert (asset_root('contracts') / 'studio' / "
+                    "'ai-sdlc-projection-v1.schema.json').is_file()"
+                ),
             ],
             "the built wheel fails to load its manifest; inspect pyproject.toml packaging",
             cwd=Path(tmp),

@@ -1,9 +1,22 @@
 import copy
 import itertools
+import json
+from pathlib import Path
 
 import pytest
+from agora.model import SessionRecord, UsageRecord
 
-from agora_ai_sdlc.provenance import DIMENSIONS, ProvenanceError, compare, evaluate_separation, parse
+from agora_ai_sdlc.provenance import (
+    DIMENSIONS,
+    ProvenanceError,
+    compare,
+    evaluate_separation,
+    from_core_session,
+    from_core_usage,
+    parse,
+)
+
+FIXTURES = Path(__file__).parent / "fixtures" / "provenance"
 
 
 def val(value, source="declared"):
@@ -49,8 +62,11 @@ def test_missing_fields_default_to_unavailable():
         (lambda r: r.update(provider={"value": "p"}), "provenance.field"),
         (lambda r: r.update(provider={"value": "", "source": "declared"}), "provenance.value"),
         (lambda r: r.update(provider={"value": "p", "source": "unavailable"}), "provenance.unavailable_value"),
-        (lambda r: r.update(fallback={"used": True}), "provenance.fallback"),
-        (lambda r: r.update(fallback={"used": True, "from": {"provider": "p", "model": "m"}}), "provenance.fallback"),
+        (lambda r: r.update(fallback={"source": "declared", "used": True}), "provenance.fallback"),
+        (
+            lambda r: r.update(fallback={"source": "declared", "used": True, "from": {"provider": "p", "model": "m"}}),
+            "provenance.fallback",
+        ),
         (lambda r: r.update(subject={"kind": "architecture"}), "provenance.subject"),
         (
             lambda r: r.update(subject={"kind": "architecture", "id": "ARC-001", "revision": 0, "digest": "x"}),
@@ -65,8 +81,24 @@ def test_invalid_records(mutate, expected):
 
 
 def test_valid_fallback_metadata():
-    p = parse(rec(fallback={"used": True, "from": {"provider": "p", "model": "m"}, "reason": "quota"}))
-    assert p.fallback_used and p.fallback_from == {"provider": "p", "model": "m"} and p.fallback_reason == "quota"
+    p = parse(
+        rec(
+            fallback={
+                "source": "observed",
+                "used": True,
+                "from": {"runtime": "codex", "provider": "p", "model": "m"},
+                "reason": "quota",
+            }
+        )
+    )
+    assert p.fallback_used and p.fallback_source == "observed"
+    assert p.fallback_from == {"runtime": "codex", "provider": "p", "model": "m"}
+    assert p.fallback_reason == "quota"
+
+
+def test_missing_fallback_metadata_is_explicitly_unavailable():
+    p = parse(rec())
+    assert p.fallback_used is None and p.fallback_source == "unavailable"
 
 
 def test_valid_subject_binding_is_normalized():
@@ -105,7 +137,17 @@ def test_secret_looking_fields_rejected(key):
 def test_secret_looking_values_rejected(value):
     r = rec()
     r["selection_reason"] = val(value)
-    assert code(r) == "provenance.secret"
+    with pytest.raises(ProvenanceError) as exc:
+        parse(r)
+    assert exc.value.code == "provenance.secret"
+    assert value not in str(exc.value)
+
+
+def test_known_and_unknown_provenance_fixtures():
+    known = parse(json.loads((FIXTURES / "known.json").read_text()))
+    unknown = parse(json.loads((FIXTURES / "unknown.json").read_text()))
+    assert known.runtime.value == "codex" and known.fallback_used is False
+    assert unknown.runtime.source == "unavailable" and unknown.fallback_used is None
 
 
 def test_local_and_internal_providers_need_no_special_case():
@@ -179,3 +221,56 @@ def test_input_is_not_mutated():
     snapshot = copy.deepcopy(r)
     parse(r)
     assert r == snapshot
+
+
+def core_session(**changes):
+    values = {
+        "id": "session-1",
+        "actor": "responsible",
+        "executor": "runtime-executor",
+        "swarm_id": "swarm-1",
+        "work_id": "work-1",
+        "roles": ["builder"],
+        "integration": "generic",
+        "provider": "internal-gateway",
+        "model": "local-model",
+        "execution_profile": "balanced",
+        "status": "completed",
+        "path": ".agora/sessions/session-1",
+        "context_path": ".agora/sessions/session-1/CONTEXT.md",
+        "launch_command": ["runner"],
+        "runtime_available": True,
+        "created_at": "2026-09-20T00:00:00Z",
+    }
+    values.update(changes)
+    return SessionRecord(**values)
+
+
+def test_core_session_mapping_preserves_authority_and_marks_gaps_unavailable():
+    provenance = from_core_session(core_session())
+    assert provenance.actor == "runtime-executor"
+    assert (provenance.runtime.value, provenance.runtime.source) == ("generic", "declared")
+    assert (provenance.provider.value, provenance.provider.source) == ("internal-gateway", "declared")
+    assert (provenance.model.value, provenance.model.source) == ("local-model", "declared")
+    assert provenance.runtime_version.source == "unavailable"
+    assert provenance.selection_reason.source == "unavailable"
+    assert provenance.fallback_source == "unavailable"
+
+
+def test_core_usage_resolves_provenance_through_authoritative_session_link():
+    session = core_session()
+    usage = UsageRecord(
+        id="usage-1",
+        swarm_id="swarm-1",
+        work_id="work-1",
+        actor="runtime-executor",
+        amounts={"tokens": 10},
+        evidence_refs=["repo://evidence"],
+        created_at="2026-09-20T00:00:00Z",
+        path=".agora/usage/usage-1.md",
+        session_id=session.id,
+    )
+    assert from_core_usage(usage, {session.id: session}).provider.value == "internal-gateway"
+    with pytest.raises(ProvenanceError) as exc:
+        from_core_usage(usage, {})
+    assert exc.value.code == "provenance.core_usage"

@@ -1,0 +1,10 @@
+{
+  "schema": "agora-ai-sdlc/provenance/v1",
+  "actor": "builder",
+  "runtime": {"value": "codex", "source": "observed"},
+  "runtime_version": {"value": "1.2.3", "source": "observed"},
+  "provider": {"value": "internal-gateway", "source": "declared"},
+  "model": {"value": "model-a", "source": "declared"},
+  "selection_reason": {"value": "regulated review", "source": "declared"},
+  "fallback": {"source": "observed", "used": false}
+}

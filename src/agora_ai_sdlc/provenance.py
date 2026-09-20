@@ -5,7 +5,9 @@ Every value is `observed` (measured by the platform), `declared` (asserted by a 
 """
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Protocol
 
 SCHEMA = "agora-ai-sdlc/provenance/v1"
 SOURCES = ("observed", "declared", "unavailable")
@@ -43,10 +45,24 @@ class Provenance:
     provider: Value
     model: Value
     selection_reason: Value
-    fallback_used: bool
+    fallback_used: bool | None
+    fallback_source: str
     fallback_from: dict[str, str] | None
     fallback_reason: str | None
     subject: dict | None
+
+
+class CoreSession(Protocol):
+    id: str
+    actor: str
+    executor: str | None
+    integration: str
+    provider: str
+    model: str
+
+
+class CoreUsage(Protocol):
+    session_id: str | None
 
 
 def _scan(node, path: str) -> None:
@@ -111,22 +127,76 @@ def parse(record: dict) -> Provenance:
     actor = record.get("actor")
     if not isinstance(actor, str) or not actor.strip():
         raise ProvenanceError("provenance.actor", "'actor' must be a non-empty string")
-    fallback = record.get("fallback") or {}
-    if set(fallback) - {"used", "from", "reason"}:
-        raise ProvenanceError("provenance.unknown_field", "unknown fallback fields")
-    used = bool(fallback.get("used", False))
-    origin = fallback.get("from")
-    if used:
-        if not isinstance(origin, dict) or not origin.get("provider") or not origin.get("model"):
-            raise ProvenanceError("provenance.fallback", "fallback.from must name the original provider and model")
-        if not str(fallback.get("reason") or "").strip():
-            raise ProvenanceError("provenance.fallback", "fallback.reason is required when a fallback was used")
+    fallback = record.get("fallback")
+    used, fallback_source, origin, fallback_reason = _fallback(fallback)
     return Provenance(
-        actor=actor.strip(), subject=_subject(record), fallback_used=used,
-        fallback_from={k: str(v) for k, v in origin.items()} if used else None,
-        fallback_reason=str(fallback["reason"]).strip() if used else None,
+        actor=actor.strip(), subject=_subject(record), fallback_used=used, fallback_source=fallback_source,
+        fallback_from=origin, fallback_reason=fallback_reason,
         **{name: _value(record, name) for name in FIELDS},
     )  # fmt: skip
+
+
+def _fallback(raw: object) -> tuple[bool | None, str, dict[str, str] | None, str | None]:
+    if raw is None:
+        return None, "unavailable", None, None
+    if not isinstance(raw, dict) or set(raw) - {"source", "used", "from", "reason"}:
+        raise ProvenanceError("provenance.fallback", "fallback must contain source and fallback metadata")
+    source = raw.get("source")
+    if source not in SOURCES:
+        raise ProvenanceError("provenance.source", f"fallback source {source!r} must be one of {', '.join(SOURCES)}")
+    if source == "unavailable":
+        if set(raw) != {"source"}:
+            raise ProvenanceError("provenance.unavailable_value", "unavailable fallback must not carry metadata")
+        return None, source, None, None
+    used = raw.get("used")
+    if not isinstance(used, bool):
+        raise ProvenanceError("provenance.fallback", "fallback.used must be boolean when declared or observed")
+    origin = raw.get("from")
+    reason = raw.get("reason")
+    if not used:
+        if origin is not None or reason is not None:
+            raise ProvenanceError("provenance.fallback", "unused fallback must not carry from or reason")
+        return False, source, None, None
+    if not isinstance(origin, dict) or set(origin) != {"runtime", "provider", "model"}:
+        raise ProvenanceError("provenance.fallback", "fallback.from must name runtime, provider and model")
+    if not all(isinstance(value, str) and value.strip() for value in origin.values()):
+        raise ProvenanceError("provenance.fallback", "fallback.from values must be non-empty strings")
+    if not isinstance(reason, str) or not reason.strip():
+        raise ProvenanceError("provenance.fallback", "fallback.reason is required when a fallback was used")
+    return True, source, {key: value.strip() for key, value in origin.items()}, reason.strip()
+
+
+def from_core_session(session: CoreSession, *, subject: dict | None = None) -> Provenance:
+    """Map fields Core 0.8 persists; unsupported provenance remains unavailable."""
+    executor = session.executor or session.actor
+    record = {
+        "schema": SCHEMA,
+        "actor": executor,
+        "runtime": {"value": session.integration, "source": "declared"},
+        "runtime_version": {"source": "unavailable"},
+        "provider": {"value": session.provider, "source": "declared"},
+        "model": {"value": session.model, "source": "declared"},
+        "selection_reason": {"source": "unavailable"},
+        "fallback": {"source": "unavailable"},
+    }
+    if subject is not None:
+        record["subject"] = subject
+    return parse(record)
+
+
+def from_core_usage(
+    usage: CoreUsage,
+    sessions: Mapping[str, CoreSession],
+    *,
+    subject: dict | None = None,
+) -> Provenance:
+    """Resolve usage provenance through Core's authoritative session link."""
+    if not usage.session_id:
+        raise ProvenanceError("provenance.core_usage", "Core usage record has no session reference")
+    session = sessions.get(usage.session_id)
+    if session is None:
+        raise ProvenanceError("provenance.core_usage", f"Core session {usage.session_id!r} is unavailable")
+    return from_core_session(session, subject=subject)
 
 
 def normalize(text: str) -> str:

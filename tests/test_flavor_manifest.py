@@ -42,7 +42,9 @@ def test_golden_manifest_is_typed_and_immutable():
 
 
 def test_packaged_manifest_loads():
-    assert load_packaged_manifest().id == "agora-ai-sdlc"
+    manifest = load_packaged_manifest()
+    assert manifest.id == "agora-ai-sdlc"
+    assert manifest.policies == ("independent-review", "model-provenance")
 
 
 @pytest.mark.parametrize("field", ["schema", "id", "name", "version", "supported_core"])

@@ -1,0 +1,29 @@
+schema: agora-ai-sdlc/integration-profile/v1
+id: operational-evidence
+provider: neutral
+core_tool: observability
+default_mode: read-only
+operations:
+  query-metrics: {operation: query-metrics, capability: observability.read, risk: read}
+  service-health: {operation: service-health, capability: observability.read, risk: read}
+required_metrics: [http.error_rate]
+metrics:
+  http.error_rate:
+    unit: percent
+    window: 5m
+    control_band:
+      id: production-http-error-rate
+      mean: 0.5
+      standard_deviation: 0.25
+      diagnose_sigma: 2.0
+      propose_sigma: 4.0
+freshness_seconds: 300
+limits:
+  max_identity_length: 128
+  max_reference_length: 2048
+provider_examples:
+  - cloudwatch
+  - azure-monitor
+  - gcp-monitoring
+  - prometheus
+  - opentelemetry

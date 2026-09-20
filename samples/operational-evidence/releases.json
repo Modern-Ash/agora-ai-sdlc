@@ -1,0 +1,4 @@
+[
+  {"schema":"agora-ai-sdlc/release-observation/v1","provider":"deployment-controller","kind":"deployment","release":"product-2026.09.20","revision":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","environment":"production","status":"success","timestamp":"2026-09-20T15:00:00Z","source":"https://deploy.example/releases/product-2026.09.20"},
+  {"schema":"agora-ai-sdlc/release-observation/v1","provider":"smoke-runner","kind":"smoke-test","release":"product-2026.09.20","revision":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","environment":"production","status":"success","timestamp":"2026-09-20T15:01:00Z","source":"https://smoke.example/runs/product-2026.09.20"}
+]

@@ -8,5 +8,6 @@ Credential-free executable scenarios shipped in the wheel and source distributio
 - `security-findings`: normalized findings, accountable decisions, and security gate evidence.
 - `gitlab-delivery`: read-only GitLab issue, merge-request, and pipeline facts.
 - `jira-work-items`: read-only Jira work-item facts kept separate from Agora lifecycle state.
+- `operational-evidence`: five neutral metric mappings, release readiness, and a governed control-band proposal.
 
 Run one with `agora-ai-sdlc run-sample <name>`.

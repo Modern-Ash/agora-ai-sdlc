@@ -1,0 +1,13 @@
+schema: agora-ai-sdlc/adoption-profile/v1
+id: starter
+depth: standard
+method:
+  id: ai-sdlc
+  version: 0.1.0
+topology:
+  repositories: 1
+  teams: 1
+  max_ai_runtimes: 2
+human_roles: [product-owner, quality-reviewer]
+execution_roles: [architect, builder, operator]
+upgrade_to: [enterprise, modernization, regulated]

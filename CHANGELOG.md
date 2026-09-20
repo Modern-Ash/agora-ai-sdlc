@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add the preview-first Starter profile and deterministic one-team repository bootstrap.
 - Add provider-neutral operational metrics, release readiness, and governed Core control-band proposals.
 - Add read-only-by-default GitLab delivery and Jira work-management follow-on profiles.
 - Add provider-neutral security findings, depth thresholds, and accountable decisions.

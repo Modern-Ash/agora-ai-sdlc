@@ -1,0 +1,15 @@
+{
+  "schema": "agora-ai-sdlc/starter-bootstrap/v1",
+  "profile": "starter",
+  "swarm": "starter-team",
+  "objective": "Deliver the first bounded AI-SDLC pilot",
+  "work": {
+    "id": "first-work",
+    "title": "Deliver the first pilot outcome",
+    "criteria": [{"id": "outcome", "text": "The pilot delivers one reviewed outcome"}]
+  },
+  "runtimes": [
+    {"id": "primary", "integration": "generic", "provider": "local", "model": "simulated"}
+  ],
+  "role_execution": {"architect": "primary", "builder": "primary", "operator": "human"}
+}

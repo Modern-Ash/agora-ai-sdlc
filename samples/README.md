@@ -9,5 +9,6 @@ Credential-free executable scenarios shipped in the wheel and source distributio
 - `gitlab-delivery`: read-only GitLab issue, merge-request, and pipeline facts.
 - `jira-work-items`: read-only Jira work-item facts kept separate from Agora lifecycle state.
 - `operational-evidence`: five neutral metric mappings, release readiness, and a governed control-band proposal.
+- `starter`: preview-first bootstrap of one team, one repository, and the first Unit of Work.
 
 Run one with `agora-ai-sdlc run-sample <name>`.

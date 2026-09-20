@@ -29,7 +29,7 @@ def build_ready(life, skip=None):
     life.stage("build", "built")
     if skip != "criterion":
         life.stage("qa", "verified")
-    for kind in ("implementation", "test-strategy"):
+    for kind in ("implementation-plan", "test-strategy"):
         if skip != kind:
             life.artifact("build", kind)
     if skip != "evidence":
@@ -50,7 +50,7 @@ def test_build_positive(life):
     ("skip", "marker"),
     [
         ("criterion", "required-criterion-stage=verified"),
-        ("implementation", "missing-artifacts=[implementation]"),
+        ("implementation-plan", "missing-artifacts=[implementation-plan]"),
         ("test-strategy", "missing-artifacts=[test-strategy]"),
         ("evidence", "missing-evidence-types=[test-suite]"),
         ("approval", "missing-approvals=[quality-reviewer]"),

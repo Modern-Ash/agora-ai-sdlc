@@ -123,7 +123,7 @@ class Lifecycle:
     def to_operations(self) -> None:
         self.stage("build", "built")
         self.stage("qa", "verified")
-        self.artifact("build", "implementation")
+        self.artifact("build", "implementation-plan")
         self.artifact("build", "test-strategy")
         self.evidence("build", "test-suite")
         self.approve("qa", "quality-reviewer")

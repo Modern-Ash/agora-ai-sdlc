@@ -5,7 +5,8 @@ version: 0.1.0
 supported_core: ">=0.8.2,<0.9"
 method_packs:
   - ai-sdlc
-profiles: []
+profiles:
+  - github-delivery
 policies:
   - data-classification
   - independent-review

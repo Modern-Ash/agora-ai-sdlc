@@ -1,0 +1,35 @@
+{
+  "project": "example/product",
+  "expected_revision": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "issue": {
+    "number": 42,
+    "state": "OPEN",
+    "title": "Deliver governed change",
+    "url": "https://github.com/example/product/issues/42"
+  },
+  "pull_request": {
+    "number": 56,
+    "state": "OPEN",
+    "isDraft": false,
+    "headRefName": "feat/governed-change",
+    "baseRefName": "main",
+    "reviewDecision": "APPROVED",
+    "url": "https://github.com/example/product/pull/56",
+    "statusCheckRollup": [
+      {
+        "name": "verify",
+        "conclusion": "SUCCESS",
+        "detailsUrl": "https://github.com/example/product/actions/runs/9001"
+      }
+    ]
+  },
+  "check_run": {
+    "databaseId": 9001,
+    "workflowName": "verify",
+    "headBranch": "feat/governed-change",
+    "headSha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "status": "completed",
+    "conclusion": "success",
+    "url": "https://github.com/example/product/actions/runs/9001"
+  }
+}

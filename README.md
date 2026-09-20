@@ -23,3 +23,13 @@ uv run pytest
 uv run agora-ai-sdlc --version
 uv build
 ```
+
+## Executable samples
+
+```bash
+uv run agora-ai-sdlc run-sample new-product
+uv run agora-ai-sdlc run-sample github-delivery
+```
+
+The [GitHub delivery profile](docs/integrations/github.md) is read-only by default and uses Agora
+Core's reviewed CLI Tool Packs without requiring credentials for its offline sample.

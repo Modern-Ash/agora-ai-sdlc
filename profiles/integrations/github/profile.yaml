@@ -1,0 +1,38 @@
+schema: agora-ai-sdlc/integration-profile/v1
+id: github-delivery
+provider: github
+default_mode: read-only
+adapters: [github-issues, github-pull-requests, github-actions]
+read_roles:
+  product-owner: [issue.read]
+  builder: [review.read]
+  quality-reviewer: [review.read, ci.read]
+modes:
+  read-only:
+    capabilities: [issue.read, review.read, ci.read]
+  delivery-write:
+    capabilities: [issue.write, issue.transition, review.write, review.decide, ci.run]
+    confirmation_required: true
+  merge-write:
+    capabilities: [review.merge]
+    confirmation_required: true
+operations:
+  issue-view: {adapter: github-issues, operation: view, capability: issue.read, risk: read}
+  issue-create: {adapter: github-issues, operation: create, capability: issue.write, risk: write}
+  issue-comment: {adapter: github-issues, operation: comment, capability: issue.write, risk: write}
+  issue-transition: {adapter: github-issues, operation: transition, capability: issue.transition, risk: write}
+  pull-request-view: {adapter: github-pull-requests, operation: view, capability: review.read, risk: read}
+  pull-request-checks: {adapter: github-pull-requests, operation: checks, capability: review.read, risk: read}
+  pull-request-create: {adapter: github-pull-requests, operation: create, capability: review.write, risk: write}
+  pull-request-comment: {adapter: github-pull-requests, operation: comment, capability: review.write, risk: write}
+  pull-request-approve: {adapter: github-pull-requests, operation: approve, capability: review.decide, risk: write}
+  pull-request-request-changes: {adapter: github-pull-requests, operation: request-changes, capability: review.decide, risk: write}
+  pull-request-merge: {adapter: github-pull-requests, operation: merge, capability: review.merge, risk: destructive}
+  check-run-view: {adapter: github-actions, operation: view-run, capability: ci.read, risk: read}
+  workflow-list-runs: {adapter: github-actions, operation: list-runs, capability: ci.read, risk: read}
+  workflow-trigger: {adapter: github-actions, operation: trigger, capability: ci.run, risk: write}
+evidence:
+  unit_of_work: github-issue-url
+  implementation: github-pull-request-url
+  review: github-pull-request-review-decision
+  verification: github-actions-run-url-at-commit

@@ -20,12 +20,26 @@ def main(argv: list[str] | None = None) -> int:
     show.add_argument("depth", nargs="?", default=DEFAULT)
     sample = sub.add_parser("run-sample", help="Run a bundled credential-free sample and print a JSON summary")
     sample.add_argument("name")
+    self_test = sub.add_parser("self-test", help="Verify all bundled AI-SDLC assets in temporary repositories")
+    self_test.add_argument("--json", action="store_true", help="Print the schema-versioned result as JSON")
     starter = sub.add_parser("starter-bootstrap", help="Preview and apply the Starter profile")
     starter.add_argument("--config", required=True)
     starter.add_argument("--target", required=True)
     starter.add_argument("--home", required=True)
     starter.add_argument("--yes", action="store_true", help="Apply the preview non-interactively")
     args = parser.parse_args(argv)
+    if args.command == "self-test":
+        from agora_ai_sdlc.conformance import run_self_test
+
+        summary = run_self_test(progress=lambda message: print(f"[self-test] {message}", file=sys.stderr))
+        if args.json:
+            print(json.dumps(summary, sort_keys=True))
+        else:
+            outcome = "passed" if summary["ok"] else "failed"
+            print(f"AI-SDLC self-test {outcome}: {len(summary['checks'])} checks")
+            if summary["workspace"]:
+                print(f"Diagnostic workspace: {summary['workspace']}")
+        return 0 if summary["ok"] else 1
     if args.command == "starter-bootstrap":
         config = json.loads(Path(args.config).read_text(encoding="utf-8"))
         target, home = Path(args.target), Path(args.home)

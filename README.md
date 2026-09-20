@@ -21,6 +21,7 @@ uv sync
 uv run python scripts/verify_all.py   # full verification
 uv run pytest
 uv run agora-ai-sdlc --version
+uv run agora-ai-sdlc self-test --json
 uv build
 ```
 

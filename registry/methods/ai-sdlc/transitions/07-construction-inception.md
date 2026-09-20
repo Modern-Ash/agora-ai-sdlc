@@ -3,6 +3,7 @@ schema: "agora/transition/v1"
 from: "construction"
 to: "inception"
 roles: ["architect"]
+gate: "rework-recorded"
 ---
 
 # Rework design

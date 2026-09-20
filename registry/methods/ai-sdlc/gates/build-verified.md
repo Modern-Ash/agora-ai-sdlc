@@ -4,12 +4,13 @@ id: "build-verified"
 require-all-criteria: true
 required-criterion-stage: "verified"
 require-required-artifacts: true
-required-artifacts: []
+required-artifacts: ["implementation", "test-strategy"]
 require-successful-evidence: true
+required-evidence-types: ["test-suite"]
 required-approval-roles: ["quality-reviewer"]
 require-resolved-clarifications: false
 ---
 
 # build-verified
 
-Operations cannot begin until every criterion is verified, successful evidence exists and the Quality Reviewer approves.
+Operations cannot begin until an `implementation` and a `test-strategy` artifact are registered, every criterion is `verified`, a successful `test-suite` evidence record exists in the current revision, and the Quality Reviewer approves. Failed or absent test evidence blocks. A later successful record supersedes an earlier failure, so record failures too: the history stays auditable.

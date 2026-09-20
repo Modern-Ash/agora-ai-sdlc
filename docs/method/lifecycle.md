@@ -38,3 +38,14 @@ Templates: [readiness-assessment](../../templates/readiness-assessment.md), [pro
 Blockers are Core's gate report, e.g. `missing-artifacts=[intent]`, `missing-approvals=[architect]`, `required-criterion-stage=designed`, `clarifications=[clarification-inputs-stale]`.
 
 Limits in Core 0.8.2 (verified by tests): approvals are per work revision, not per gate, so an earlier Product Owner approval satisfies later gates; the "same Unit of Work revision" binding is only the work revision (reopen clears artifacts, approvals and criteria); profile-specific obligations are not yet composed (issue #20).
+
+## Late gates (issue #18)
+
+Issue #18 names three gates for two transitions, so `operational-readiness` is folded into `completion` (same approach as #17).
+
+- `build-verified` (construction -> operations): `implementation` and `test-strategy` artifacts, criteria `verified`, successful `test-suite` evidence, Quality Reviewer approval.
+- `completion` (operations -> completed): `deployment-plan`, `rollback-procedure`, `operational-readiness` artifacts, criteria `accepted`, successful `deployment` and `security-scan` evidence, Product Owner approval (acceptance and accountable actor are recorded in the approvals register).
+
+Templates: [test-strategy](../../templates/test-strategy.md), [deployment-plan](../../templates/deployment-plan.md), [rollback-procedure](../../templates/rollback-procedure.md), [operational-readiness](../../templates/operational-readiness.md).
+
+Limits in Core 0.8.2: gates check evidence type and result, not findings, so "no open blocking findings" is enforced only as a successful `security-scan` evidence record; a later success supersedes an earlier failure. Severity/profile-based blocking belongs to profiles (#20). Evidence is bound to the current revision because reopening clears it; artifact content, and "acceptance of outcomes" beyond an approval by the accountable role, are not machine-checked.

@@ -3,7 +3,7 @@ schema: "agora/transition/v1"
 from: "intent"
 to: "inception"
 roles: ["product-owner", "architect"]
-gate: "intent-approved"
+gate: "intent-framed"
 ---
 
 # Approve intent

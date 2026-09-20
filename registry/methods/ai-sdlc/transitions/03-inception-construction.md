@@ -3,7 +3,7 @@ schema: "agora/transition/v1"
 from: "inception"
 to: "construction"
 roles: ["architect"]
-gate: "design-approved"
+gate: "architecture-approved"
 ---
 
 # Approve design

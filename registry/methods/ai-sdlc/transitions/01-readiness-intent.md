@@ -3,7 +3,7 @@ schema: "agora/transition/v1"
 from: "readiness"
 to: "intent"
 roles: ["product-owner"]
-gate: "readiness-cleared"
+gate: "readiness-approved"
 ---
 
 # Clear readiness

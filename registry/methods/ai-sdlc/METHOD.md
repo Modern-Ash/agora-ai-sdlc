@@ -22,9 +22,9 @@ Lifecycle: `readiness -> intent -> inception -> construction -> operations -> co
 
 ## Gates
 
-- **readiness-cleared** (readiness to intent): a `readiness-brief` artifact is registered and no clarification is open.
-- **intent-approved** (intent to inception): an `intent` artifact is registered, every criterion has reached `elaborated`, and the Product Owner has approved.
-- **design-approved** (inception to construction): `architecture` and `domain-model` artifacts are registered, every criterion has reached `designed`, and the Architect and Product Owner have approved.
+- **readiness-approved** (readiness to intent): a `readiness-assessment` artifact is registered, no clarification is open, and the Product Owner has approved.
+- **intent-framed** (intent to inception): an `intent` artifact is registered, every criterion has reached `elaborated`, and the Product Owner has approved.
+- **architecture-approved** (inception to construction): `requirements` and `architecture` artifacts are registered, every criterion has reached `designed`, and the Architect and Product Owner have approved.
 - **build-verified** (construction to operations): every criterion has reached `verified`, successful evidence exists, and the Quality Reviewer has approved.
 - **completion** (operations to completed): every criterion has reached `accepted`, deployment evidence exists, and the Product Owner has approved.
 

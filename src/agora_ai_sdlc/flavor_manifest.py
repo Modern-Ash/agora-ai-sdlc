@@ -4,7 +4,6 @@ import re
 from dataclasses import dataclass
 from importlib import metadata, resources
 from pathlib import Path
-from typing import Any
 
 import yaml
 from packaging.specifiers import InvalidSpecifier, SpecifierSet
@@ -77,8 +76,11 @@ def parse_manifest(contents: str) -> FlavorManifest:
     if "metadata" in data and not isinstance(data["metadata"], dict):
         raise ManifestError("manifest.type", "'metadata' must be a mapping")
     return FlavorManifest(
-        id=data["id"], name=data["name"], version=data["version"],
-        supported_core=data["supported_core"], **lists,
+        id=data["id"],
+        name=data["name"],
+        version=data["version"],
+        supported_core=data["supported_core"],
+        **lists,
     )
 
 

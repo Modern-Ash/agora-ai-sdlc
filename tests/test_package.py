@@ -22,7 +22,13 @@ def test_unknown_flag_fails():
 
 def test_module_importable_without_provider_sdk():
     out = subprocess.run(
-        [sys.executable, "-c", "import sys, agora_ai_sdlc; print([m for m in sys.modules if m.split('.')[0] in ('openai','anthropic')])"],
-        capture_output=True, text=True, check=True,
+        [
+            sys.executable,
+            "-c",
+            "import sys, agora_ai_sdlc; print([m for m in sys.modules if m.split('.')[0] in ('openai','anthropic')])",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout
     assert out.strip() == "[]"

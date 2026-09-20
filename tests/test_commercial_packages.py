@@ -11,6 +11,7 @@ PACKAGES = {
     "enterprise-adoption.md": "enterprise-adoption",
     "modernization.md": "legacy-modernization",
 }
+REFERENCE_DOCS = {"reference-architecture.md", "security-and-responsibility.md"}
 REQUIRED_HEADINGS = {
     "Customer problem",
     "Entry criteria and prerequisites",
@@ -49,7 +50,11 @@ def manifest_assets() -> dict[str, set[str]]:
 
 
 def test_package_set_and_implemented_asset_claims_match_release_manifest():
-    assert {path.name for path in COMMERCIAL.glob("*.md")} == {*PACKAGES, "README.md"}
+    assert {path.name for path in COMMERCIAL.glob("*.md")} == {
+        *PACKAGES,
+        *REFERENCE_DOCS,
+        "README.md",
+    }
     available = manifest_assets()
     for name, package_id in PACKAGES.items():
         front, _body = document(name)

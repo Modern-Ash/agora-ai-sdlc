@@ -9,6 +9,11 @@ Modern Ash offers bounded consulting and implementation services around the open
 | [Enterprise Adoption](enterprise-adoption.md) | Governed multi-project rollout using signed project-local snapshots | Self-managed rollout |
 | [Legacy Modernization](modernization.md) | One characterized, traced modernization slice | Bounded migration increment |
 
+Cross-package procurement references:
+
+- [Vendor-neutral reference architecture](reference-architecture.md): logical boundaries, deployment patterns, replacement points, failure recovery, and optional cloud/on-premises mappings.
+- [Security and shared responsibility](security-and-responsibility.md): control-by-control distinction between Agora enforcement, deployment evidence, customer operation, and provider duties.
+
 ## Software and services boundary
 
 Repository software and documentation remain available under [Apache License 2.0](../../LICENSE). The license does not include consulting labor, implementation, training, customer-specific configuration, operational support, provider/cloud charges, or a managed service. Purchasing services does not change the open-source license, and using the software does not require purchasing services.

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Publish the cross-repository AI-SDLC Studio projection v1 contract, fixtures, ownership map, and compatibility table.
 - Add the Regulated profile with Core-signed critical actions, segregation controls, observed provenance, and immutable exception and retention metadata.
 - Add the Modernization profile with explicit legacy unknowns, incremental slice traceability, equivalence and cutover gates.
 - Add the Enterprise profile with signed project registries, inherited policy validation, provenance, and previewable upgrades.

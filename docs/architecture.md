@@ -28,6 +28,7 @@ flowchart TB
 - **Policies**: producer/reviewer separation, data classification and runtime eligibility, budgets and fallback, provenance.
 - **Profiles**: the implemented Starter, Enterprise, Modernization and Regulated adoption profiles compose shared assets without forking Core. Enterprise delegates registry trust and transactions to Core; Modernization evaluates additional artifact/evidence obligations before delegating transitions; Regulated delegates actor identity, signatures, stale preconditions and lifecycle mutation to Core while the flavor owns segregation, provenance completeness and exception/retention metadata.
 - **Integrations**: the implemented GitHub and GitLab delivery, Jira work-management, generic CI/CD, security-finding, and operational-evidence profiles compose Core's provider-neutral Tool Pack, evidence, control-band, and structured-finding operations. External systems remain operational sources, while Core remains lifecycle authority.
+- **Studio projection**: the [AI-SDLC projection v1](integrations/studio-projection.md) composes versioned Core read DTOs with flavor-owned policy projections behind a Core application-service boundary. Browser requests use server-issued selection ids, never filesystem paths; presentation hints are explicitly non-authoritative.
 
 ## Allowed dependencies
 

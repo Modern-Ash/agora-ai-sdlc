@@ -1,0 +1,96 @@
+[
+  {
+    "finding": {
+      "schema": "agora-ai-sdlc/security-finding/v1",
+      "id": "sast-auth-001",
+      "category": "sast",
+      "severity": "high",
+      "rule": "authz/missing-check",
+      "summary": "Authorization check is missing on a protected path.",
+      "location": "src/api.py:42",
+      "scanner": "code-scanner-a",
+      "scanner_finding_id": "A-101",
+      "report_ref": "https://security.example.com/reports/change-42/findings/A-101"
+    },
+    "decision": {
+      "kind": "resolved",
+      "actor": "security",
+      "actor_kind": "human",
+      "role": "security-reviewer",
+      "reason": "Authorization middleware now covers the protected path.",
+      "evidence_ref": "https://governance.example.com/security/decisions/change-42"
+    }
+  },
+  {
+    "finding": {
+      "schema": "agora-ai-sdlc/security-finding/v1",
+      "id": "dependency-lib-002",
+      "category": "dependency",
+      "severity": "critical",
+      "rule": "CVE-2099-0002",
+      "summary": "A transitive dependency requires temporary risk treatment.",
+      "location": "uv.lock",
+      "scanner": "dependency-scanner-b",
+      "scanner_finding_id": "B-202",
+      "report_ref": "https://security.example.com/reports/change-42/findings/B-202"
+    },
+    "decision": {
+      "kind": "accepted-risk",
+      "actor": "governance",
+      "actor_kind": "human",
+      "role": "governance-owner",
+      "reason": "Compensating controls are approved until the upstream release.",
+      "evidence_ref": "https://governance.example.com/security/decisions/change-42"
+    }
+  },
+  {
+    "finding": {
+      "schema": "agora-ai-sdlc/security-finding/v1",
+      "id": "secret-example-003",
+      "category": "secret",
+      "severity": "medium",
+      "rule": "secret/test-placeholder",
+      "summary": "A redacted test placeholder matched the secret pattern.",
+      "location": "tests/fixtures/redacted.txt:3",
+      "scanner": "secret-scanner-c",
+      "scanner_finding_id": "C-303",
+      "report_ref": "https://security.example.com/reports/change-42/findings/C-303"
+    },
+    "decision": {
+      "kind": "false-positive",
+      "actor": "security",
+      "actor_kind": "human",
+      "role": "security-reviewer",
+      "reason": "The fixture contains a documented redacted placeholder, not a credential.",
+      "evidence_ref": "https://governance.example.com/security/decisions/change-42"
+    }
+  },
+  {
+    "finding": {
+      "schema": "agora-ai-sdlc/security-finding/v1",
+      "id": "container-hardening-004",
+      "category": "container",
+      "severity": "low",
+      "rule": "container/non-root-metadata",
+      "summary": "Container metadata omits an optional hardening annotation.",
+      "location": "Containerfile:8",
+      "scanner": "container-scanner-d",
+      "scanner_finding_id": "D-404",
+      "report_ref": "https://security.example.com/reports/change-42/findings/D-404"
+    }
+  },
+  {
+    "finding": {
+      "schema": "agora-ai-sdlc/security-finding/v1",
+      "id": "iac-tag-005",
+      "category": "iac",
+      "severity": "low",
+      "rule": "iac/recommended-tag",
+      "summary": "A non-production resource omits a recommended ownership tag.",
+      "location": "infra/main.tf:17",
+      "scanner": "iac-scanner-e",
+      "scanner_finding_id": "E-505",
+      "report_ref": "https://security.example.com/reports/change-42/findings/E-505"
+    }
+  }
+]

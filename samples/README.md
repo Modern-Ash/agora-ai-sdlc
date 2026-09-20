@@ -10,5 +10,6 @@ Credential-free executable scenarios shipped in the wheel and source distributio
 - `jira-work-items`: read-only Jira work-item facts kept separate from Agora lifecycle state.
 - `operational-evidence`: five neutral metric mappings, release readiness, and a governed control-band proposal.
 - `starter`: preview-first bootstrap of one team, one repository, and the first Unit of Work.
+- `enterprise`: signed project-registry install and transactional upgrade with provenance and recovery metadata.
 
 Run one with `agora-ai-sdlc run-sample <name>`.

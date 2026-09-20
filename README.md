@@ -35,6 +35,7 @@ uv run agora-ai-sdlc run-sample gitlab-delivery
 uv run agora-ai-sdlc run-sample jira-work-items
 uv run agora-ai-sdlc run-sample operational-evidence
 uv run agora-ai-sdlc run-sample starter
+uv run agora-ai-sdlc run-sample enterprise
 ```
 
 The [GitHub delivery profile](docs/integrations/github.md) is read-only by default and uses Agora
@@ -47,3 +48,4 @@ The [GitLab and Jira profiles](docs/integrations/gitlab-jira.md) reuse the same 
 keep writes opt-in, and reconcile external facts without changing Agora lifecycle meaning.
 The [operational-evidence profile](docs/integrations/observability.md) maps optional monitoring sources to fresh release evidence and deterministic Core control bands without production mutation.
 The [Starter profile](docs/profiles/starter.md) previews and bootstraps a one-team repository with explicit human accountability and at most two declared AI runtimes.
+The [Enterprise profile](docs/profiles/enterprise.md) validates inherited organization policy and consumes signed registries as project-local snapshots with Core provenance and transactional updates.

@@ -1,0 +1,25 @@
+schema: agora-ai-sdlc/adoption-profile/v1
+id: enterprise
+extends: starter
+depth: comprehensive
+method:
+  id: ai-sdlc
+  version: 0.1.0
+topology:
+  repositories: multiple
+  teams: multiple
+registry:
+  scope: project
+  checksum: sha256
+  signature: ed25519
+  minimum_signature_threshold: 1
+  immutable_snapshot: true
+  provenance_record: SOURCE.md
+upgrade:
+  preview_required: true
+  transactional_apply: core
+  rollback_strategy: signed-forward-release
+organization_policy_fields: [registry, allowed_providers, budget_ceilings, required_metrics]
+project_customization_fields: [project_id, providers, budgets, exported_metrics, exceptions]
+exception_required_fields: [id, policy, reason, approved_by, expires_at, evidence]
+

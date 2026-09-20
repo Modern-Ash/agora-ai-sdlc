@@ -1,0 +1,7 @@
+[
+  {"provider":"cloudwatch","payload":{"MetricName":"HTTPErrorRate","Average":0.75,"Unit":"Percent","Period":300,"Environment":"production","Timestamp":"2026-09-20T15:00:00Z","DashboardUrl":"https://console.aws.example/metrics/http-error-rate"}},
+  {"provider":"azure-monitor","payload":{"name":"http.error_rate","average":0.75,"unit":"percent","timeGrain":"PT5M","environment":"production","timestamp":"2026-09-20T15:00:00Z","portalUrl":"https://portal.azure.example/metrics/http-error-rate"}},
+  {"provider":"gcp-monitoring","payload":{"metric":{"type":"custom.googleapis.com/http/error_rate"},"point":{"value":{"doubleValue":0.75},"interval":{"startTime":"2026-09-20T14:55:00Z","endTime":"2026-09-20T15:00:00Z"}},"unit":"%","environment":"production","source":"https://console.cloud.google.example/monitoring/http-error-rate"}},
+  {"provider":"prometheus","payload":{"metric":{"__name__":"http_error_rate","environment":"production"},"value":[1789916400,"0.75"],"unit":"percent","window":"5m","source":"https://prometheus.example/graph/http-error-rate"}},
+  {"provider":"opentelemetry","payload":{"name":"http.error_rate","value":0.75,"unit":"%","start_time_unix_nano":1789916100000000000,"time_unix_nano":1789916400000000000,"attributes":{"deployment.environment.name":"production"},"source":"https://otel.example/metrics/http-error-rate"}}
+]

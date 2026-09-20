@@ -11,6 +11,7 @@ profiles:
   - security-findings
   - gitlab-delivery
   - jira-work-management
+  - operational-evidence
 policies:
   - data-classification
   - independent-review

@@ -44,6 +44,8 @@ def test_self_test_discovers_assets_exercises_roles_and_does_not_touch_caller(mo
     assert result["assets"]["methods"] == ["ai-sdlc"]
     assert result["assets"]["samples"] == sorted(path.parent.name for path in (ROOT / "samples").glob("*/run.py"))
     assert set(result["assets"]["profiles"]) >= {
+        "compatibility/aws-original",
+        "compatibility/lg-enterprise",
         "depth/minimal",
         "depth/standard",
         "depth/comprehensive",

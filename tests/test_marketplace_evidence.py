@@ -14,16 +14,16 @@ def test_generated_marketplace_matrix_is_deterministic_and_current():
     assert first == second
     assert (ROOT / marketplace_evidence.GENERATED_RELATIVE).read_text(encoding="utf-8") == first
     assert "| Evidence dimension | AWS-original | LG-enterprise | Agora-open |" in first
-    assert "**TARGET_ONLY**" in first
+    assert "risk-issue-management" in first
     assert "recursive-planning" in first
     assert "additive governance only" in first
 
 
-def test_matrix_preserves_lg_target_boundary_and_aws_gaps():
+def test_matrix_preserves_lg_public_boundary_and_aws_gaps():
     rendered = marketplace_evidence.generate(ROOT)
 
-    assert "LG-enterprise currently represents a public compatibility target only" in rendered
-    assert "TARGET_ONLY must not be rewritten as PASS" in rendered
+    assert "LG-enterprise statuses come from the repository-derived public-profile provider" in rendered
+    assert "no proprietary LG behavior is inferred" in rendered
     assert "PARTIAL/FAIL remain visible" in rendered
     assert "Agora-specific governance is never counted as AWS-original fidelity" in rendered
 

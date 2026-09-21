@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+from importlib import metadata
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -49,8 +50,8 @@ def run_doctor(root: Path) -> tuple[tuple[DoctorCheck, ...], tuple[RuntimeDiscov
     try:
         core_version = installed_core_version()
         checks.append(DoctorCheck("agora-core", True, core_version))
-    except Exception as error:
-        checks.append(DoctorCheck("agora-core", False, error.__class__.__name__))
+    except metadata.PackageNotFoundError:
+        checks.append(DoctorCheck("agora-core", False, "not installed"))
 
     checks.append(DoctorCheck("agora-ai-sdlc", True, __version__))
     checks.append(_tool_check("git"))

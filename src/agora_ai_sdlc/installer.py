@@ -31,6 +31,7 @@ from agora_ai_sdlc.flavor_manifest import (
 )
 from agora_ai_sdlc.guided import skill_path
 from agora_ai_sdlc.profile_activation import adoption_profiles
+from agora_ai_sdlc.runtime_discovery import discover_runtimes, render_runtimes
 
 SCHEMA = "agora-ai-sdlc/install-config/v1"
 PROJECT_SCHEMA = "agora-ai-sdlc/project-config/v1"
@@ -300,6 +301,8 @@ def _write_project_metadata(target: Path, normalized: dict) -> None:
         "integrations": normalized["integrations"],
         "profile": normalized["profile"],
         "depth": normalized["depth"],
+        "runtimes": normalized["runtimes"],
+        "role_execution": normalized["role_execution"],
     }
     (directory / "project.yaml").write_text(
         yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
@@ -494,6 +497,10 @@ def wizard(
         ("new-product", "brownfield", "refactor", "regulated-change", "scaling", "trivial-change"),
         "brownfield" if existing else "new-product",
     )
+
+    detected = discover_runtimes(target)
+    output_fn(render_runtimes(detected))
+    output_fn("Select only the runtimes you want to enable; detection does not configure them.")
 
     integrations = []
     for integration in OPTIONAL_INTEGRATIONS:

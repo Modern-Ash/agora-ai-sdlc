@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from agora_ai_sdlc.artifacts import Artifact, ArtifactError, parse_artifact
+from agora_ai_sdlc.artifacts import ID_PATTERN, Artifact, ArtifactError, parse_artifact
 
 APPROVAL_STATES = {"pending", "approved", "rejected"}
 DECISIONS = {"execute", "skip"}
@@ -123,10 +123,10 @@ def parse_plan(text: str) -> Plan:
         raise PlanError("plan.parent_required", "Level N plan must declare parent-plan")
 
     intent = _non_empty(front.get("intent"), "intent")
-    if not intent.startswith("INT-"):
+    if not ID_PATTERN.fullmatch(intent) or not intent.startswith("INT-"):
         raise PlanError("plan.intent", "intent must reference an INT-NNN artifact")
     unit = _optional_string(front.get("unit"), "unit")
-    if unit is not None and not unit.startswith("UOW-"):
+    if unit is not None and (not ID_PATTERN.fullmatch(unit) or not unit.startswith("UOW-")):
         raise PlanError("plan.unit", "unit must reference a UOW-NNN artifact")
 
     proposed_by = _non_empty(front.get("proposed-by"), "proposed-by")
@@ -171,6 +171,10 @@ def parse_plan(text: str) -> Plan:
         seen.add(parsed.id)
         steps.append(parsed)
 
+    if intent not in artifact.traces_to:
+        raise PlanError("plan.intent_trace", "intent must appear in traces-to")
+    if unit is not None and unit not in artifact.traces_to:
+        raise PlanError("plan.unit_trace", "unit must appear in traces-to")
     if parent is not None and parent not in artifact.traces_to:
         raise PlanError("plan.parent_trace", "parent-plan must also appear in traces-to")
 

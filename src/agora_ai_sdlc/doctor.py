@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import shutil
 import subprocess
-from importlib import metadata
 from dataclasses import dataclass
+from importlib import metadata
 from pathlib import Path
 
 from agora.workspace import AgoraWorkspace

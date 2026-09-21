@@ -38,6 +38,7 @@ class AwsOriginalRuleError(ValueError):
 @dataclass(frozen=True)
 class FidelityRule:
     capability: str
+    classification: str
     pass_checks: tuple[dict, ...]
     partial_checks: tuple[dict, ...]
     evidence: tuple[str, ...]
@@ -47,6 +48,7 @@ class FidelityRule:
 @dataclass(frozen=True)
 class AdditiveGovernanceRule:
     id: str
+    classification: str
     checks: tuple[dict, ...]
     evidence: tuple[str, ...]
     reason: str
@@ -184,6 +186,7 @@ def parse_rules(contents: str) -> AwsOriginalRules:
         base.append(
             FidelityRule(
                 capability=capability,
+                classification="base-method",
                 pass_checks=_checks(raw["pass"], f"base_rules[{index}].pass"),
                 partial_checks=_checks(raw["partial"], f"base_rules[{index}].partial", allow_empty=True),
                 evidence=evidence,
@@ -222,6 +225,7 @@ def parse_rules(contents: str) -> AwsOriginalRules:
         additive.append(
             AdditiveGovernanceRule(
                 id=rule_id,
+                classification="agora-additive",
                 checks=_checks(raw["checks"], f"additive_governance[{index}].checks"),
                 evidence=evidence,
                 reason=reason,

@@ -48,7 +48,7 @@ def blocker_codes(result):
 
 def test_profile_composes_base_lifecycle_with_incremental_gate_obligations():
     profile = load_profile()
-    assert profile["extends"] == "starter" and profile["method"] == {"id": "ai-sdlc", "version": "0.1.0"}
+    assert profile["extends"] == "starter" and profile["method"] == {"id": "ai-sdlc", "version": "0.1.1"}
     assert profile["strategy"] == "incremental-slices"
     assert profile["gate_obligations"]["build-verified"]["evidence"] == ["behavioral-equivalence"]
     assert profile["gate_obligations"]["completion"]["evidence"] == [

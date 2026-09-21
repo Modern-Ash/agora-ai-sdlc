@@ -109,3 +109,18 @@ def test_core_rejects_broken_pack(tmp_path):
         check=False,
     )
     assert result.returncode != 0
+
+
+def test_product_owner_can_read_external_issue_backlog():
+    role = front(PACK / "roles" / "product-owner.md")
+    capabilities = set(role["allowed-tool-capabilities"])
+    assert "issue.read" in capabilities
+    assert "issue.write" not in capabilities
+    assert "issue.transition" not in capabilities
+
+
+def test_ai_orchestrator_does_not_gain_issue_write_authority():
+    role = front(PACK / "roles" / "ai-orchestrator.md")
+    capabilities = set(role["allowed-tool-capabilities"])
+    assert "issue.write" not in capabilities
+    assert "issue.transition" not in capabilities

@@ -3,7 +3,7 @@ id: starter
 depth: standard
 method:
   id: ai-sdlc
-  version: 0.1.0
+  version: 0.1.1
 topology:
   repositories: 1
   teams: 1

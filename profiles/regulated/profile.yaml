@@ -4,7 +4,7 @@ extends: enterprise
 depth: regulated
 method:
   id: ai-sdlc
-  version: 0.1.0
+  version: 0.1.1
 critical_actions:
   - approval.add
   - artifact.add

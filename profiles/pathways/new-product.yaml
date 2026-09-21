@@ -1,0 +1,6 @@
+schema: agora-ai-sdlc/pathway/v1
+id: new-product
+minimum_depth: standard
+mandatory_steps: [clarify-intent, elaborate-stories, define-nfrs, assess-risks, measurement-criteria, decompose-units, domain-design, logical-design, implementation, unit-tests, integration-tests, deployment-unit, deployment, observability, rollback-readiness]
+optional_steps: [threat-model, security-tests, performance-tests]
+forbidden_skips: [clarify-intent, decompose-units, implementation, unit-tests, deployment, observability]

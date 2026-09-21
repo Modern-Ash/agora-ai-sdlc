@@ -114,3 +114,31 @@ def test_conformance_derive_strict_and_provider_errors(tmp_path, capsys):
 
     assert main(["conformance", "lg-enterprise", "--derive", "--root", str(ROOT)]) == 2
     assert "no derived fact provider" in capsys.readouterr().err
+
+
+def test_plan_validate_cli_authorizes_valid_pathway(capsys):
+    root = Path(__file__).parent.parent
+    plan = root / "tests" / "fixtures" / "pathways" / "trivial-change.md"
+
+    assert main(["plan-validate", str(plan), "--pathway", "trivial-change", "--depth", "standard", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["authorized"] is True
+    assert payload["pathway"] == "trivial-change"
+    assert payload["effective_depth"] == "standard"
+    assert payload["lifecycle"] == ["inception", "construction", "operations"]
+
+
+def test_plan_validate_cli_fails_closed_for_stricter_profile(capsys):
+    root = Path(__file__).parent.parent
+    plan = root / "tests" / "fixtures" / "pathways" / "trivial-change.md"
+
+    assert main(["plan-validate", str(plan), "--pathway", "trivial-change", "--profile", "enterprise"]) == 2
+    assert "pathway.mandatory_" in capsys.readouterr().err
+
+
+def test_plan_validate_cli_rejects_unknown_pathway(capsys):
+    root = Path(__file__).parent.parent
+    plan = root / "tests" / "fixtures" / "pathways" / "trivial-change.md"
+
+    assert main(["plan-validate", str(plan), "--pathway", "missing"]) == 2
+    assert "pathway.unknown" in capsys.readouterr().err

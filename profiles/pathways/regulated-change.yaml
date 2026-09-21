@@ -1,0 +1,6 @@
+schema: agora-ai-sdlc/pathway/v1
+id: regulated-change
+minimum_depth: regulated
+mandatory_steps: [clarify-intent, elaborate-stories, define-nfrs, assess-risks, measurement-criteria, decompose-units, domain-design, logical-design, threat-model, implementation, unit-tests, integration-tests, security-tests, performance-tests, deployment-unit, deployment, observability, rollback-readiness]
+optional_steps: []
+forbidden_skips: [clarify-intent, assess-risks, threat-model, security-tests, deployment-unit, deployment, observability, rollback-readiness]

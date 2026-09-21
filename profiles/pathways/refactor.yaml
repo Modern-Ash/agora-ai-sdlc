@@ -1,0 +1,6 @@
+schema: agora-ai-sdlc/pathway/v1
+id: refactor
+minimum_depth: standard
+mandatory_steps: [clarify-intent, assess-risks, domain-design, implementation, unit-tests, integration-tests, deployment, observability]
+optional_steps: [define-nfrs, logical-design, threat-model, security-tests, performance-tests, deployment-unit, rollback-readiness]
+forbidden_skips: [clarify-intent, implementation, unit-tests, deployment, observability]

@@ -16,6 +16,7 @@ from agora.markdown import read_markdown, strings_attribute
 from agora.model import AddActorInput, AddArtifactInput, AssignActorInput, CreateSwarmInput, CreateWorkInput
 
 from agora_ai_sdlc import (
+    adaptive_planning,
     ci_evidence,
     compatibility_profiles,
     enterprise,
@@ -36,6 +37,8 @@ PROFILE_SCHEMAS = {
     "agora-ai-sdlc/integration-profile/v1",
     "agora-ai-sdlc/adoption-profile/v1",
     compatibility_profiles.SCHEMA,
+    adaptive_planning.PATHWAY_SCHEMA,
+    adaptive_planning.POLICY_SET_SCHEMA,
 }
 
 
@@ -79,6 +82,9 @@ def _discover_assets() -> dict[str, list[str]]:
     load_follow_on_profile("jira")
     for profile_id in compatibility_profiles.available_profiles():
         compatibility_profiles.load_profile(profile_id)
+    adaptive_planning.load_policy_set()
+    for pathway_id in adaptive_planning.available_pathways():
+        adaptive_planning.load_pathway(pathway_id)
 
     policies_root = asset_root("policies")
     policy_files = sorted(policies_root.rglob("*.yaml"))

@@ -1,0 +1,49 @@
+schema: agora-ai-sdlc/pathway-policy-set/v1
+id: adaptive-pathways
+version: 1.0.0
+method:
+  id: ai-sdlc
+  version: 0.2.0
+lifecycle: [inception, construction, operations]
+depth_order: [minimal, standard, comprehensive, regulated]
+depth_requirements:
+  minimal: []
+  standard: []
+  comprehensive:
+    - domain-design
+    - logical-design
+    - threat-model
+    - integration-tests
+    - security-tests
+    - performance-tests
+  regulated:
+    - domain-design
+    - logical-design
+    - threat-model
+    - integration-tests
+    - security-tests
+    - performance-tests
+    - deployment-unit
+    - rollback-readiness
+    - observability
+step_vocabulary:
+  - clarify-intent
+  - elaborate-stories
+  - define-nfrs
+  - assess-risks
+  - measurement-criteria
+  - decompose-units
+  - domain-design
+  - logical-design
+  - threat-model
+  - implementation
+  - unit-tests
+  - integration-tests
+  - security-tests
+  - performance-tests
+  - deployment-unit
+  - deployment
+  - observability
+  - rollback-readiness
+  - brownfield-static-model
+  - brownfield-dynamic-model

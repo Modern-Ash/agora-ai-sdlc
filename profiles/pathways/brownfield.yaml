@@ -1,0 +1,6 @@
+schema: agora-ai-sdlc/pathway/v1
+id: brownfield
+minimum_depth: standard
+mandatory_steps: [clarify-intent, assess-risks, brownfield-static-model, brownfield-dynamic-model, domain-design, logical-design, implementation, unit-tests, integration-tests, deployment-unit, deployment, observability, rollback-readiness]
+optional_steps: [elaborate-stories, define-nfrs, measurement-criteria, decompose-units, threat-model, security-tests, performance-tests]
+forbidden_skips: [brownfield-static-model, brownfield-dynamic-model, implementation, unit-tests, deployment, observability]

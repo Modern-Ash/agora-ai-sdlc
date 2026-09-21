@@ -1,12 +1,9 @@
 """Public entry points for the bundled AI-SDLC conformance harness."""
 
-from agora_ai_sdlc.conformance.aws_original import (
-    RULES_SCHEMA as AWS_ORIGINAL_RULES_SCHEMA,
-    AwsOriginalRuleError,
-    derive_additive_governance,
-    derive_facts as derive_aws_original_facts,
-    load_rules as load_aws_original_rules,
-)
+from agora_ai_sdlc.conformance.aws_original import RULES_SCHEMA as AWS_ORIGINAL_RULES_SCHEMA
+from agora_ai_sdlc.conformance.aws_original import AwsOriginalRuleError, derive_additive_governance
+from agora_ai_sdlc.conformance.aws_original import derive_facts as derive_aws_original_facts
+from agora_ai_sdlc.conformance.aws_original import load_rules as load_aws_original_rules
 from agora_ai_sdlc.conformance.compatibility import (
     FACTS_SCHEMA,
     STATUSES,
@@ -25,11 +22,11 @@ from agora_ai_sdlc.conformance.self_test import RESULT_SCHEMA, run_self_test
 
 __all__ = [
     "AWS_ORIGINAL_RULES_SCHEMA",
-    "AwsOriginalRuleError",
     "COMPATIBILITY_RESULT_SCHEMA",
     "FACTS_SCHEMA",
     "RESULT_SCHEMA",
     "STATUSES",
+    "AwsOriginalRuleError",
     "CapabilityFact",
     "CapabilityResult",
     "ConformanceError",

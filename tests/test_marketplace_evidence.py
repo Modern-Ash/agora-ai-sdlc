@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-import agora_ai_sdlc.marketplace_evidence as marketplace_evidence
+from agora_ai_sdlc import marketplace_evidence
 
 ROOT = Path(__file__).parent.parent
 

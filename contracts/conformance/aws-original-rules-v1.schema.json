@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modern-ash.github.io/agora-ai-sdlc/contracts/aws-original-rules-v1.schema.json",
+  "title": "Agora AI-SDLC AWS-original fidelity rules v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "version", "profile", "base_rules", "additive_governance"],
+  "properties": {
+    "schema": {"const": "agora-ai-sdlc/aws-original-rules/v1"},
+    "id": {"const": "aws-original"},
+    "version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "profile": {"const": "aws-original"},
+    "base_rules": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/rule"}
+    },
+    "additive_governance": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/additive"}
+    }
+  },
+  "$defs": {
+    "check": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "path"],
+          "properties": {
+            "type": {"const": "file-exists"},
+            "path": {"type": "string", "minLength": 1}
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "paths"],
+          "properties": {
+            "type": {"const": "files-exist"},
+            "paths": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": "string", "minLength": 1}
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "path", "values"],
+          "properties": {
+            "type": {"const": "file-contains-all"},
+            "path": {"type": "string", "minLength": 1},
+            "values": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {"type": "string", "minLength": 1}
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "path", "field", "values"],
+          "properties": {
+            "type": {"enum": ["front-matter-list-equals", "front-matter-list-contains"]},
+            "path": {"type": "string", "minLength": 1},
+            "field": {"type": "string", "minLength": 1},
+            "values": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {"type": "string"}
+            }
+          }
+        }
+      ]
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capability", "classification", "pass", "partial", "evidence", "remediation"],
+      "properties": {
+        "capability": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+        "classification": {"const": "base-method"},
+        "pass": {"type": "array", "items": {"$ref": "#/$defs/check"}},
+        "partial": {"type": "array", "items": {"$ref": "#/$defs/check"}},
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "remediation": {"type": "string", "minLength": 1}
+      }
+    },
+    "additive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "classification", "checks", "evidence", "reason"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+        "classification": {"const": "agora-additive"},
+        "checks": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/check"}},
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "minLength": 1}
+        },
+        "reason": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

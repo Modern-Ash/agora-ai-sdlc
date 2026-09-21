@@ -54,7 +54,7 @@ def main() -> dict:
     )
 
     profile = load_compatibility_profile("lg-enterprise")
-    report = evaluate_conformance(profile, derive_facts(ROOT), facts_source=FACTS_SOURCE)
+    report = evaluate_conformance(profile, derive_facts(ROOT, packaged_fallback=True), facts_source=FACTS_SOURCE)
     presentation = render("lg-enterprise", "operations")
 
     exercised = {

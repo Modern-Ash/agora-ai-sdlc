@@ -125,7 +125,9 @@ def _component(raw: object, index: int, repositories: set[str]) -> ComponentImpa
         raise ImpactAnalysisError("impact.component_fields", f"components[{index}] has invalid fields")
     repository = _string(raw["repository"], f"components[{index}].repository")
     if repository not in repositories:
-        raise ImpactAnalysisError("impact.repository_unknown", f"component references unknown repository {repository!r}")
+        raise ImpactAnalysisError(
+            "impact.repository_unknown", f"component references unknown repository {repository!r}"
+        )
     return ComponentImpact(
         repository,
         _string(raw["name"], f"components[{index}].name"),
@@ -225,7 +227,9 @@ def parse_impact_analysis(text: str) -> ImpactAnalysis:
     owners = _strings(front.get("owners"), "owners")
     reviewers = _strings(front.get("reviewers"), "reviewers")
     if set(owners) >= set(reviewers):
-        raise ImpactAnalysisError("impact.reviewer_separation", "at least one reviewer must be distinct from all owners")
+        raise ImpactAnalysisError(
+            "impact.reviewer_separation", "at least one reviewer must be distinct from all owners"
+        )
 
     confidence = _string(front.get("confidence"), "confidence")
     if confidence not in CONFIDENCE:

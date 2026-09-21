@@ -216,7 +216,7 @@ def command_plan(decision: GuidedDecision) -> tuple[tuple[str, str], ...]:
                 (
                     "agora approval add "
                     f"--swarm {decision.swarm} --work {decision.work} "
-                    f"--role {approval} --by {actor} --note \"Reviewed and approved\""
+                    f'--role {approval} --by {actor} --note "Reviewed and approved"'
                 ),
                 "Run only after explicit confirmation from the responsible human.",
             )
@@ -269,8 +269,7 @@ def render(
         [
             f"Work: {decision.swarm}/{decision.work}",
             f"Method: {decision.method or 'unknown'}",
-            f"Stage: {decision.state or 'unknown'}"
-            + (f"  ->  {decision.target}" if decision.target else ""),
+            f"Stage: {decision.state or 'unknown'}" + (f"  ->  {decision.target}" if decision.target else ""),
         ]
     )
     if decision.gate:

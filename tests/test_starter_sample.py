@@ -14,4 +14,4 @@ def test_starter_sample_bootstraps_first_work():
     summary = json.loads(result.stdout)
     assert summary["final_state"] == "completed" and summary["validate"] == "ok"
     assert summary["preview_matches"] and summary["first_work_state"] == "readiness"
-    assert summary["method"] == {"id": "ai-sdlc", "version": "0.1.0"}
+    assert summary["method"] == {"id": "ai-sdlc", "version": "0.1.1"}

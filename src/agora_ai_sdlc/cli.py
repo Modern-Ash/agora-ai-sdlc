@@ -211,9 +211,7 @@ def main(argv: list[str] | None = None) -> int:
         home = Path(args.home).expanduser()
         try:
             config = (
-                project_installer.load_config(Path(args.config))
-                if args.config
-                else project_installer.wizard(target)
+                project_installer.load_config(Path(args.config)) if args.config else project_installer.wizard(target)
             )
             if args.write_config:
                 output = Path(args.write_config)

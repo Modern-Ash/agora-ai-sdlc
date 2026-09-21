@@ -3,6 +3,7 @@
 AI-SDLC assets shipped in the wheel and source distribution:
 
 - `depth/`: lifecycle obligation depth profiles.
+- `reviews/`: enterprise review-gate policies for starter, enterprise, and regulated adoption.
 - `pathways/`: adaptive delivery pathway policies over the shared Method Pack 0.2.0 lifecycle.
 - `compatibility/`: versioned AWS-original and LG-enterprise public compatibility projections.
 - `integrations/github/`: offline-first GitHub delivery profile over Agora Core Tool Packs.
@@ -29,3 +30,5 @@ See the [Regulated profile](../docs/profiles/regulated.md) for signed actions, s
 See [compatibility profiles](../docs/reference/compatibility-profiles.md) for canonical mappings, validation and neutrality rules.
 
 Adaptive pathway profiles are documented in [adaptive planning](../docs/method/adaptive-planning.md).
+
+See [enterprise review gates](../docs/policies/enterprise-review-gates.md) for mandatory/optional review policy and independent-review composition.

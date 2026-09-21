@@ -233,12 +233,41 @@ def configure(
     return replace(profile, estimation=replace(profile.estimation, enabled=estimation_enabled))
 
 
+def _validate_facts(facts: ControlFacts) -> None:
+    fields = (
+        ("estimation_metrics", facts.estimation_metrics, ESTIMATION_METRICS),
+        ("test_classes", facts.test_classes, TEST_CLASSES),
+        ("coverage_obligations", facts.coverage_obligations, COVERAGE_OBLIGATIONS),
+        ("reviewer_separation", facts.reviewer_separation, REVIEW_SEPARATION),
+        ("review_evidence", facts.review_evidence, REVIEW_EVIDENCE),
+        ("blocking_findings", facts.blocking_findings, FINDING_SEVERITIES),
+    )
+    for field, values, allowed in fields:
+        if not isinstance(values, tuple) or any(not isinstance(item, str) or not item for item in values):
+            raise EnterpriseControlError(
+                "enterprise-controls.fact_type",
+                f"{field} must be a tuple of non-empty strings",
+            )
+        if len(set(values)) != len(values):
+            raise EnterpriseControlError(
+                "enterprise-controls.fact_duplicate",
+                f"{field} contains duplicate values",
+            )
+        unknown = sorted(set(values) - allowed)
+        if unknown:
+            raise EnterpriseControlError(
+                "enterprise-controls.fact_unknown",
+                f"{field} contains unsupported values: {', '.join(unknown)}",
+            )
+
+
 def _missing(required: tuple[str, ...], actual: tuple[str, ...]) -> list[str]:
     return sorted(set(required) - set(actual))
 
 
 def evaluate(profile: EnterpriseControlProfile, facts: ControlFacts) -> dict:
     """Evaluate configured controls and return deterministic conformance evidence."""
+    _validate_facts(facts)
     results: list[dict] = []
 
     if profile.estimation.enabled:

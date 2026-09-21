@@ -37,6 +37,7 @@ AWS-original has executable repository-derived fidelity rules. LG-enterprise has
 - scripts/check_marketplace_evidence.py
 - scripts/verify_all.py
 - tests/test_marketplace_evidence.py
+- tests/test_marketplace_content.py
 - docs/commercial/marketplace/compatibility-evidence.md
 - docs/commercial/marketplace/README.md
 - docs/commercial/marketplace/listing.md

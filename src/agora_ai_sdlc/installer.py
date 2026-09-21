@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -22,6 +23,12 @@ from agora.workspace import AgoraWorkspace
 from agora_ai_sdlc import profile_activation
 from agora_ai_sdlc.depth_profiles import ORDER as DEPTH_ORDER
 from agora_ai_sdlc.depth_profiles import asset_root
+from agora_ai_sdlc.flavor_manifest import (
+    ManifestError,
+    check_core_compatibility,
+    installed_core_version,
+    load_packaged_manifest,
+)
 from agora_ai_sdlc.profile_activation import adoption_profiles
 
 SCHEMA = "agora-ai-sdlc/install-config/v1"
@@ -62,6 +69,25 @@ def _profile_default_depth(profile: str) -> str:
 
 def _depth_at_least(selected: str, minimum: str) -> bool:
     return DEPTH_ORDER.index(selected) >= DEPTH_ORDER.index(minimum)
+
+
+def core_preflight() -> dict[str, str]:
+    """Verify that the Core package and CLI required by AI-SDLC are usable."""
+
+    try:
+        version = installed_core_version()
+        check_core_compatibility(load_packaged_manifest(), installed=version)
+    except ManifestError as error:
+        raise InstallerError("installer.core.incompatible", str(error)) from error
+
+    executable = shutil.which("agora")
+    if executable is None:
+        raise InstallerError(
+            "installer.core.cli-missing",
+            "Agora Core is installed as a dependency but the 'agora' executable is not available "
+            "in the current environment; reinstall agora-ai-sdlc in the active environment",
+        )
+    return {"version": version, "executable": executable}
 
 
 def validate_config(config: dict) -> dict:
@@ -237,10 +263,12 @@ def render_config(config: dict) -> str:
 
 def preview(config: dict, target: Path) -> dict:
     normalized = validate_config(config)
+    core = core_preflight()
     return {
         "schema": "agora-ai-sdlc/install-preview/v1",
         "target": str(target.resolve()),
         "existing_repository": (target / ".git").is_dir(),
+        "core": core,
         "project": normalized["project"],
         "profile": normalized["profile"],
         "depth": normalized["depth"],
@@ -279,6 +307,7 @@ def _write_project_metadata(target: Path, normalized: dict) -> None:
 
 def apply(config: dict, target: Path, home: Path) -> dict:
     normalized = validate_config(config)
+    core = core_preflight()
     target.mkdir(parents=True, exist_ok=True)
     if not (target / ".git").is_dir():
         subprocess.run(["git", "init", "-q", str(target)], check=True)
@@ -391,10 +420,17 @@ def apply(config: dict, target: Path, home: Path) -> dict:
     work = workspace.show_work(normalized["swarm"], normalized["work"]["id"])
     return {
         **preview(normalized, target),
+        "core": core,
         "validate": "ok" if validation.ok else "failed",
+        "core_validation": "ok" if validation.ok else "failed",
         "work_state": work.state,
         "swarm": normalized["swarm"],
         "work": normalized["work"]["id"],
+        "next_commands": [
+            "agora validate",
+            "agora status --board",
+            "agora continue",
+        ],
     }
 
 

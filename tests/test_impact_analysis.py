@@ -8,6 +8,7 @@ from agora_ai_sdlc.impact_analysis import (
     ImpactAnalysisError,
     affected_repositories,
     assert_approved,
+    enterprise_review_evidence,
     parse_impact_analysis,
     summary,
 )
@@ -52,6 +53,7 @@ def test_multi_repo_impact_analysis_parses_and_summarizes():
         "approved": True,
     }
     assert_approved(analysis)
+    assert enterprise_review_evidence(analysis) == ("approved-impact-analysis",)
 
 
 def test_generic_traceability_accepts_unit_plan_bolt_and_impact_analysis():

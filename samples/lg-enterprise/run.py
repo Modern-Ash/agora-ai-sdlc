@@ -30,6 +30,7 @@ def main() -> dict:
     impact = _run("cross-repo-impact")
     change = _run("change-management")
     knowledge = _run("domain-knowledge")
+    risk_issue = _run("risk-issue-management")
 
     review_policy = load_policy("enterprise")
     review_facts = tuple(
@@ -62,6 +63,7 @@ def main() -> dict:
         "cross-repository-impact": impact["final_state"] == "completed",
         "change-configuration-management": change["final_state"] == "completed",
         "domain-knowledge": knowledge["final_state"] == "completed",
+        "risk-issue-management": risk_issue["final_state"] == "completed" and risk_issue["validate"] == "ok",
         "review-gates": review_result.allowed,
         "enterprise-controls": control_result["allowed"],
         "five-stage-presentation": [stage["id"] for stage in presentation["stages"]]
@@ -71,7 +73,7 @@ def main() -> dict:
     summary = {
         "sample": "lg-enterprise",
         "final_state": "completed" if all(exercised.values()) else "failed",
-        "validate": "ok" if all(exercised.values()) and report.overall_status in {"PASS", "PARTIAL"} else "failed",
+        "validate": "ok" if all(exercised.values()) and report.overall_status == "PASS" else "failed",
         "profile": profile.id,
         "conformance": report.overall_status,
         "facts_source": report.facts_source,

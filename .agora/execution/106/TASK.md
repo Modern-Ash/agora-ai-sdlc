@@ -38,6 +38,7 @@ Cross-repository impact analysis and enterprise review gates are on main. The re
 - tests/test_change_management.py
 - tests/test_domain_knowledge.py
 - tests/test_templates.py
+- tests/security/test_secret_leaks.py
 - tests/fixtures/change-management/**
 - tests/fixtures/domain-knowledge/**
 - samples/change-management/**

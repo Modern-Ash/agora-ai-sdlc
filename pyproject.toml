@@ -30,9 +30,10 @@ packages = ["src/agora_ai_sdlc"]
 "templates" = "agora_ai_sdlc/templates"
 "samples" = "agora_ai_sdlc/samples"
 "contracts" = "agora_ai_sdlc/contracts"
+"skills" = "agora_ai_sdlc/skills"
 
 [tool.hatch.build.targets.sdist]
-include = ["src", "registry", "profiles", "policies", "templates", "samples", "contracts", "tests", "docs", "README.md", "LICENSE", "CHANGELOG.md"]
+include = ["src", "registry", "profiles", "policies", "templates", "samples", "contracts", "skills", "tests", "docs", "README.md", "LICENSE", "CHANGELOG.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

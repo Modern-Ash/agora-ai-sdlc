@@ -65,8 +65,21 @@ def parse_descriptor(contents: str) -> DomainKnowledgeSource:
     if not isinstance(data, dict):
         raise DomainKnowledgeError("knowledge.syntax", "descriptor must be a mapping")
     if _contains_forbidden_fields(data):
-        raise DomainKnowledgeError("knowledge.forbidden_field", "descriptor contains forbidden credential/endpoint fields")
-    expected = {"schema", "id", "kind", "owner", "classification", "revision", "scope", "reference", "description", "metadata"}
+        raise DomainKnowledgeError(
+            "knowledge.forbidden_field", "descriptor contains forbidden credential/endpoint fields"
+        )
+    expected = {
+        "schema",
+        "id",
+        "kind",
+        "owner",
+        "classification",
+        "revision",
+        "scope",
+        "reference",
+        "description",
+        "metadata",
+    }
     if set(data) != expected:
         raise DomainKnowledgeError("knowledge.fields", "descriptor fields do not match v1 contract")
     if data.get("schema") != SCHEMA:
@@ -98,12 +111,16 @@ def parse_descriptor(contents: str) -> DomainKnowledgeSource:
     if any(marker in lowered for marker in ("token=", "password=", "secret=", "api_key=", "apikey=", "authorization=")):
         raise DomainKnowledgeError("knowledge.reference_secret", "reference contains forbidden credential material")
     if reference.startswith(("http:", "https:")):
-        raise DomainKnowledgeError("knowledge.endpoint", "raw network endpoints are not allowed; use an opaque source reference")
+        raise DomainKnowledgeError(
+            "knowledge.endpoint", "raw network endpoints are not allowed; use an opaque source reference"
+        )
     description = data.get("description")
     if not isinstance(description, str) or not description.strip():
         raise DomainKnowledgeError("knowledge.description", "description is required")
     metadata = data.get("metadata")
-    if not isinstance(metadata, dict) or any(not isinstance(k, str) or not isinstance(v, str) for k, v in metadata.items()):
+    if not isinstance(metadata, dict) or any(
+        not isinstance(k, str) or not isinstance(v, str) for k, v in metadata.items()
+    ):
         raise DomainKnowledgeError("knowledge.metadata", "metadata must be a string-to-string mapping")
     return DomainKnowledgeSource(
         source_id,

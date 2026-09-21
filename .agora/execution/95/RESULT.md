@@ -1,58 +1,71 @@
 ---
 issue: 95
 status: partial
-commit:
-pull_request:
+commit: b66436521628bf78dc479e9e791f157e04d1f332
+pull_request: 109
 updated_at: 2026-09-21
 ---
 # Result
 
 ## Status
-Implementation complete; automated verification and independent review pending.
+Implementation and automated verification are complete. Independent review is still required before Definition of Done.
 
 ## Concise summary
-Added a generic, offline compatibility conformance engine, versioned facts/result contracts, CLI command, strict mode, deterministic evaluation semantics and tests. Methodology-specific rule derivation remains intentionally outside this issue.
+Added a generic, offline compatibility conformance engine with versioned local facts and result contracts, deterministic capability evaluation, human/JSON CLI output and strict mode. The engine is vendor-neutral and intentionally separates generic evaluation from methodology-specific evidence derivation.
 
 ## Files modified
-- src/agora_ai_sdlc/conformance/compatibility.py
-- src/agora_ai_sdlc/conformance/__init__.py
-- src/agora_ai_sdlc/cli.py
-- contracts/conformance/conformance-facts-v1.schema.json
-- contracts/conformance/conformance-result-v1.schema.json
-- tests/conformance/test_compatibility_engine.py
-- tests/test_cli.py
-- docs/reference/conformance.md
-- .agora/execution/95/*
+- `src/agora_ai_sdlc/conformance/compatibility.py`
+- `src/agora_ai_sdlc/conformance/__init__.py`
+- `src/agora_ai_sdlc/cli.py`
+- `contracts/conformance/conformance-facts-v1.schema.json`
+- `contracts/conformance/conformance-result-v1.schema.json`
+- `tests/conformance/test_compatibility_engine.py`
+- `tests/test_cli.py`
+- `docs/reference/conformance.md`
+- `.agora/execution/95/*`
 
 ## Decisions made
-- Facts are a local versioned contract rather than a vendor API.
-- Required capabilities fail closed when facts are missing or marked NOT_APPLICABLE.
-- Optional missing facts are NOT_APPLICABLE.
+- Capability facts are local/versioned inputs rather than vendor API results.
+- Required capabilities fail closed when missing and when explicitly marked NOT_APPLICABLE.
+- Optional missing capabilities become NOT_APPLICABLE.
 - Unsupported profile capabilities render NOT_APPLICABLE.
-- Unknown fact capabilities are rejected to prevent silent typos.
-- Non-strict CLI reports valid failing conformance with exit 0; --strict returns 1 when any FAIL exists; invalid inputs return 2.
-- This engine does not infer methodology-specific evidence. Issue #96 adds fidelity rules/providers.
+- Unknown fact capabilities are rejected to prevent silent misspellings or unrelated evidence.
+- Overall status precedence is FAIL, PARTIAL, PASS, then NOT_APPLICABLE.
+- Valid failing reports return 0 by default; `--strict` returns 1 when any FAIL exists; invalid input returns 2.
+- The engine does not hard-code AWS/LG scoring rules. Issue #96 supplies methodology-specific fidelity facts/rules.
 
 ## Criteria satisfied
-Implementation addresses all functional criteria in issue #95; automated verification is pending.
+All issue #95 functional criteria are implemented and covered:
+- deterministic project/repository fact evaluation;
+- four result statuses per capability;
+- evidence/reason/source contract version/remediation in output;
+- human and JSON CLI;
+- strict/non-strict exit behavior;
+- fail-closed required capabilities;
+- stable invalid-input errors;
+- offline/no-network operation;
+- checked-in facts and result schemas;
+- existing CLI and full repository behavior preserved.
 
-## Tests run
-Pending pull-request CI.
+## Automated verification
+GitHub Actions run #91 passed:
+- Python 3.11: full `verify_all.py`
+- Python 3.12: full `verify_all.py`
+- Python 3.13: full `verify_all.py` (605 passed, 16 skipped)
+- Agora Core 0.9.1 compatibility: 619 passed, 2 skipped
 
-## Results
-Pending.
+Evidence: https://github.com/Modern-Ash/agora-ai-sdlc/actions/runs/35614225775
 
 ## Deviations
-None known.
+No requested product behavior was omitted. Focused commands were not separately executed because the full CI path exercised the same modules plus the complete repository verification.
 
 ## Remaining risks
-- CI may expose formatting or integration regressions.
-- Independent review remains required.
-- Without a local facts file or later rule provider, required capabilities deliberately fail closed.
+- Independent review by a different session/runtime remains pending; the implementer does not author `REVIEW.md`.
+- The engine consumes explicit facts. Automatic fidelity evidence derivation is intentionally deferred to #96.
+- Without facts or a later rule provider, required capabilities correctly fail closed.
 
 ## Pending work
-Run CI, fix failures, record final evidence, independent review.
+Independent review and human merge decision.
 
 ## Commit and pull request
-Branch: feat/95-conformance-engine
-Pull request: pending
+Draft PR #109: https://github.com/Modern-Ash/agora-ai-sdlc/pull/109

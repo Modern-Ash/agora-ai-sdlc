@@ -4,7 +4,7 @@ epic: 91
 title: Implement machine-readable conformance engine and CLI
 repository: Modern-Ash/agora-ai-sdlc
 base_commit: 52a4e5a7e46a75213c7fb3a2dd4aff1dc763b47c
-status: implementing
+status: review
 risk: medium
 context_size: medium
 budget:
@@ -72,18 +72,18 @@ Compatibility profiles are versioned and validated, but there is no evaluator, f
 - No vendor-specific semantics in the engine.
 
 ## Acceptance criteria
-- [ ] Deterministic evaluation from a compatibility profile and facts.
-- [ ] PASS/PARTIAL/FAIL/NOT_APPLICABLE emitted per capability.
-- [ ] Evidence/reason, profile contract version and remediation fields emitted.
-- [ ] Human-readable CLI output supported.
-- [ ] JSON CLI output supported and conforms to checked-in schema shape.
-- [ ] Strict mode returns non-zero when any FAIL exists.
-- [ ] Non-strict mode returns zero for a valid report even when it contains FAIL.
-- [ ] Missing required facts fail closed.
-- [ ] Optional missing facts become NOT_APPLICABLE.
-- [ ] Invalid/unknown facts fail with stable errors.
-- [ ] Evaluation performs no network access.
-- [ ] Existing CLI commands and tests remain compatible.
+- [x] Deterministic evaluation from a compatibility profile and facts.
+- [x] PASS/PARTIAL/FAIL/NOT_APPLICABLE emitted per capability.
+- [x] Evidence/reason, profile contract version and remediation fields emitted.
+- [x] Human-readable CLI output supported.
+- [x] JSON CLI output supported and conforms to checked-in schema shape.
+- [x] Strict mode returns non-zero when any FAIL exists.
+- [x] Non-strict mode returns zero for a valid report even when it contains FAIL.
+- [x] Missing required facts fail closed.
+- [x] Optional missing facts become NOT_APPLICABLE.
+- [x] Invalid/unknown facts fail with stable errors.
+- [x] Evaluation performs no network access.
+- [x] Existing CLI commands and tests remain compatible.
 
 ## Negative cases
 - facts file missing when explicitly requested;

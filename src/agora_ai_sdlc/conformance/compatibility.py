@@ -259,16 +259,21 @@ def evaluate(
                     )
                 continue
 
+            status = fact.status
+            reason = fact.reason
+            if requirement == "required" and status == "NOT_APPLICABLE":
+                status = "FAIL"
+                reason = f"Required capability cannot be NOT_APPLICABLE. Declared reason: {fact.reason}"
             remediation = fact.remediation
-            if fact.status in {"FAIL", "PARTIAL"} and remediation is None:
-                remediation = _default_remediation(capability, fact.status)
+            if status in {"FAIL", "PARTIAL"} and remediation is None:
+                remediation = _default_remediation(capability, status)
             results.append(
                 CapabilityResult(
                     capability=capability,
                     requirement=requirement,
-                    status=fact.status,
+                    status=status,
                     evidence=fact.evidence,
-                    reason=fact.reason,
+                    reason=reason,
                     source_contract_version=profile.version,
                     remediation=remediation,
                 )

@@ -45,6 +45,8 @@ Method Pack 0.2.0 is on main as the selectable three-phase candidate. Issue #99 
 - profiles/README.md
 - tests/test_cli.py
 - src/agora_ai_sdlc/cli.py
+- src/agora_ai_sdlc/conformance/self_test.py
+- tests/conformance/test_self_test.py
 
 ## Forbidden changes
 - Agora Core

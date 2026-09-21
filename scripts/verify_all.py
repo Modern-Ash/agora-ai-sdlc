@@ -97,6 +97,16 @@ def check_samples(root: Path = ROOT) -> str:
     return f"ran {len(samples)} sample(s)"
 
 
+def check_marketplace_evidence(root: Path = ROOT) -> str:
+    sys.path.insert(0, str(root / "src"))
+    from agora_ai_sdlc.marketplace_evidence import check
+
+    ok, message = check(root)
+    if not ok:
+        raise PhaseError(message, "run: uv run python scripts/check_marketplace_evidence.py --write")
+    return message
+
+
 def check_package() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         run(["uv", "build", "--out-dir", tmp, "--quiet"], "run: uv build")
@@ -141,6 +151,7 @@ PHASES: list[tuple[str, Callable[[], object]]] = [
     ("tests", lambda: run(["uv", "run", "pytest", "-q"], "run: uv run pytest -q -x")),
     ("links", check_links),
     ("manifest", check_manifest),
+    ("marketplace-evidence", check_marketplace_evidence),
     ("packs", check_packs),
     ("samples", check_samples),
     ("package", check_package),

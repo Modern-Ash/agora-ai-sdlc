@@ -6,6 +6,7 @@ This directory contains a draft AWS Marketplace **Professional Services** listin
 
 - [Listing copy](listing.md): buyer-facing draft plus field-level completion notes.
 - [Claim substantiation](claim-substantiation.md): the evidence and permitted boundary for every material marketing claim.
+- [Generated compatibility evidence](compatibility-evidence.md): executable AWS-original fidelity status, LG-enterprise target declarations, and Agora-open additive governance boundaries.
 - [Private-offer inputs](private-offer-inputs.md): customer-specific information to collect and protect outside this public repository.
 - [Pre-submission review](review-checklist.md): editorial, legal, security, and marketplace-operations gate.
 

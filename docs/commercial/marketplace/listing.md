@@ -28,6 +28,8 @@ Agora Core remains the lifecycle authority. External systems remain authoritativ
 
 This listing is for Professional Services, not SaaS. The Apache-2.0 repository software is available separately from paid assessment, configuration, implementation, facilitation, integration, training, and engagement support. [C07] [C09]
 
+Compatibility with public method profiles is evidence-tracked rather than asserted as a blanket claim. Current gaps remain visible in the generated matrix, and LG-enterprise is represented as a public target profile until implementation conformance rules exist. [C10]
+
 ## Highlights
 
 - Choose a bounded assessment, one-repository pilot, self-managed enterprise adoption, or incremental legacy-modernization engagement. [C02]
@@ -86,6 +88,7 @@ Publish one to three stable public URLs only after editorial approval. Candidate
 - [Professional Services packages](../README.md)
 - [Vendor-neutral reference architecture](../reference-architecture.md)
 - [Security and shared responsibility](../security-and-responsibility.md)
+- [Generated compatibility evidence](compatibility-evidence.md)
 
 Repository-relative links are evidence sources, not valid public Marketplace resource URLs. The submission owner must publish approved versions and enter their stable public URLs in the seller portal.
 

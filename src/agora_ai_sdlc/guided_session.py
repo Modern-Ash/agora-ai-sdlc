@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next, render
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes

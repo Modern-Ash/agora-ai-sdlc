@@ -82,6 +82,8 @@ def test_human_only_project_bootstraps_and_records_metadata(tmp_path, monkeypatc
     assert metadata["integrations"] == ["github", "ci"]
     assert metadata["profile"] == "starter"
     assert metadata["depth"] == "standard"
+    assert metadata["runtimes"] == []
+    assert metadata["role_execution"] == {"architect": "human", "builder": "human", "operator": "human"}
     skill = target / ".agora" / "skills" / "agora-ai-sdlc-guided" / "SKILL.md"
     assert skill.is_file()
     assert "Never record a human approval without explicit confirmation" in skill.read_text(encoding="utf-8")
@@ -232,3 +234,54 @@ def test_apply_reports_core_handoff_commands(tmp_path, monkeypatch):
         "agora status --board",
         "agora-ai-sdlc continue",
     ]
+
+
+def test_wizard_displays_detected_runtimes_without_enabling_them(tmp_path, monkeypatch):
+    from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
+
+    detected = (
+        RuntimeDiscovery(
+            id="codex",
+            name="Codex",
+            command="codex",
+            installed=True,
+            executable="/bin/codex",
+            responsive=True,
+            version="codex 1.0",
+            configured=False,
+        ),
+    )
+    monkeypatch.setattr("agora_ai_sdlc.installer.discover_runtimes", lambda target: detected)
+    outputs = []
+    answers = iter(
+        [
+            "",
+            "",
+            "",
+            "",
+            "python",
+            "",
+            "",
+            "n",
+            "n",
+            "n",
+            "n",
+            "n",
+            "n",
+            "n",
+            "human",
+            "human",
+            "human",
+            "",
+            "",
+            "",
+            "",
+            "",
+        ]
+    )
+
+    config = wizard(tmp_path / "project", input_fn=lambda _: next(answers), output_fn=outputs.append)
+
+    assert config["runtimes"] == []
+    assert any("Codex" in output and "responsive" in output for output in outputs)
+    assert any("does not configure" in output for output in outputs)

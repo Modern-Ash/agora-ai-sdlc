@@ -55,6 +55,13 @@ def main(argv: list[str] | None = None) -> int:
     )
     bolt_validate.add_argument("path")
     bolt_validate.add_argument("--json", action="store_true")
+    runtimes = sub.add_parser("runtimes", help="Detect local AI CLI runtimes without reading credentials")
+    runtimes.add_argument("--root", default=".", help="Project root used to correlate configured runtimes")
+    runtimes.add_argument("--json", action="store_true", help="Print deterministic machine-readable output")
+    runtimes.add_argument("--timeout", type=float, default=2.0, help="Probe timeout in seconds")
+    doctor = sub.add_parser("doctor", help="Diagnose the local AI-SDLC environment")
+    doctor.add_argument("--root", default=".", help="Project root")
+    doctor.add_argument("--json", action="store_true", help="Print machine-readable diagnostics")
     install = sub.add_parser("install", help="Configure and bootstrap an Agora AI-SDLC project")
     install.add_argument("target", nargs="?", default=".")
     install.add_argument("--home", default="~/.agora")
@@ -211,6 +218,35 @@ def main(argv: list[str] | None = None) -> int:
                 f"valid unit={summary['unit']} bolts={len(summary['bolts'])} ready={','.join(summary['ready']) or '-'} "
                 f"construction_evidence_complete={summary['construction_evidence_complete']}"
             )
+        return 0
+    if args.command == "runtimes":
+        from agora_ai_sdlc.runtime_discovery import discover_runtimes, render_runtimes
+
+        discoveries = discover_runtimes(
+            Path(args.root).expanduser(),
+            timeout_seconds=args.timeout,
+        )
+        if args.json:
+            print(json.dumps([item.snapshot() for item in discoveries], sort_keys=True))
+        else:
+            print(render_runtimes(discoveries))
+        return 0
+    if args.command == "doctor":
+        from agora_ai_sdlc.doctor import render_doctor, run_doctor
+
+        checks, runtimes_found = run_doctor(Path(args.root).expanduser())
+        if args.json:
+            print(
+                json.dumps(
+                    {
+                        "checks": [item.snapshot() for item in checks],
+                        "runtimes": [item.snapshot() for item in runtimes_found],
+                    },
+                    sort_keys=True,
+                )
+            )
+        else:
+            print(render_doctor(checks, runtimes_found))
         return 0
     if args.command == "continue":
         from agora_ai_sdlc.guided import inspect_next, render, skill_path

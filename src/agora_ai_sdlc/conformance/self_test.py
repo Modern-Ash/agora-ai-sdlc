@@ -82,6 +82,9 @@ def _discover_assets() -> dict[str, list[str]]:
     load_follow_on_profile("jira")
     for profile_id in compatibility_profiles.available_profiles():
         compatibility_profiles.load_profile(profile_id)
+    from agora_ai_sdlc.enterprise_reviews import available_policies as available_review_policies, load_policy as load_review_policy
+    for profile_id in available_review_policies():
+        load_review_policy(profile_id)
     adaptive_planning.load_policy_set()
     for pathway_id in adaptive_planning.available_pathways():
         adaptive_planning.load_pathway(pathway_id)

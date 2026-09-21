@@ -10,7 +10,7 @@ reviews:
   - id: architecture-review
     mandatory: true
     required_approval_roles: [architect]
-    required_evidence_types: [architecture-review]
+    required_evidence_types: [architecture-review, approved-impact-analysis]
     independent_review_profiles: [distinct-actor]
   - id: security-compliance-review
     mandatory: true

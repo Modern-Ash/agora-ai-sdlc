@@ -19,8 +19,8 @@ Each review policy declares whether the review is mandatory, which approval role
 Three packaged policies are available:
 
 - **starter**: business, quality, and operational readiness are mandatory; architecture and security/compliance can remain optional for small-team delivery.
-- **enterprise**: all five reviews are mandatory.
-- **regulated**: all five are mandatory, governance-owner participation is added where configured, and sensitive reviews require the existing regulated independent-review policy.
+- **enterprise**: all five reviews are mandatory; architecture review also requires `approved-impact-analysis` evidence.
+- **regulated**: all five are mandatory, governance-owner participation is added where configured, sensitive reviews require the existing regulated independent-review policy, and architecture review requires `approved-impact-analysis` evidence.
 
 The policy files are under profiles/reviews/.
 

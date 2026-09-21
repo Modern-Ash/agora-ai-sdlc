@@ -47,7 +47,7 @@ def test_every_gate_required_artifact_has_a_template():
 def test_all_required_templates_exist():
     wanted = {
         "readiness-assessment", "intent", "clarification", "unit-of-work", "requirements", "domain-model",
-        "architecture", "threat-model", "test-strategy", "implementation-plan", "deployment-plan", "plan", "bolt-plan", "static-system-model", "dynamic-system-model",
+        "architecture", "threat-model", "test-strategy", "implementation-plan", "deployment-plan", "plan", "bolt-plan", "impact-analysis", "static-system-model", "dynamic-system-model",
         "operational-readiness", "learning-record",
         "legacy-inventory", "dependency-map", "characterization", "target-architecture", "migration-plan",
         "migration-slice", "conversion-record", "equivalence-report", "cutover-plan", "stabilization-report",

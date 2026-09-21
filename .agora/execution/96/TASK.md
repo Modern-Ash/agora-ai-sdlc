@@ -4,7 +4,7 @@ epic: 91
 title: Build AWS AI-DLC fidelity conformance rules
 repository: Modern-Ash/agora-ai-sdlc
 base_commit: c95afba520b3a4d56dca110338a3e8487ca375ba
-status: implementing
+status: review
 risk: medium
 context_size: medium
 budget:
@@ -74,21 +74,21 @@ The aws-original compatibility profile exists. The generic conformance engine an
 - Additive governance rules are reported separately by the provider API and are not scored as AWS base-method requirements.
 
 ## Acceptance criteria
-- [ ] 3 canonical phases are checked.
-- [ ] Intent, Unit and Bolt semantics are checked.
-- [ ] Level 1 Plan and recursive decomposition are checked.
-- [ ] Human approval before execution is checked.
-- [ ] User stories, NFRs, risk register, measurement criteria and optional PRFAQ are checked.
-- [ ] Domain Design, Logical Design and Deployment Units are checked.
-- [ ] Persistent context memory and forward/backward traceability are checked.
-- [ ] Minimal required roles with optional participants are checked.
-- [ ] Brown-field semantic elevation is checked.
-- [ ] Operations telemetry and human-approved remediation are checked.
-- [ ] Every rule maps to explicit Agora files/capabilities.
-- [ ] Base fidelity is separated from additive Agora governance.
-- [ ] Golden pass/partial/fail fixtures exist.
-- [ ] --derive produces a valid generic conformance report.
-- [ ] No network access is required.
+- [x] 3 canonical phases are checked.
+- [x] Intent, Unit and Bolt semantics are checked.
+- [x] Level 1 Plan and recursive decomposition are checked.
+- [x] Human approval before execution is checked.
+- [x] User stories, NFRs, risk register, measurement criteria and optional PRFAQ are checked.
+- [x] Domain Design, Logical Design and Deployment Units are checked.
+- [x] Persistent context memory and forward/backward traceability are checked.
+- [x] Minimal required roles with optional participants are checked.
+- [x] Brown-field semantic elevation is checked.
+- [x] Operations telemetry and human-approved remediation are checked.
+- [x] Every rule maps to explicit Agora files/capabilities.
+- [x] Base fidelity is separated from additive Agora governance.
+- [x] Golden pass/partial/fail fixtures exist.
+- [x] --derive produces a valid generic conformance report.
+- [x] No network access is required.
 
 ## Negative cases
 - missing/invalid rules file;

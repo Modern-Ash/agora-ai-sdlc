@@ -179,10 +179,21 @@ def validate_config(config: dict) -> dict:
         raise InstallerError("installer.work", "at least one acceptance criterion is required")
     normalized_criteria = []
     for item in criteria:
-        if not isinstance(item, dict):
-            raise InstallerError("installer.criteria", "criterion must be a mapping")
+        if isinstance(item, dict):
+            criterion_id = item.get("id")
+            criterion_text = item.get("text")
+        elif isinstance(item, (list, tuple)) and len(item) == 2:
+            criterion_id, criterion_text = item
+        else:
+            raise InstallerError(
+                "installer.criteria",
+                "criterion must be a mapping or normalized id/text pair",
+            )
         normalized_criteria.append(
-            (_slug(item.get("id"), "criterion id"), _text(item.get("text"), "criterion text"))
+            (
+                _slug(criterion_id, "criterion id"),
+                _text(criterion_text, "criterion text"),
+            )
         )
     if len({item[0] for item in normalized_criteria}) != len(normalized_criteria):
         raise InstallerError("installer.criteria", "criterion ids must be unique")
@@ -465,7 +476,7 @@ def wizard(
             }
         )
 
-    runtime_choices = tuple(["human", *[runtime["id"] for runtime in runtimes]])
+    runtime_choices = ("human", *(runtime["id"] for runtime in runtimes))
     role_execution = {
         role: _choose(input_fn, f"Executor for {role}", runtime_choices, runtime_choices[-1])
         for role in EXECUTION_ROLES

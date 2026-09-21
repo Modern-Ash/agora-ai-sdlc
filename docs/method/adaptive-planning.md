@@ -48,6 +48,8 @@ The `brownfield` pathway requires:
 
 before construction-oriented work is authorized. These are pathway obligations, not extra lifecycle states.
 
+Pass `--artifacts DIR` to `plan-validate` to enforce them: for any pathway whose policy makes both steps mandatory, the directory must hold a `static-system-model` (tracing to a `legacy-inventory`) and a `dynamic-system-model` (tracing to that static model) for the plan's `work`. Failures use `elevation.*` codes. See [context graph](context-graph.md).
+
 ## CLI
 
 Validate an approved plan:

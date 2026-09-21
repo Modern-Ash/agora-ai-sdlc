@@ -4,6 +4,7 @@ expected:
   PASS:
     - ai-initiated-planning
     - bolts
+    - brownfield-semantic-elevation
     - domain-design
     - forward-backward-traceability
     - human-validation
@@ -16,7 +17,6 @@ expected:
     - recursive-planning
     - units
   PARTIAL:
-    - brownfield-semantic-elevation
     - deployment-units
     - logical-design
     - measurement-criteria

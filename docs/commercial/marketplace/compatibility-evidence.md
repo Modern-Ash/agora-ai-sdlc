@@ -9,8 +9,8 @@ It is release evidence, not a certification, affiliation, partnership, or endors
 | Evidence dimension | AWS-original | LG-enterprise | Agora-open |
 | --- | --- | --- | --- |
 | Current result | **PARTIAL** (executable repository conformance) | **TARGET_ONLY** (public profile declaration; implementation conformance not yet evaluated) | **PASS** (additive governance only) |
-| PASS | ai-initiated-planning, bolts, domain-design, forward-backward-traceability, human-validation, intent, level-1-plan, non-functional-requirements, operations-observability, persistent-context, quality-reviewer, recursive-planning, units | Not reported as PASS until a dedicated LG rule provider exists | fail-closed-gates, independent-review, model-provenance, provider-neutrality |
-| PARTIAL | brownfield-semantic-elevation, deployment-units, logical-design, measurement-criteria, minimal-roles, operations-governed-remediation, risk-register, three-phase-lifecycle, user-stories | Not evaluated | — |
+| PASS | ai-initiated-planning, bolts, brownfield-semantic-elevation, domain-design, forward-backward-traceability, human-validation, intent, level-1-plan, non-functional-requirements, operations-observability, persistent-context, quality-reviewer, recursive-planning, units | Not reported as PASS until a dedicated LG rule provider exists | fail-closed-gates, independent-review, model-provenance, provider-neutrality |
+| PARTIAL | deployment-units, logical-design, measurement-criteria, minimal-roles, operations-governed-remediation, risk-register, three-phase-lifecycle, user-stories | Not evaluated | — |
 | FAIL | — | Not evaluated | — |
 | NOT_APPLICABLE / optional | prfaq | effort-estimation | — |
 | Required target capabilities | Derived by executable rules | change-configuration-management, code-review, cross-repository-impact, documentation, domain-knowledge, ideation, operational-rules, organizational-readiness, quality-governance, review-gates, risk-issue-management, security-compliance, technical-setup, test-design, traceability | Additive controls, not base-method requirements |

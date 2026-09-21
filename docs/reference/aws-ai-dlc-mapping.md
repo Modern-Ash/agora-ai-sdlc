@@ -18,7 +18,7 @@ Goal: stay as close to the published AI-DLC method as possible while keeping thi
 | No hard-wired workflow: AI proposes a Level 1 Plan per pathway, recursively decomposed | gap | Fixed six-state lifecycle; no plan artifact tied to a pathway |
 | Bolts replace sprints (hours or days), Units of Work replace epics | partial | Both are defined terms; Bolts are entries of the first-class `bolt-plan` artifact |
 | Retain risk practices (Risk Register) | partial | `risks` sections in intent and architecture; no organization risk-register linkage |
-| Brown-field: elevate code to static and dynamic models before construction | partial | Modernization profile: legacy inventory, dependency map, characterization; no explicit static/dynamic model artifacts |
+| Brown-field: elevate code to static and dynamic models before construction | aligned | `static-system-model` and `dynamic-system-model` artifacts; `plan-validate --artifacts` enforces them for pathways that require elevation |
 
 ## Phases, rituals and artifacts
 

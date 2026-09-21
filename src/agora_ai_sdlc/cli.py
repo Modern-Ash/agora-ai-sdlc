@@ -39,6 +39,16 @@ def main(argv: list[str] | None = None) -> int:
     plan_validate.add_argument("--depth")
     plan_validate.add_argument("--profile")
     plan_validate.add_argument("--json", action="store_true")
+    plan_validate.add_argument("--artifacts", help="artifact directory; enforces brown-field semantic elevation")
+    context = sub.add_parser("context", help="Assemble deterministic context for an Intent, Unit, artifact or Bolt")
+    context.add_argument("artifacts", help="directory of artifact documents")
+    context.add_argument("id", help="artifact id or Bolt (BLP-001/bolt-id)")
+    context.add_argument("--direction", choices=["backward", "forward", "both"], default="both")
+    context.add_argument("--depth", type=int)
+    context.add_argument("--max-tokens", type=int)
+    context.add_argument("--strict", action="store_true")
+    context.add_argument("--content", action="store_true", help="include document text")
+    context.add_argument("--json", action="store_true")
     bolt_validate = sub.add_parser(
         "bolt-validate", help="Validate a Bolt plan and print Unit -> Bolt -> evidence trace"
     )
@@ -102,8 +112,14 @@ def main(argv: list[str] | None = None) -> int:
             print(render_human(report))
         return 1 if args.strict and report.has_failures else 0
     if args.command == "plan-validate":
-        from agora_ai_sdlc.adaptive_planning import AdaptivePlanningError, validate_adaptive_plan
+        from agora_ai_sdlc.adaptive_planning import AdaptivePlanningError, load_pathway, validate_adaptive_plan
+        from agora_ai_sdlc.context_graph import ContextError, load_artifacts
         from agora_ai_sdlc.plans import PlanError, parse_plan
+        from agora_ai_sdlc.semantic_elevation import (
+            SemanticElevationError,
+            requires_elevation,
+            validate_semantic_elevation,
+        )
 
         try:
             plan = parse_plan(Path(args.path).read_text(encoding="utf-8"))
@@ -113,16 +129,50 @@ def main(argv: list[str] | None = None) -> int:
                 depth=args.depth,
                 adoption_profile=args.profile,
             )
-        except (OSError, PlanError, AdaptivePlanningError) as error:
+            elevation = None
+            if args.artifacts and requires_elevation(load_pathway(args.pathway)):
+                documents = load_artifacts(Path(args.artifacts))
+                elevation = validate_semantic_elevation(
+                    [artifact for _, _, artifact in documents], str(plan.artifact.front.get("work"))
+                )
+        except (OSError, PlanError, AdaptivePlanningError, ContextError, SemanticElevationError) as error:
             print(error, file=sys.stderr)
             return 2
         if args.json:
-            print(json.dumps(decision.snapshot(), sort_keys=True))
+            snapshot = decision.snapshot()
+            if elevation is not None:
+                snapshot["semantic_elevation"] = {"static": elevation[0], "dynamic": elevation[1]}
+            print(json.dumps(snapshot, sort_keys=True))
         else:
             print(
                 f"authorized pathway={decision.pathway} depth={decision.effective_depth} "
                 f"executed={len(decision.executed_steps)} skipped={len(decision.skipped_steps)}"
             )
+        return 0
+    if args.command == "context":
+        from agora_ai_sdlc.context_graph import ContextError, context_bundle, graph_from_directory
+
+        try:
+            bundle = context_bundle(
+                graph_from_directory(Path(args.artifacts)),
+                args.id,
+                direction=args.direction,
+                max_depth=args.depth,
+                max_tokens=args.max_tokens,
+                strict=args.strict,
+            )
+        except (OSError, ContextError) as error:
+            print(error, file=sys.stderr)
+            return 2
+        if args.json:
+            print(json.dumps(bundle.snapshot(include_text=args.content), sort_keys=True))
+        else:
+            for item in bundle.items:
+                print(f"{item.distance} {item.relation} {item.id} ({item.kind}) {item.path} ~{item.tokens}t")
+                if args.content:
+                    print(bundle.text[item.id])
+            if bundle.omitted:
+                print(f"omitted (budget): {', '.join(bundle.omitted)}")
         return 0
     if args.command == "bolt-validate":
         from agora_ai_sdlc.bolts import BoltError, parse_bolt_plan, trace

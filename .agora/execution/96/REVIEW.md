@@ -1,15 +1,15 @@
 ---
 issue: 96
-reviewed_commit: main
+reviewed_commit: 5cad2a077b5da96e9bb136e94a448009b085944b
 reviewer: ChatGPT independent session
-verdict: changes-requested
+verdict: approved-with-observations
 updated_at: 2026-09-21
 ---
 # Independent review
 
 ## Verdict
 
-Changes requested before closing #96.
+Approved with observations after remediation.
 
 ## Scope reviewed
 
@@ -20,25 +20,27 @@ Changes requested before closing #96.
 - `tests/fixtures/conformance/aws-original/**`
 - `profiles/compatibility/aws-original/profile.yaml`
 - `docs/reference/conformance.md`
-- recorded CI evidence for PR #110 / promotion PR #111
+- PR #126 remediation and CI run #166
 
-## Findings
+## Re-review of prior blocking finding
 
-### Blocking — stable PASS/PARTIAL/FAIL fixture coverage was not durable
+The prior review identified that PASS/PARTIAL/FAIL coverage depended on the mutable current-repository snapshot. PR #126 added immutable fixture roots for the representative `three-phase-lifecycle` rule:
 
-Issue #96 requires golden fixtures covering PASS, PARTIAL and FAIL. The implementation originally satisfied that through the mutable `current.yaml` repository snapshot. Subsequent fidelity work changed the repository so the current snapshot now contains PASS and PARTIAL but no FAIL.
+- PASS fixture with the complete canonical state list;
+- PARTIAL fixture with the three public phases but without Agora's terminal recording state;
+- FAIL fixture with the Method Pack contract deliberately absent.
 
-That makes the acceptance criterion dependent on unrelated future repository evolution and removes a deterministic regression test for FAIL derivation.
+The tests exercise all three roots through the real `derive_facts()` provider, so the acceptance criterion no longer depends on later repository evolution.
 
-Required remediation: add immutable fixture roots that independently exercise PASS, PARTIAL and FAIL for at least one representative rule through the real `derive_facts()` provider.
+CI run #166 passed the full repository verification matrix.
 
 ## Observations
 
-- The rule provider is offline and path-confined.
-- Base-method rules and Agora additive governance are correctly separated.
+- Base-method fidelity and Agora additive governance remain cleanly separated.
 - Rule/profile coverage fails closed for missing or undeclared capabilities.
-- Current repository fidelity has improved since the original #96 result; the historical RESULT/TESTS snapshot should not be read as the current conformance state.
+- Path confinement and offline evaluation remain intact.
+- The current repository snapshot has improved since the original implementation evidence; historical RESULT/TESTS files should be read as execution history, not as the current fidelity result.
 
-## Re-review condition
+## Final assessment
 
-Approve once stable PASS/PARTIAL/FAIL fixture roots are added and full CI passes.
+The acceptance criteria for #96 are satisfied. No blocking findings remain.

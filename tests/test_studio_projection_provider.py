@@ -116,9 +116,7 @@ def test_separation_requires_distinct_actor_and_current_digest():
         artifact_references=("repo://src/app.py",),
         artifact_content_sha256={"repo://src/app.py": "a" * 64},
     )
-    context = SimpleNamespace(
-        work=SimpleNamespace(artifacts=(artifact,), evidence=(review,))
-    )
+    context = SimpleNamespace(work=SimpleNamespace(artifacts=(artifact,), evidence=(review,)))
     section = _separation(context)
     assert section["status"] == "available"
     assert section["value"]["decision"] == "satisfied"

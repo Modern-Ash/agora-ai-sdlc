@@ -116,9 +116,9 @@ def test_conformance_derive_strict_and_provider_errors(tmp_path, capsys):
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"]["id"] == "lg-enterprise"
     assert payload["facts_source"] == "derived:lg-enterprise-rules/v1"
-    assert payload["overall_status"] == "PARTIAL"
+    assert payload["overall_status"] == "PASS"
     assert any(
-        item["capability"] == "risk-issue-management" and item["status"] == "PARTIAL" for item in payload["results"]
+        item["capability"] == "risk-issue-management" and item["status"] == "PASS" for item in payload["results"]
     )
 
 

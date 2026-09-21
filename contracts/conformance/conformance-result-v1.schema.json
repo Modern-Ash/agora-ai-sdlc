@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modern-ash.github.io/agora-ai-sdlc/contracts/conformance-result-v1.schema.json",
+  "title": "Agora AI-SDLC conformance result v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "profile", "overall_status", "has_failures", "facts_source", "results"],
+  "properties": {
+    "schema": {"const": "agora-ai-sdlc/conformance-result/v1"},
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "version"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "name": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1}
+      }
+    },
+    "overall_status": {"enum": ["PASS", "PARTIAL", "FAIL", "NOT_APPLICABLE"]},
+    "has_failures": {"type": "boolean"},
+    "facts_source": {"type": ["string", "null"]},
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "capability",
+          "requirement",
+          "status",
+          "evidence",
+          "reason",
+          "source_contract_version",
+          "remediation"
+        ],
+        "properties": {
+          "capability": {"type": "string", "minLength": 1},
+          "requirement": {"enum": ["required", "optional", "unsupported"]},
+          "status": {"enum": ["PASS", "PARTIAL", "FAIL", "NOT_APPLICABLE"]},
+          "evidence": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {"type": "string", "minLength": 1}
+          },
+          "reason": {"type": "string", "minLength": 1},
+          "source_contract_version": {"type": "string", "minLength": 1},
+          "remediation": {"type": ["string", "null"], "minLength": 1}
+        }
+      }
+    }
+  }
+}

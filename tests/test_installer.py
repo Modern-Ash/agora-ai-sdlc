@@ -179,7 +179,9 @@ def test_wizard_builds_config_without_writing_target(tmp_path):
 def test_core_preflight_reports_installed_core_and_cli(monkeypatch):
     monkeypatch.setattr("agora_ai_sdlc.installer.installed_core_version", lambda: "0.9.0")
     monkeypatch.setattr("agora_ai_sdlc.installer.check_core_compatibility", lambda manifest, installed=None: None)
-    monkeypatch.setattr("agora_ai_sdlc.installer.shutil.which", lambda name: "/venv/bin/agora" if name == "agora" else None)
+    monkeypatch.setattr(
+        "agora_ai_sdlc.installer.shutil.which", lambda name: "/venv/bin/agora" if name == "agora" else None
+    )
 
     result = core_preflight()
 

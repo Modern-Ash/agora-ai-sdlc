@@ -17,7 +17,7 @@ def config():
 def test_manifest_pins_shipped_pack_and_standard_profile():
     profile = load_profile()
     assert profile["depth"] == "standard"
-    assert profile["method"] == {"id": "ai-sdlc", "version": "0.1.0"}
+    assert profile["method"] == {"id": "ai-sdlc", "version": "0.1.1"}
     assert profile["human_roles"] == ["product-owner", "quality-reviewer"]
 
 
@@ -26,7 +26,7 @@ def test_preview_is_deterministic_and_writes_nothing(tmp_path):
     first = preview(config(), target)
     second = preview(config(), target)
     assert first == second and not target.exists()
-    assert first["method"] == {"id": "ai-sdlc", "version": "0.1.0"}
+    assert first["method"] == {"id": "ai-sdlc", "version": "0.1.1"}
 
 
 def test_interactive_cancel_writes_nothing_to_target_or_home(tmp_path):

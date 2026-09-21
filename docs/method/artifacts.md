@@ -42,6 +42,7 @@ Modernization templates also use structured `behaviors`, `slice-ids`, `slice-id`
 | operational-readiness | OPR | deployment-plan | operational-readiness.md |
 | learning-record | LRN | any | learning-record.md |
 | rework-record | RWK | any | rework-record.md |
+| plan | PLN | any (plan-specific scope/parent rules apply) | plan.md |
 | legacy-inventory | LGI | root | legacy-inventory.md |
 | dependency-map | DPM | legacy-inventory | dependency-map.md |
 | characterization | CHR | legacy-inventory | characterization.md |
@@ -64,3 +65,7 @@ Chain: intent -> unit of work -> requirements (criteria) -> architecture / test 
 - Every artifact kind required by a gate has a template (tested). `build-verified` now requires `implementation-plan` (previously `implementation`): the plan is updated with code and test references as work is delivered.
 - Core gates check registered base obligations. Modernization adds local parsing, traceability and digest checks through its transition wrapper; other artifact validators remain explicit local checks.
 - Code/test evidence and deployment linkage are expressed through the implementation-plan and deployment-plan references; evidence records themselves stay in Core.
+
+## Plan-specific semantics
+
+`plan` artifacts use the shared artifact envelope plus recursive Level-N fields. Generic traceability keeps their references resolvable; [planning](planning.md) defines parent-level, scope, step ordering, approval and stale-revision rules enforced by `agora_ai_sdlc.plans`.

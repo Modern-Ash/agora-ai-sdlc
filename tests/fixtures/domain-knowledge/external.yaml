@@ -1,0 +1,11 @@
+schema: agora-ai-sdlc/domain-knowledge-source/v1
+id: architecture-wiki
+kind: wiki
+owner: enterprise-architecture
+classification: internal
+revision: 3
+scope: [architecture, integration]
+reference: knowledge:wiki/enterprise-architecture
+description: External enterprise architecture wiki referenced logically; content is not embedded.
+metadata:
+  system: corporate-wiki

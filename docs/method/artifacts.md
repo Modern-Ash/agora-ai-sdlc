@@ -45,6 +45,9 @@ Modernization templates also use structured `behaviors`, `slice-ids`, `slice-id`
 | plan | PLN | any (plan-specific scope/parent rules apply) | plan.md |
 | bolt-plan | BLP | unit-of-work, plan | bolt-plan.md |
 | impact-analysis | IMA | unit-of-work, plan, bolt-plan | impact-analysis.md |
+| change-request | CRQ | unit-of-work, impact-analysis | change-request.md |
+| change-plan | CHP | change-request, plan | change-plan.md |
+| configuration-delta | CFD | change-plan | configuration-delta.md |
 | static-system-model | SSM | legacy-inventory, dependency-map | static-system-model.md |
 | dynamic-system-model | DSM | static-system-model, characterization | dynamic-system-model.md |
 | legacy-inventory | LGI | root | legacy-inventory.md |
@@ -81,3 +84,7 @@ Chain: intent -> unit of work -> requirements (criteria) -> architecture / test 
 ## Impact-analysis semantics
 
 `impact-analysis` artifacts make cross-repository blast radius explicit before implementation. They record provider-neutral repository ids, affected components, API/event/schema contracts, dependency direction, known/unknown dependency status, expected changes, owners/reviewers, confidence and unresolved unknowns. Exact-revision approval is enforced by `agora_ai_sdlc.impact_analysis`. See [cross-repository impact analysis](impact-analysis.md).
+
+## Change-management semantics
+
+`change-request`, `change-plan`, and `configuration-delta` artifacts form the governed enterprise change chain. Exact-revision approval, secret-safe deltas, release evidence and rollback linkage are enforced by `agora_ai_sdlc.change_management`. See [change management](change-management.md).

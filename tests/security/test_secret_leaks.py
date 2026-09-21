@@ -38,7 +38,7 @@ def test_all_samples_and_validation_are_offline_and_do_not_persist_environment_c
 
     result = run_self_test(progress=progress.append)
 
-    assert result["ok"] and len(result["assets"]["samples"]) == 13
+    assert result["ok"] and len(result["assets"]["samples"]) == 15
     observed = [json.dumps(result, sort_keys=True), *progress]
     observed.extend(
         path.read_bytes().decode("utf-8", errors="replace") for path in workspace.rglob("*") if path.is_file()

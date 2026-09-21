@@ -1,0 +1,11 @@
+schema: agora-ai-sdlc/domain-knowledge-source/v1
+id: payments-domain-docs
+kind: repository-docs
+owner: team-payments
+classification: internal
+revision: 1
+scope: [payments, recurring-payments]
+reference: repo://docs/domain/payments
+description: Payments domain documentation stored with the project.
+metadata:
+  format: markdown

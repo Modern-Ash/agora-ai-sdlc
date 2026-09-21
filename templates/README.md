@@ -7,3 +7,5 @@ Modernization templates extend the shared artifact chain without adding lifecycl
 Level 1 / Level-N planning uses [plan.md](plan.md) with additional deterministic validation documented in [planning](../docs/method/planning.md).
 
 Cross-repository analysis uses [impact-analysis.md](impact-analysis.md), with provider-neutral repository and contract semantics documented in [impact analysis](../docs/method/impact-analysis.md).
+
+Governed enterprise changes use [change-request.md](change-request.md), [change-plan.md](change-plan.md), and [configuration-delta.md](configuration-delta.md). See [change management](../docs/method/change-management.md).

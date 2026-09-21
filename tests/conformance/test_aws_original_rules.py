@@ -17,6 +17,7 @@ from agora_ai_sdlc.conformance.compatibility import evaluate
 
 ROOT = Path(__file__).parents[2]
 GOLDEN = ROOT / "tests" / "fixtures" / "conformance" / "aws-original" / "current.yaml"
+GOLDEN_ROOT = ROOT / "tests" / "fixtures" / "conformance" / "aws-original" / "three-phase"
 
 
 def grouped(report):
@@ -139,3 +140,17 @@ def test_derivation_is_offline(monkeypatch):
 
     facts = derive_facts(ROOT)
     assert facts
+
+
+@pytest.mark.parametrize(
+    ("fixture", "expected_status"),
+    [
+        ("pass", "PASS"),
+        ("partial", "PARTIAL"),
+        ("fail", "FAIL"),
+    ],
+)
+def test_stable_three_phase_golden_fixture_roots_cover_pass_partial_fail(fixture, expected_status):
+    facts = derive_facts(GOLDEN_ROOT / fixture)
+    fact = next(item for item in facts if item.capability == "three-phase-lifecycle")
+    assert fact.status == expected_status

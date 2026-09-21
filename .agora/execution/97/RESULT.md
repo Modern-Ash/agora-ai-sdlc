@@ -1,56 +1,63 @@
 ---
 issue: 97
 status: partial
-commit:
-pull_request:
+commit: 425471fce7ee1ed978d383589925697afd16ad6c
+pull_request: 112
 updated_at: 2026-09-21
 ---
 # Result
 
 ## Status
-Implementation complete; automated verification and independent review pending.
+Implementation and automated verification are complete. Independent review remains required before Definition of Done.
 
 ## Concise summary
-Added a generated Marketplace compatibility evidence matrix, drift checker, CI verification phase, and Marketplace claim references that preserve executable AWS-original gaps, distinguish LG-enterprise target declarations from implementation conformance, and report Agora-open additive governance separately.
+Added a generated compatibility evidence matrix for Marketplace/release use, an offline drift checker, a new verify_all.py phase, and buyer-facing claim references that keep executable AWS-original gaps visible while separating LG-enterprise target declarations and Agora-open additive governance.
 
 ## Files modified
-- src/agora_ai_sdlc/marketplace_evidence.py
-- scripts/check_marketplace_evidence.py
-- scripts/verify_all.py
-- tests/test_marketplace_evidence.py
-- docs/commercial/marketplace/compatibility-evidence.md
-- docs/commercial/marketplace/README.md
-- docs/commercial/marketplace/listing.md
-- docs/commercial/marketplace/claim-substantiation.md
-- .agora/execution/97/*
+- `src/agora_ai_sdlc/marketplace_evidence.py`
+- `scripts/check_marketplace_evidence.py`
+- `scripts/verify_all.py`
+- `tests/test_marketplace_evidence.py`
+- `tests/test_marketplace_content.py`
+- `docs/commercial/marketplace/compatibility-evidence.md`
+- `docs/commercial/marketplace/README.md`
+- `docs/commercial/marketplace/listing.md`
+- `docs/commercial/marketplace/claim-substantiation.md`
+- `.agora/execution/97/*`
 
 ## Decisions made
-- AWS-original status is generated only from executable conformance rules.
-- LG-enterprise is represented as TARGET_ONLY until a dedicated LG implementation rule provider exists.
-- Agora-open additive governance remains separate and cannot improve AWS fidelity.
-- The generated matrix is checked into the repository for release/Marketplace review, but manual drift fails CI.
-- Buyer-facing listing copy uses claim C10 and links the generated evidence rather than asserting blanket compatibility.
+- AWS-original values are generated from executable repository conformance, not marketing prose.
+- LG-enterprise is TARGET_ONLY until a dedicated implementation conformance provider exists; the matrix never turns target declarations into PASS.
+- Agora-open additive governance is shown separately and does not affect AWS-original fidelity.
+- The generated file is checked into source control for release and Marketplace review, while CI rejects manual drift.
+- Marketplace listing language references claim C10 and the generated matrix rather than making a blanket compatibility statement.
+- No certification, endorsement, sponsorship, partnership, or non-public implementation claim is introduced.
 
-## Criteria satisfied
-Implementation addresses all issue #97 functional criteria; automated verification is pending.
+## Current generated matrix
+- AWS-original overall: FAIL, preserving current implementation gaps.
+- LG-enterprise: TARGET_ONLY.
+- Agora-open additive governance: PASS for the currently implemented additive controls.
 
-## Tests run
-Pending pull-request CI.
+## Automated verification
+GitHub Actions run #103 passed:
+- Python 3.11: full `verify_all.py`
+- Python 3.12: full `verify_all.py`
+- Python 3.13: full `verify_all.py` (627 passed, 16 skipped)
+- Agora Core 0.9.1 compatibility: 641 passed, 2 skipped
+- Marketplace evidence regeneration/drift check: passed
 
-## Results
-Pending.
+Evidence: https://github.com/Modern-Ash/agora-ai-sdlc/actions/runs/35618483857
 
 ## Deviations
-None known.
+None from issue #97 requirements. LG implementation conformance is intentionally not inferred because no dedicated LG rule provider exists yet.
 
 ## Remaining risks
-- CI may expose formatting or regeneration mismatch.
-- Independent review remains required.
-- #97 is stacked on promotion PR #111 because #110 was merged into the already-merged #95 branch rather than directly into main.
+- Independent review by a different session/runtime remains pending.
+- PR #112 is stacked on promotion PR #111; #111 must reach main first.
+- Marketplace eligibility and actual seller submission remain separate business actions and are not established by this matrix.
 
 ## Pending work
-Run CI, correct failures, record final evidence, independent review.
+Independent review, merge promotion PR #111, then retarget/merge PR #112.
 
 ## Commit and pull request
-Branch: feat/97-marketplace-evidence-matrix
-Pull request: pending
+Draft PR #112: https://github.com/Modern-Ash/agora-ai-sdlc/pull/112

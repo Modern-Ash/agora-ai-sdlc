@@ -4,7 +4,7 @@ epic: 91
 title: Publish compatibility evidence matrix for Marketplace claims
 repository: Modern-Ash/agora-ai-sdlc
 base_commit: 398ec6b59086a5c3e3cbbb13d24b3fabbea76648
-status: implementing
+status: review
 risk: medium
 context_size: medium
 budget:
@@ -63,16 +63,16 @@ AWS-original has executable repository-derived fidelity rules. LG-enterprise has
 - Marketplace README/listing/claim register consume the generated evidence matrix.
 
 ## Acceptance criteria
-- [ ] Generated matrix has AWS-original, LG-enterprise and Agora-open columns.
-- [ ] AWS statuses are derived from conformance rules, not manually typed.
-- [ ] LG target declarations are clearly distinguished from implementation conformance.
-- [ ] Agora additive governance is not counted as AWS fidelity.
-- [ ] Every PASS/PARTIAL/FAIL AWS row includes evidence/remediation where appropriate.
-- [ ] Generated content contains no endorsement/certification claim.
-- [ ] Check script returns non-zero on drift.
-- [ ] verify_all.py includes the matrix drift check.
-- [ ] Marketplace docs link to/use the generated matrix.
-- [ ] Tests cover deterministic regeneration and drift failure.
+- [x] Generated matrix has AWS-original, LG-enterprise and Agora-open columns.
+- [x] AWS statuses are derived from conformance rules, not manually typed.
+- [x] LG target declarations are clearly distinguished from implementation conformance.
+- [x] Agora additive governance is not counted as AWS fidelity.
+- [x] Every PASS/PARTIAL/FAIL AWS row includes evidence/remediation where appropriate.
+- [x] Generated content contains no endorsement/certification claim.
+- [x] Check script returns non-zero on drift.
+- [x] verify_all.py includes the matrix drift check.
+- [x] Marketplace docs link to/use the generated matrix.
+- [x] Tests cover deterministic regeneration and drift failure.
 
 ## Negative cases
 - generated matrix edited by hand;

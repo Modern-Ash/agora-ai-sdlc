@@ -1,0 +1,22 @@
+schema: agora-ai-sdlc/enterprise-controls-profile/v1
+id: aws-original
+compatibility_profile: aws-original
+classification: enterprise-extension
+controls:
+  estimation:
+    enabled: false
+    optional: true
+    metrics: []
+  test-design:
+    enabled: false
+    optional: true
+    required-test-classes: []
+    coverage-obligations: []
+  code-review:
+    enabled: false
+    optional: true
+    reviewer-separation: []
+    required-evidence: []
+    blocking-findings: []
+metadata:
+  scope: Enterprise delivery controls are outside the canonical AWS-original method and remain disabled by default.

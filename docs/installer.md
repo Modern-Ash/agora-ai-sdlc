@@ -78,7 +78,16 @@ A successful installation reports the Core version/executable and the next opera
 ```bash
 agora validate
 agora status --board
-agora continue
+agora-ai-sdlc continue
 ```
 
-AI-SDLC owns the bootstrap experience; Agora Core remains the lifecycle authority after bootstrap.
+The installer also copies the portable guided-agent skill to:
+
+```
+.agora/skills/agora-ai-sdlc-guided/SKILL.md
+```
+
+The default guided command translates Core blockers into human-readable decisions. Use
+`agora-ai-sdlc continue --expert` to include the exact Core gate details.
+
+AI-SDLC owns the bootstrap and guided experience; Agora Core remains the lifecycle authority after bootstrap.

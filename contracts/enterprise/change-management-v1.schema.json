@@ -1,0 +1,7 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modern-ash.github.io/agora-ai-sdlc/contracts/change-management-v1.schema.json",
+  "title": "Agora AI-SDLC change management v1",
+  "type": "object",
+  "description": "Reference schema for change-request/change-plan/configuration-delta artifact fields."
+}

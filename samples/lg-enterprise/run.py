@@ -1,5 +1,7 @@
 """Vendor-neutral end-to-end sample for the public LG-style enterprise profile."""
 
+import contextlib
+import io
 import json
 import runpy
 from pathlib import Path
@@ -19,7 +21,8 @@ ROOT = Path(__file__).parents[2]
 
 def _run(name: str) -> dict:
     module = runpy.run_path(str(ROOT / "samples" / name / "run.py"), run_name=f"lg_enterprise_{name}")
-    return module["main"]()
+    with contextlib.redirect_stdout(io.StringIO()):
+        return module["main"]()
 
 
 def main() -> dict:

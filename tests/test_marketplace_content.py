@@ -9,6 +9,7 @@ EXPECTED = {
     "README.md",
     "listing.md",
     "claim-substantiation.md",
+    "compatibility-evidence.md",
     "private-offer-inputs.md",
     "review-checklist.md",
 }
@@ -67,7 +68,7 @@ def test_every_marketing_claim_has_exactly_one_substantiation_row():
     registered = re.findall(r"^\| (C\d{2}) \|", register, re.MULTILINE)
     assert used == set(registered)
     assert len(registered) == len(set(registered))
-    assert used == {f"C{number:02d}" for number in range(1, 10)}
+    assert used == {f"C{number:02d}" for number in range(1, 11)}
     for row in (line for line in register.splitlines() if re.match(r"^\| C\d{2} \|", line)):
         assert row.count("|") == 6
         cells = [cell.strip() for cell in row.strip("|").split("|")]

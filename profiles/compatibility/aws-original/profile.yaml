@@ -1,0 +1,54 @@
+schema: agora-ai-sdlc/compatibility-profile/v1
+id: aws-original
+name: AWS AI-DLC original public method
+version: 1.0.0
+canonical_model: agora-ai-sdlc/canonical-elements/v1
+source:
+  basis: public
+  references:
+    - https://aws.amazon.com/blogs/devops/ai-driven-development-life-cycle/
+    - https://prod.d13rzhkk8cj2z0.amplifyapp.com/aidlc.pdf
+  affiliation: false
+  runtime_dependency: false
+stages:
+  - id: inception
+    label: Inception
+    maps_from: [intent, inception]
+  - id: construction
+    label: Construction
+    maps_from: [construction]
+  - id: operations
+    label: Operations
+    maps_from: [operations]
+capabilities:
+  required:
+    - ai-initiated-planning
+    - human-validation
+    - intent
+    - units
+    - bolts
+    - level-1-plan
+    - recursive-planning
+    - persistent-context
+    - forward-backward-traceability
+    - user-stories
+    - non-functional-requirements
+    - risk-register
+    - measurement-criteria
+    - domain-design
+    - logical-design
+    - deployment-units
+    - operations-observability
+    - brownfield-semantic-elevation
+  optional:
+    - prfaq
+    - quality-reviewer
+  unsupported: []
+neutrality:
+  provider: true
+  model: true
+  cloud: true
+  scm: true
+  agent-runtime: true
+metadata:
+  scope: Public method compatibility target; readiness is pre-method and is intentionally not presented as an AWS phase.

@@ -2,6 +2,10 @@
 
 Decision (2026-09-21): Agora AI-SDLC follows the published AI-Driven Development Lifecycle method definition (the AWS blog post and the paper by Raja SP, cited in the [alignment table](aws-ai-dlc-mapping.md)) as faithfully as Agora Core allows. Where the current Method Pack differs from the paper, the paper wins unless Core cannot express it, and every remaining difference is listed here as a forced or additive deviation. This document is a plan and a decision record, not shipped behavior. Content is paraphrased; no text or prompts from the sources are reproduced. AWS is methodological inspiration, not a runtime dependency or endorsement; the project is not affiliated with AWS.
 
+## Implementation status
+
+Method Pack 0.2.0 is now shipped as a selectable candidate under `registry/method-versions/ai-sdlc/0.2.0`. Existing adoption profiles remain pinned to 0.1.0 until an explicit migration/promotion step. Issues #99-#101 still own first-class recursive plans, adaptive pathway execution and executable Bolts.
+
 ## What the paper defines, and the target
 
 | Element in the paper | Today | Target in Method Pack 0.2.0 |

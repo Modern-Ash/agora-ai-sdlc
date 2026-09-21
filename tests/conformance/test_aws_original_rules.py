@@ -85,7 +85,7 @@ def test_rules_contract_schema_matches_runtime():
 
 def test_unknown_check_type_fails_with_stable_code():
     raw = yaml.safe_load(
-        (ROOT / "profiles" / "compatibility" / "aws-original" / "rules.yaml").read_text(encoding="utf-8")
+        (ROOT / "contracts" / "conformance" / "aws-original-rules-v1.yaml").read_text(encoding="utf-8")
     )
     raw["base_rules"][0]["pass"][0]["type"] = "magic"
     with pytest.raises(AwsOriginalRuleError) as exc:
@@ -95,7 +95,7 @@ def test_unknown_check_type_fails_with_stable_code():
 
 def test_missing_rule_for_profile_capability_fails_closed():
     raw = yaml.safe_load(
-        (ROOT / "profiles" / "compatibility" / "aws-original" / "rules.yaml").read_text(encoding="utf-8")
+        (ROOT / "contracts" / "conformance" / "aws-original-rules-v1.yaml").read_text(encoding="utf-8")
     )
     raw["base_rules"] = raw["base_rules"][1:]
     with pytest.raises(AwsOriginalRuleError) as exc:
@@ -105,7 +105,7 @@ def test_missing_rule_for_profile_capability_fails_closed():
 
 def test_rule_for_undeclared_capability_is_rejected():
     raw = yaml.safe_load(
-        (ROOT / "profiles" / "compatibility" / "aws-original" / "rules.yaml").read_text(encoding="utf-8")
+        (ROOT / "contracts" / "conformance" / "aws-original-rules-v1.yaml").read_text(encoding="utf-8")
     )
     clone = dict(raw["base_rules"][0])
     clone["capability"] = "not-declared"
@@ -117,7 +117,7 @@ def test_rule_for_undeclared_capability_is_rejected():
 
 def test_rule_paths_cannot_escape_repository_root():
     raw = yaml.safe_load(
-        (ROOT / "profiles" / "compatibility" / "aws-original" / "rules.yaml").read_text(encoding="utf-8")
+        (ROOT / "contracts" / "conformance" / "aws-original-rules-v1.yaml").read_text(encoding="utf-8")
     )
     raw["base_rules"][0]["evidence"] = ["../outside"]
     with pytest.raises(AwsOriginalRuleError) as exc:

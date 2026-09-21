@@ -12,7 +12,12 @@ PACKAGES = {
     "modernization.md": "legacy-modernization",
     "regulated-readiness.md": "regulated-readiness",
 }
-REFERENCE_DOCS = {"reference-architecture.md", "security-and-responsibility.md", "statement-of-work-template.md"}
+REFERENCE_DOCS = {
+    "reference-architecture.md",
+    "security-and-responsibility.md",
+    "statement-of-work-template.md",
+    "competitive-positioning.md",
+}
 REQUIRED_HEADINGS = {
     "Customer problem",
     "Entry criteria and prerequisites",
@@ -119,3 +124,16 @@ def test_regulated_readiness_never_claims_certification_or_compliance():
     assert "certification" in lowered and "not legal advice" in lowered
     assert "no output states that the software, the organization, or a deployment is certified or compliant" in lowered
     assert "[Regulated profile](../profiles/regulated.md)" in body
+
+
+def test_competitive_positioning_compares_only_to_the_published_definition_without_outcome_claims():
+    text = (COMMERCIAL / "competitive-positioning.md").read_text(encoding="utf-8")
+    lowered = text.casefold()
+    assert "not buyer-facing copy" in lowered
+    assert "do not make statements about any aws product" in lowered
+    assert "must not be turned into" in lowered
+    assert "not sponsored, endorsed, or certified by aws" in lowered
+    section = text.split("## Differentiators and their evidence", 1)[1].split("\n## ", 1)[0]
+    rows = [line for line in section.splitlines() if line.startswith("|")][2:]
+    assert len(rows) >= 8
+    assert all(row.count("|") == 5 for row in rows)

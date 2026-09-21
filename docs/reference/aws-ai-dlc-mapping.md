@@ -12,12 +12,12 @@ Goal: stay as close to the published AI-DLC method as possible while keeping thi
 | Human validation at each step catches errors early | aligned | Gates require evidence and accountable approvals before each forward transition |
 | Persist every artifact as durable context memory, with backward and forward traceability | aligned | Markdown artifacts in Git with `traces-to` links and the [traceability engine](../method/artifacts.md) |
 | Three phases: Inception, Construction, Operations | partial | Same phases, plus extra `readiness` and `intent` states before Inception and a terminal `completed` state |
-| Retain user stories as the contract between humans and AI | gap | Acceptance criteria and `requirements` exist; there is no user-story artifact |
+| Retain user stories as the contract between humans and AI | aligned | `user-stories` template traced to the Unit of Work, plus acceptance criteria in Core |
 | Design techniques integral to the method (a DDD flavor first) | partial | `domain-model` and `architecture` templates exist; no technique-specific flavor or Domain/Logical Design split |
 | Minimal roles (Product Owner and developers) | deliberate difference | Nine roles for governance and segregation of duties; small teams may hold several |
 | No hard-wired workflow: AI proposes a Level 1 Plan per pathway, recursively decomposed | gap | Fixed six-state lifecycle; no plan artifact tied to a pathway |
-| Bolts replace sprints (hours or days), Units of Work replace epics | partial | Both are defined terms; a Bolt is only a section of the `unit-of-work` template, not a recorded artifact |
-| Retain risk practices (Risk Register) | partial | `risks` sections in intent and architecture; no organization risk-register linkage |
+| Bolts replace sprints (hours or days), Units of Work replace epics | aligned | Both are defined terms; a Bolt is a recorded `bolt-plan` artifact traced to its Unit of Work and stories |
+| Retain risk practices (Risk Register) | aligned | `risk-register` template with an organization-register reference section, traced to the intent |
 | Brown-field: elevate code to static and dynamic models before construction | partial | Modernization profile: legacy inventory, dependency map, characterization; no explicit static/dynamic model artifacts |
 
 ## Phases, rituals and artifacts
@@ -25,21 +25,21 @@ Goal: stay as close to the published AI-DLC method as possible while keeping thi
 | AI-DLC element | Status | Agora AI-SDLC | Proposed action |
 | --- | --- | --- | --- |
 | Intent | aligned | `product-intent` artifact, state `intent` | none |
-| Mob Elaboration (collaborative elaboration of Intent into stories, criteria and Units) | gap | not defined | document the ritual as a facilitated session recorded through Core sessions and gates |
-| User stories and acceptance criteria | partial | acceptance criteria in Core; `requirements` template | add a `user-stories` artifact template |
+| Mob Elaboration (collaborative elaboration of Intent into stories, criteria and Units) | aligned | [Collaborative elaboration](../method/rituals.md) recorded through artifacts, clarifications and gates | none |
+| User stories and acceptance criteria | aligned | `user-stories` template; acceptance criteria in Core | none |
 | Non-functional requirements | aligned | `requirements` has a mandatory section | none |
-| PRFAQ (optional) | gap | not defined | add an optional `prfaq` template |
-| Risk descriptions (matching an organization's Risk Register) | partial | risks in `product-intent` and `architecture` | add a `risk-register` template with an external-reference field |
-| Measurement criteria traced to the business intent | partial | `Success measures` in `product-intent` | add a `measurement-criteria` template and trace it from stories |
-| Units and suggested Bolts | partial | `unit-of-work` template lists Bolts | record Bolts as first-class artifacts planned by AI and validated by a human |
-| Mob Construction (collocated teams exchanging integration specifications) | gap | not defined | document the ritual; integration specifications as Unit artifacts |
+| PRFAQ (optional) | aligned | optional `prfaq` template | none |
+| Risk descriptions (matching an organization's Risk Register) | aligned | `risk-register` template with an external-reference section | none |
+| Measurement criteria traced to the business intent | aligned | `measurement-criteria` template traced to the intent | none |
+| Units and suggested Bolts | aligned | `unit-of-work` plus `bolt-plan` artifacts; AI proposes, a human approves | none |
+| Mob Construction (collocated teams exchanging integration specifications) | aligned | [Collaborative construction](../method/rituals.md); integration specifications as Unit artifacts | none |
 | Domain Design | aligned | `domain-model` template | none |
-| Logical Design with architecture decision records | partial | `architecture` has Decisions | add a `logical-design` template covering non-functional patterns and ADR links |
+| Logical Design with architecture decision records | aligned | `logical-design` template with decision records | none |
 | Code and unit tests generated, executed and analyzed | aligned | build evidence and `test-suite` evidence at `build-verified` | none |
-| Deployment Units tested for function, security and non-functional requirements | partial | `deployment-plan`, `test-strategy`, security-scan and deployment evidence | add a `deployment-units` template |
+| Deployment Units tested for function, security and non-functional requirements | aligned | `deployment-units` template plus security-scan and deployment evidence | none |
 | Operations: telemetry analysis, runbooks, human-approved actions | aligned | operational-evidence profile and control bands | none |
-| Context-memory folder layout for plans, requirements, stories and designs | gap | artifacts live at project-chosen paths | publish a recommended layout in [artifacts](../method/artifacts.md) |
-| Plans with checkboxes, approved before execution | partial | `implementation-plan` template | add a `plan` template with approval checkpoints |
+| Context-memory folder layout for plans, requirements, stories and designs | aligned | recommended layout in [artifacts](../method/artifacts.md) | none |
+| Plans with checkboxes, approved before execution | partial | `plan` template with an approval section; approval is recorded through Core, not enforced by the template | require an approved `plan` at a gate in a depth profile |
 
 ## Deliberate differences
 

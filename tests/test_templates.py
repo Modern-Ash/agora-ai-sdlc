@@ -51,6 +51,8 @@ def test_all_required_templates_exist():
         "operational-readiness", "learning-record",
         "legacy-inventory", "dependency-map", "characterization", "target-architecture", "migration-plan",
         "migration-slice", "conversion-record", "equivalence-report", "cutover-plan", "stabilization-report",
+        "user-stories", "prfaq", "risk-register", "measurement-criteria", "bolt-plan", "logical-design",
+        "deployment-units", "plan",
     }  # fmt: skip
     for kind in wanted:
         assert parse_template(template_for(kind).read_text()).kind == kind
@@ -143,3 +145,48 @@ def test_uncovered_and_unknown_criteria():
     unknown = text.replace('covers-criteria: ["value"]', 'covers-criteria: ["value", "ghost"]')
     items = [a for a in chain() if a.kind != "test-strategy"] + [parse_artifact(unknown)]
     assert code_of(lambda: check_traceability(items)) == "trace.unknown_criterion"
+
+
+NEW_KINDS = {
+    "user-stories": "USR", "prfaq": "PRF", "risk-register": "RSK", "measurement-criteria": "MSR",
+    "bolt-plan": "BLT", "logical-design": "LGD", "deployment-units": "DPU", "plan": "PLN",
+}  # fmt: skip
+
+
+def filled(kind, artifact_id, traces_to=()):
+    template = template_for(kind).read_text()
+    front, _ = split(template)
+    text = template.replace('id: ""', f'id: "{artifact_id}"').replace(
+        "traces-to: []", f"traces-to: {json.dumps(list(traces_to))}"
+    )
+    for section in front["required-sections"]:
+        text = text.replace(f"<!-- {section}: describe; see docs/method/artifacts.md -->", f"{section} filled.")
+    return parse_artifact(text)
+
+
+def test_elaboration_construction_and_planning_kinds_are_optional_and_registered():
+    for kind, prefix in NEW_KINDS.items():
+        assert PREFIX[kind] == prefix and kind not in gate_required_kinds()
+        assert parse_template(template_for(kind).read_text()).kind == kind
+
+
+def test_new_kinds_trace_through_the_existing_chain():
+    intent = load("intent.md")
+    unit = load("unit.md")
+    artifacts = [
+        intent,
+        unit,
+        filled("user-stories", "USR-001", [unit.id]),
+        filled("bolt-plan", "BLT-001", ["UOW-001", "USR-001"]),
+        filled("prfaq", "PRF-001", [intent.id]),
+        filled("risk-register", "RSK-001", [intent.id]),
+        filled("measurement-criteria", "MSR-001", [intent.id]),
+        filled("plan", "PLN-001", []),
+    ]
+    check_traceability(artifacts)
+
+
+def test_new_kinds_reject_a_parent_of_the_wrong_kind():
+    intent = load("intent.md")
+    wrong = [intent, filled("user-stories", "USR-001", [intent.id])]
+    assert code_of(lambda: check_traceability(wrong)) == "trace.parent_kind"

@@ -24,6 +24,7 @@ VENDOR_ATTRIBUTION_ALLOWED = {
     "docs/method/overview.md",
     "docs/product/positioning.md",
     "docs/reference/aws-ai-dlc-mapping.md",
+    "docs/reference/aws-ai-dlc-fidelity-plan.md",
     "docs/commercial",
     ".agora",
 }

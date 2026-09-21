@@ -1,15 +1,26 @@
 ---
 issue: 131
-status: pending
+status: passed
+tested_commit: ca8e2828496d66f722d1a12e592bccc2f3f3437d
 updated_at: 2026-09-21
 ---
 # Tests
 
-GitHub Actions is the authoritative verification.
+GitHub Actions run #181 passed on the final implementation head.
 
-Required:
-- derived lg-enterprise conformance coverage
-- CLI derive coverage
-- Marketplace regeneration/drift coverage
-- enterprise reference sample
-- full verify_all matrix
+Run: https://github.com/Modern-Ash/agora-ai-sdlc/actions/runs/35642663931
+
+## Verified
+- lint
+- format
+- full pytest matrix
+- links
+- manifest
+- Marketplace evidence drift
+- Method Pack validation
+- all bundled samples
+- wheel build/install smoke test
+- bundled self-test from installed wheel
+- newest supported Agora Core compatibility
+
+The lg-enterprise sample now passes both from source checkout and from the installed wheel.

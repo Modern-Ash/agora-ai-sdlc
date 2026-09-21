@@ -29,8 +29,8 @@ from agora_ai_sdlc.flavor_manifest import (
     installed_core_version,
     load_packaged_manifest,
 )
-from agora_ai_sdlc.profile_activation import adoption_profiles
 from agora_ai_sdlc.guided import skill_path
+from agora_ai_sdlc.profile_activation import adoption_profiles
 
 SCHEMA = "agora-ai-sdlc/install-config/v1"
 PROJECT_SCHEMA = "agora-ai-sdlc/project-config/v1"

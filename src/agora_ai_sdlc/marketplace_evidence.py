@@ -7,6 +7,8 @@ from pathlib import Path
 from agora_ai_sdlc.compatibility_profiles import load_profile
 from agora_ai_sdlc.conformance.aws_original import derive_additive_governance, derive_facts
 from agora_ai_sdlc.conformance.compatibility import evaluate
+from agora_ai_sdlc.conformance.lg_enterprise import FACTS_SOURCE as LG_FACTS_SOURCE
+from agora_ai_sdlc.conformance.lg_enterprise import derive_facts as derive_lg_facts
 
 GENERATED_RELATIVE = Path("docs/commercial/marketplace/compatibility-evidence.md")
 
@@ -45,8 +47,9 @@ def generate(root: Path) -> str:
     aws = _grouped_statuses(aws_report)
 
     lg_profile = load_profile("lg-enterprise")
+    lg_report = evaluate(lg_profile, derive_lg_facts(root), facts_source=LG_FACTS_SOURCE)
+    lg = _grouped_statuses(lg_report)
     lg_required = sorted(lg_profile.required_capabilities)
-    lg_optional = sorted(lg_profile.optional_capabilities)
 
     agora_results = derive_additive_governance(root)
     agora_pass = sorted(result.id for result in agora_results if result.status == "PASS")
@@ -62,7 +65,8 @@ def generate(root: Path) -> str:
     lg_evidence = ", ".join(
         (
             _link("profiles/compatibility/lg-enterprise/profile.yaml"),
-            _link("docs/reference/compatibility-profiles.md"),
+            _link("src/agora_ai_sdlc/conformance/lg_enterprise.py"),
+            _link("tests/conformance/test_lg_enterprise_rules.py"),
         )
     )
     agora_evidence = ", ".join(
@@ -85,25 +89,25 @@ def generate(root: Path) -> str:
         "| --- | --- | --- | --- |",
         (
             f"| Current result | **{aws_report.overall_status}** (executable repository conformance) | "
-            "**TARGET_ONLY** (public profile declaration; implementation conformance not yet evaluated) | "
+            f"**{lg_report.overall_status}** (executable repository conformance against the public profile) | "
             f"**{'PASS' if not agora_fail else 'FAIL'}** (additive governance only) |"
         ),
-        f"| PASS | {_items(aws['PASS'])} | Not reported as PASS until a dedicated LG rule provider exists | {_items(agora_pass)} |",
-        f"| PARTIAL | {_items(aws['PARTIAL'])} | Not evaluated | — |",
-        f"| FAIL | {_items(aws['FAIL'])} | Not evaluated | {_items(agora_fail)} |",
-        f"| NOT_APPLICABLE / optional | {_items(aws['NOT_APPLICABLE'])} | {_items(lg_optional)} | — |",
+        f"| PASS | {_items(aws['PASS'])} | {_items(lg['PASS'])} | {_items(agora_pass)} |",
+        f"| PARTIAL | {_items(aws['PARTIAL'])} | {_items(lg['PARTIAL'])} | — |",
+        f"| FAIL | {_items(aws['FAIL'])} | {_items(lg['FAIL'])} | {_items(agora_fail)} |",
+        f"| NOT_APPLICABLE / optional | {_items(aws['NOT_APPLICABLE'])} | {_items(lg['NOT_APPLICABLE'])} | — |",
         f"| Required target capabilities | Derived by executable rules | {_items(lg_required)} | Additive controls, not base-method requirements |",
         f"| Evidence | {aws_evidence} | {lg_evidence} | {agora_evidence} |",
         (
             "| Boundary | Public-method fidelity only; PARTIAL/FAIL remain visible | "
-            "Public target semantics only; no private/proprietary implementation behavior is modeled | "
+            "Public-profile implementation evidence only; no private/proprietary LG behavior is modeled | "
             "Agora-specific governance is never counted as AWS-original fidelity |"
         ),
         "",
         "## Claim boundaries",
         "",
         "- AWS-original statuses come from the repository-derived conformance provider and cannot be promoted by editing this document.",
-        "- LG-enterprise currently represents a public compatibility target only. TARGET_ONLY must not be rewritten as PASS, PARTIAL, or verified implementation compatibility.",
+        "- LG-enterprise statuses come from the repository-derived public-profile provider; PARTIAL/FAIL remain visible and no proprietary LG behavior is inferred.",
         "- Agora-open reports additive governance such as fail-closed gates, independent review, provider neutrality, and model/session provenance; those controls do not upgrade AWS-original fidelity.",
         "- Proprietary or non-public AWS/LG prompts, source code, scoring, implementation details, partner status, certification, sponsorship, or endorsement are not evaluated or claimed.",
         "- Marketplace and release copy must preserve current PARTIAL/FAIL states and link back to this generated evidence.",

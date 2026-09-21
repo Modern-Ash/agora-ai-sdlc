@@ -1,6 +1,4 @@
 from pathlib import Path
-from types import SimpleNamespace
-
 from agora_ai_sdlc.guided import GuidedDecision
 from agora_ai_sdlc.guided_session import run_interactive
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery

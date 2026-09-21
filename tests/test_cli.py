@@ -213,3 +213,60 @@ def test_guided_continue_cli_can_show_commands_and_json(monkeypatch, capsys):
     payload = json.loads(capsys.readouterr().out)
     assert payload["gate"] == "readiness-approved"
     assert payload["missing_artifacts"] == ["readiness-assessment"]
+
+
+def test_runtimes_cli_human_and_json(monkeypatch, capsys):
+    from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
+
+    discovered = (
+        RuntimeDiscovery(
+            id="codex",
+            name="Codex",
+            command="codex",
+            installed=True,
+            executable="/bin/codex",
+            responsive=True,
+            version="codex 1.0",
+            configured=True,
+        ),
+    )
+    monkeypatch.setattr("agora_ai_sdlc.runtime_discovery.discover_runtimes", lambda *args, **kwargs: discovered)
+    monkeypatch.setattr("agora_ai_sdlc.runtime_discovery.render_runtimes", lambda items: "runtime-report")
+
+    assert main(["runtimes"]) == 0
+    assert capsys.readouterr().out.strip() == "runtime-report"
+
+    assert main(["runtimes", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload[0]["id"] == "codex"
+    assert payload[0]["configured"] is True
+
+
+def test_doctor_cli_human_and_json(monkeypatch, capsys):
+    from agora_ai_sdlc.doctor import DoctorCheck
+    from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
+
+    checks = (DoctorCheck("project", True, "valid Agora project"),)
+    runtimes = (
+        RuntimeDiscovery(
+            id="ollama",
+            name="Ollama",
+            command="ollama",
+            installed=True,
+            executable="/bin/ollama",
+            responsive=True,
+            version="ollama 1.0",
+            configured=False,
+            service="responsive",
+        ),
+    )
+    monkeypatch.setattr("agora_ai_sdlc.doctor.run_doctor", lambda root: (checks, runtimes))
+    monkeypatch.setattr("agora_ai_sdlc.doctor.render_doctor", lambda c, r: "doctor-report")
+
+    assert main(["doctor"]) == 0
+    assert capsys.readouterr().out.strip() == "doctor-report"
+
+    assert main(["doctor", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["checks"][0]["id"] == "project"
+    assert payload["runtimes"][0]["service"] == "responsive"

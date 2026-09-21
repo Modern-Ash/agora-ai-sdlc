@@ -205,29 +205,22 @@ def main(argv: list[str] | None = None) -> int:
             )
         return 0
     if args.command == "install":
-        from agora_ai_sdlc.installer import (
-            InstallerError,
-            apply as apply_install,
-            load_config as load_install_config,
-            preview as preview_install,
-            render_config as render_install_config,
-            wizard as install_wizard,
-        )
+        from agora_ai_sdlc import installer as project_installer
 
         target = Path(args.target).expanduser()
         home = Path(args.home).expanduser()
         try:
             config = (
-                load_install_config(Path(args.config))
+                project_installer.load_config(Path(args.config))
                 if args.config
-                else install_wizard(target)
+                else project_installer.wizard(target)
             )
             if args.write_config:
                 output = Path(args.write_config)
-                output.write_text(render_install_config(config), encoding="utf-8")
+                output.write_text(project_installer.render_config(config), encoding="utf-8")
                 print(json.dumps({"status": "configured", "config": str(output)}, sort_keys=True))
                 return 0
-            plan = preview_install(config, target)
+            plan = project_installer.preview(config, target)
             if not args.yes:
                 print(json.dumps(plan, sort_keys=True))
                 if input("Apply Agora AI-SDLC installation? [y/N] ").strip().casefold() not in {
@@ -236,9 +229,9 @@ def main(argv: list[str] | None = None) -> int:
                 }:
                     print(json.dumps({"status": "cancelled"}, sort_keys=True))
                     return 0
-            print(json.dumps(apply_install(config, target, home), sort_keys=True))
+            print(json.dumps(project_installer.apply(config, target, home), sort_keys=True))
             return 0
-        except (InstallerError, OSError, subprocess.CalledProcessError) as error:
+        except (project_installer.InstallerError, OSError, subprocess.CalledProcessError) as error:
             print(error, file=sys.stderr)
             return 2
     if args.command == "starter-bootstrap":

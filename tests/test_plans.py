@@ -55,33 +55,36 @@ def test_generic_artifact_traceability_accepts_plan_artifacts():
 
 
 def test_level1_requires_no_parent_and_level_n_requires_parent():
-    assert error_code(
-        lambda: parse_plan(mutate("level1.md", lambda front: front.update({"parent-plan": "PLN-999"})))
-    ) == "plan.parent_level1"
-    assert error_code(
-        lambda: parse_plan(mutate("level2.md", lambda front: front.update({"parent-plan": None})))
-    ) == "plan.parent_required"
+    assert (
+        error_code(lambda: parse_plan(mutate("level1.md", lambda front: front.update({"parent-plan": "PLN-999"}))))
+        == "plan.parent_level1"
+    )
+    assert (
+        error_code(lambda: parse_plan(mutate("level2.md", lambda front: front.update({"parent-plan": None}))))
+        == "plan.parent_required"
+    )
 
 
 def test_parent_intent_and_unit_must_be_traced():
-    assert error_code(
-        lambda: parse_plan(
-            mutate("level1.md", lambda front: front.update({"traces-to": ["UOW-001"]}))
-        )
-    ) == "plan.intent_trace"
-    assert error_code(
-        lambda: parse_plan(
-            mutate("level1.md", lambda front: front.update({"traces-to": ["INT-001"]}))
-        )
-    ) == "plan.unit_trace"
-    assert error_code(
-        lambda: parse_plan(
-            mutate(
-                "level2.md",
-                lambda front: front.update({"traces-to": ["INT-001", "UOW-001"]}),
+    assert (
+        error_code(lambda: parse_plan(mutate("level1.md", lambda front: front.update({"traces-to": ["UOW-001"]}))))
+        == "plan.intent_trace"
+    )
+    assert (
+        error_code(lambda: parse_plan(mutate("level1.md", lambda front: front.update({"traces-to": ["INT-001"]}))))
+        == "plan.unit_trace"
+    )
+    assert (
+        error_code(
+            lambda: parse_plan(
+                mutate(
+                    "level2.md",
+                    lambda front: front.update({"traces-to": ["INT-001", "UOW-001"]}),
+                )
             )
         )
-    ) == "plan.parent_trace"
+        == "plan.parent_trace"
+    )
 
 
 def test_pending_and_rejected_plans_are_not_executable():
@@ -97,17 +100,21 @@ def test_pending_and_rejected_plans_are_not_executable():
 
 
 def test_approved_plan_requires_accountable_human_and_current_revision():
-    assert error_code(
-        lambda: parse_plan(mutate("level1.md", lambda front: front.update({"approved-by": None})))
-    ) == "plan.approver_required"
-    assert error_code(
-        lambda: parse_plan(
-            mutate(
-                "level1.md",
-                lambda front: front.update({"revision": 2, "approved-revision": 1}),
+    assert (
+        error_code(lambda: parse_plan(mutate("level1.md", lambda front: front.update({"approved-by": None}))))
+        == "plan.approver_required"
+    )
+    assert (
+        error_code(
+            lambda: parse_plan(
+                mutate(
+                    "level1.md",
+                    lambda front: front.update({"revision": 2, "approved-revision": 1}),
+                )
             )
         )
-    ) == "plan.approval_stale"
+        == "plan.approval_stale"
+    )
 
 
 def test_reapproval_at_changed_revision_restores_executability():
@@ -136,16 +143,16 @@ def test_steps_are_ordered_and_dependencies_must_point_backward():
 
 
 def test_step_decision_and_rationale_fail_closed():
-    assert error_code(
-        lambda: parse_plan(
-            mutate("level1.md", lambda front: front["steps"][0].update({"decision": "maybe"}))
+    assert (
+        error_code(
+            lambda: parse_plan(mutate("level1.md", lambda front: front["steps"][0].update({"decision": "maybe"})))
         )
-    ) == "plan.step_decision"
-    assert error_code(
-        lambda: parse_plan(
-            mutate("level1.md", lambda front: front["steps"][0].update({"rationale": ""}))
-        )
-    ) == "plan.type"
+        == "plan.step_decision"
+    )
+    assert (
+        error_code(lambda: parse_plan(mutate("level1.md", lambda front: front["steps"][0].update({"rationale": ""}))))
+        == "plan.type"
+    )
 
 
 def test_recursive_graph_requires_parent_level_and_same_scope():
@@ -153,9 +160,7 @@ def test_recursive_graph_requires_parent_level_and_same_scope():
     missing_parent = parse_plan(text("level2.md"))
     assert error_code(lambda: validate_plan_graph([missing_parent])) == "plan.parent_missing"
 
-    wrong_level = parse_plan(
-        mutate("level2.md", lambda front: front.update({"level": 3}))
-    )
+    wrong_level = parse_plan(mutate("level2.md", lambda front: front.update({"level": 3})))
     assert error_code(lambda: validate_plan_graph([level1, wrong_level])) == "plan.parent_level"
 
     other_scope = parse_plan(

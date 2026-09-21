@@ -7,16 +7,17 @@ expected:
     - forward-backward-traceability
     - human-validation
     - intent
+    - level-1-plan
     - non-functional-requirements
     - operations-observability
     - persistent-context
     - quality-reviewer
+    - recursive-planning
     - units
   PARTIAL:
     - bolts
     - brownfield-semantic-elevation
     - deployment-units
-    - level-1-plan
     - logical-design
     - measurement-criteria
     - minimal-roles
@@ -25,6 +26,5 @@ expected:
     - three-phase-lifecycle
     - user-stories
   FAIL:
-    - recursive-planning
   NOT_APPLICABLE:
     - prfaq

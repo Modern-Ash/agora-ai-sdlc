@@ -113,7 +113,10 @@ def test_unknown_capability_fact_is_rejected():
     ("payload", "expected"),
     [
         ({"schema": "wrong", "facts": []}, "conformance.fact_schema"),
-        ({"schema": FACTS_SCHEMA, "facts": [{"capability": "x", "status": "MAYBE", "reason": "x"}]}, "conformance.fact_status"),
+        (
+            {"schema": FACTS_SCHEMA, "facts": [{"capability": "x", "status": "MAYBE", "reason": "x"}]},
+            "conformance.fact_status",
+        ),
         (
             {
                 "schema": FACTS_SCHEMA,

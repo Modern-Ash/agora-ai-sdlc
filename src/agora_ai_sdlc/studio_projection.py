@@ -8,14 +8,17 @@ does not yet expose is an explicit `unavailable` section with a stable reason, n
 Requires Agora Core >=0.9 at projection time; the module itself imports on any supported Core.
 
 Wire it into Agora Studio at startup: `agora-studio --flavor-projector agora_ai_sdlc.studio_projection:projector`.
+Use `:aws_original_projector` or `:lg_enterprise_projector` to present the same work through a compatibility profile's stages.
 """
 
 import json
 from typing import TYPE_CHECKING
 
+from agora_ai_sdlc.compatibility_profiles import load_profile
 from agora_ai_sdlc.depth_profiles import asset_root
 from agora_ai_sdlc.flavor_manifest import SCHEMA as MANIFEST_SCHEMA
 from agora_ai_sdlc.flavor_manifest import load_packaged_manifest
+from agora_ai_sdlc.presentation import stage_view, state_labels
 from agora_ai_sdlc.profile_activation import adoption_profiles, profile_id_from_kind
 
 if TYPE_CHECKING:
@@ -122,6 +125,10 @@ class AiSdlcProjectionProvider:
     projection_schema = PROJECTION_SCHEMA
     required_sections = SECTIONS
 
+    def __init__(self, presentation_profile: str | None = None) -> None:
+        """`presentation_profile` (a compatibility profile id) only relabels and groups Core states."""
+        self.presentation_profile = presentation_profile
+
     @property
     def projection_schema_document(self) -> dict[str, object]:
         path = asset_root("contracts") / "studio" / "ai-sdlc-projection-v1.schema.json"
@@ -166,10 +173,18 @@ class AiSdlcProjectionProvider:
                 "projection.metrics-unavailable", "No Core-backed AI-SDLC metric window is available"
             ),
         }
-        return FlavorProjectionContribution(
-            sections=sections,
-            presentation={"authoritative": False, "labels": dict(STATE_LABELS), "section_order": SECTION_ORDER},
-        )
+        presentation: dict[str, object] = {
+            "authoritative": False,
+            "labels": dict(STATE_LABELS),
+            "section_order": SECTION_ORDER,
+        }
+        if self.presentation_profile is not None:
+            profile = load_profile(self.presentation_profile)
+            presentation["labels"] = state_labels(profile)
+            presentation["stages"] = stage_view(profile, context.lifecycle.current_state)
+        return FlavorProjectionContribution(sections=sections, presentation=presentation)
 
 
 projector = AiSdlcProjectionProvider()
+aws_original_projector = AiSdlcProjectionProvider("aws-original")
+lg_enterprise_projector = AiSdlcProjectionProvider("lg-enterprise")

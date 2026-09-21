@@ -7,9 +7,11 @@ from pathlib import Path
 from agora_ai_sdlc.compatibility_profiles import load_profile as load_compatibility_profile
 from agora_ai_sdlc.conformance.compatibility import evaluate as evaluate_conformance
 from agora_ai_sdlc.conformance.lg_enterprise import FACTS_SOURCE, derive_facts
-from agora_ai_sdlc.enterprise_controls import ControlFacts, evaluate as evaluate_controls
+from agora_ai_sdlc.enterprise_controls import ControlFacts
+from agora_ai_sdlc.enterprise_controls import evaluate as evaluate_controls
 from agora_ai_sdlc.enterprise_controls import load_profile as load_control_profile
-from agora_ai_sdlc.enterprise_reviews import ReviewFact, evaluate as evaluate_reviews, load_policy
+from agora_ai_sdlc.enterprise_reviews import ReviewFact, load_policy
+from agora_ai_sdlc.enterprise_reviews import evaluate as evaluate_reviews
 from agora_ai_sdlc.presentation import render
 
 ROOT = Path(__file__).parents[2]

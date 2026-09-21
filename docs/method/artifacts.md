@@ -43,6 +43,7 @@ Modernization templates also use structured `behaviors`, `slice-ids`, `slice-id`
 | learning-record | LRN | any | learning-record.md |
 | rework-record | RWK | any | rework-record.md |
 | plan | PLN | any (plan-specific scope/parent rules apply) | plan.md |
+| bolt-plan | BLP | unit-of-work, plan | bolt-plan.md |
 | legacy-inventory | LGI | root | legacy-inventory.md |
 | dependency-map | DPM | legacy-inventory | dependency-map.md |
 | characterization | CHR | legacy-inventory | characterization.md |
@@ -69,3 +70,7 @@ Chain: intent -> unit of work -> requirements (criteria) -> architecture / test 
 ## Plan-specific semantics
 
 `plan` artifacts use the shared artifact envelope plus recursive Level-N fields. Generic traceability keeps their references resolvable; [planning](planning.md) defines parent-level, scope, step ordering, approval and stale-revision rules enforced by `agora_ai_sdlc.plans`.
+
+## Bolt-plan semantics
+
+`bolt-plan` artifacts hold the AI-proposed, human-approved Bolts that deliver one Unit of Work. [Bolts](bolts.md) defines ordering, lifecycle, conflict and evidence rules enforced by `agora_ai_sdlc.bolts`.

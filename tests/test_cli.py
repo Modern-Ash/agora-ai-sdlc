@@ -142,3 +142,18 @@ def test_plan_validate_cli_rejects_unknown_pathway(capsys):
 
     assert main(["plan-validate", str(plan), "--pathway", "missing"]) == 2
     assert "pathway.unknown" in capsys.readouterr().err
+
+
+def test_bolt_validate_cli_reports_trace_and_fails_closed(capsys, tmp_path):
+    root = Path(__file__).parent.parent
+    fixture = root / "tests" / "fixtures" / "bolts" / "parallel.md"
+
+    assert main(["bolt-validate", str(fixture), "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["unit"] == "UOW-001"
+    assert payload["ready"] == ["ui"]
+
+    broken = tmp_path / "conflict.md"
+    broken.write_text(fixture.read_text(encoding="utf-8").replace('writes: ["src/ui/"]', 'writes: ["src/api/"]'))
+    assert main(["bolt-validate", str(broken)]) == 2
+    assert "bolt.parallel_conflict" in capsys.readouterr().err

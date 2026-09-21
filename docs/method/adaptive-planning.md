@@ -62,7 +62,7 @@ Use an adoption profile:
 agora-ai-sdlc plan-validate plan.md --pathway regulated-change --profile regulated --json
 ```
 
-The command is read-only. It does not execute plan steps, mutate a repository, call an LLM, or invoke a cloud/provider API. Successful validation means only that the current approved Plan revision is policy-authorized. Step execution and Bolt scheduling are separate capabilities.
+The command is read-only. It does not execute plan steps, mutate a repository, call an LLM, or invoke a cloud/provider API. Successful validation means only that the current approved Plan revision is policy-authorized. Step execution is a separate capability; Bolt plans are validated by [bolts](bolts.md).
 
 ## Failure semantics
 

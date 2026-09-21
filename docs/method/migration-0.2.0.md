@@ -54,7 +54,7 @@ Later issues extend this baseline:
 
 - #99: first-class Level 1 / Level-N plan artifacts and approval semantics.
 - #100: adaptive pathway planning and conditional execution depth.
-- #101: first-class executable Bolts.
+- #101: first-class executable Bolts (delivered as `bolt-plan`, see [bolts](bolts.md)).
 
 Therefore 0.2.0 should not yet be described as completing those capabilities merely because the three-phase lifecycle is available.
 

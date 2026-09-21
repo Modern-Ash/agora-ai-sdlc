@@ -15,7 +15,7 @@ One canonical term per concept. Extend this file, do not fork definitions elsewh
 | Model | The specific LLM used by a runtime. Model names never imply provider independence. |
 | Swarm | A governed group of actors working on shared work items. |
 | Unit of Work | Bounded deliverable moving through the lifecycle. |
-| Bolt | Short iteration cycle over a Unit of Work, without time tracking in Core. |
+| Bolt | Short iteration cycle over a Unit of Work, without time tracking in Core. Recorded as an entry of a human-approved `bolt-plan`. |
 | Gate | Checkpoint requiring evidence/approval for a transition. |
 | Evidence | Recorded, verifiable proof (tests, reviews, approvals) attached to a gate. |
 | Profile | Opinionated adoption/policy configuration (Starter, Enterprise, Modernization, Regulated). |

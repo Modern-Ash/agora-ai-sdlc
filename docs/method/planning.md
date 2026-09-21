@@ -36,7 +36,7 @@ Plan execution fails closed until the exact current revision is approved.
 
 An approved plan must record both `approved-by` and `approved-revision`. If an approved artifact changes from revision 1 to revision 2 while retaining approval for revision 1, parsing fails with `plan.approval_stale`. The revised plan must be reviewed and approved again.
 
-`assert_executable(plan)` is the explicit flavor boundary used by later adaptive-execution work. This issue does not automatically execute plan steps; adaptive pathway selection is #100 and Bolt execution is #101.
+`assert_executable(plan)` is the explicit flavor boundary used by later adaptive-execution work. This issue does not automatically execute plan steps; adaptive pathway selection is #100 and Bolt execution is #101 ([bolts](bolts.md)).
 
 ## Traceability
 

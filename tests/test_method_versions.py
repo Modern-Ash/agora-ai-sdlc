@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from agora.markdown import read_markdown
 from agora.methods import load_method_contract
 
 from agora_ai_sdlc.method_versions import (
@@ -36,7 +37,8 @@ def test_020_contract_is_three_phase_with_minimal_roles():
     assert contract.work_states == ["inception", "construction", "operations", "completed"]
     assert contract.terminal_state == "completed"
     assert contract.required_roles == ["product-owner", "developer"]
-    assert contract.optional_roles == ["quality-reviewer"]
+    method_attributes = read_markdown(method_pack_path("0.2.0") / "METHOD.md").attributes
+    assert method_attributes["optional-roles"] == ["quality-reviewer"]
     assert {(rule.source, rule.target, rule.gate) for rule in contract.transitions} == {
         ("inception", "construction", "inception-approved"),
         ("construction", "inception", None),

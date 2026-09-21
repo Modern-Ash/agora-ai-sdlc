@@ -1,6 +1,6 @@
 # Enterprise delivery controls
 
-Issue #107 adds three provider-neutral controls that are deliberately outside the canonical AWS-original AI-DLC method: estimation, test design and code review. They are flavor-level enterprise extensions and never advance Agora Core lifecycle state.
+Issue #107 adds three provider-neutral controls that are deliberately outside the canonical AWS-original public method: estimation, test design and code review. They are flavor-level enterprise extensions and never advance Agora Core lifecycle state.
 
 ## Compatibility behavior
 

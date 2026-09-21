@@ -2,7 +2,7 @@
 schema: "agora/method/v1"
 id: "ai-sdlc"
 name: "AI-SDLC"
-version: "0.1.0"
+version: "0.1.1"
 dependencies: []
 required-roles: ["product-owner", "architect", "builder", "operator", "quality-reviewer"]
 work-states: ["readiness", "intent", "inception", "construction", "operations", "completed"]

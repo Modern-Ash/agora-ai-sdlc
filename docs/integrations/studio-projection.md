@@ -63,6 +63,10 @@ The provider fills `flavor` from the packaged manifest and `provenance` from Cor
 agora-studio --project <path> --flavor-projector agora_ai_sdlc.studio_projection:projector
 ```
 
+### Presentation profiles
+
+The same work item can be presented through a compatibility profile without changing Core state: `:aws_original_projector` (3 stages) or `:lg_enterprise_projector` (Initialization, Ideation, Inception, Construction, Operation). The profile (`profiles/compatibility/<id>/profile.yaml`, versioned) maps canonical states to stages; the projector then adds `presentation.stages` (profile id/version, current stage, done/current/upcoming per stage) and relabels `presentation.labels`. These are additive, non-authoritative hints; the default `:projector` is unchanged. See `agora_ai_sdlc.presentation`.
+
 Compatibility is asserted only after tests in each owning repository pass against these exact fixtures. A future Core or Studio version is not compatible merely because its version is newer.
 
 ## Verification responsibilities

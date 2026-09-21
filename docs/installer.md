@@ -87,7 +87,31 @@ The installer also copies the portable guided-agent skill to:
 .agora/skills/agora-ai-sdlc-guided/SKILL.md
 ```
 
-The default guided command translates Core blockers into human-readable decisions. Use
-`agora-ai-sdlc continue --expert` to include the exact Core gate details.
+The default guided command renders a decision card instead of a raw gate failure. It includes:
+
+- objective/work identity and active Method Pack;
+- current and target stages;
+- gate id and responsible role;
+- readiness checks for artifacts, criteria, clarifications, evidence, Git policy and approvals;
+- the remaining obligations in human language;
+- the explicit boundary between the responsible human and the assisting AI;
+- the recommended next interaction.
+
+Additional disclosure modes:
+
+```bash
+agora-ai-sdlc continue --commands
+agora-ai-sdlc continue --expert
+agora-ai-sdlc continue --json
+```
+
+`--commands` shows the grouped underlying Core sequence together with a reason for every step. For
+the Starter readiness slice this may contain artifact preparation/registration, clarification,
+human approval, transition and the final re-read. It is intentionally advisory: commands marked as
+human decisions must not be executed by an agent without explicit confirmation.
+
+`--expert` adds the original Core blocker text plus the complete structured decision snapshot for
+diagnosis. `--json` returns the same decision as machine-readable data for IDE, TUI or automation
+clients without creating a second lifecycle authority.
 
 AI-SDLC owns the bootstrap and guided experience; Agora Core remains the lifecycle authority after bootstrap.

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modern-ash.github.io/agora-ai-sdlc/contracts/risk-issue-record-v1.schema.json",
+  "title": "Agora AI-SDLC risk issue record v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","id","type","title","owner","severity","status","revision","scope","evidence","probability","impact","mitigation","next_action"],
+  "properties": {
+    "schema": {"const": "agora-ai-sdlc/risk-issue-record/v1"},
+    "id": {"type":"string","pattern":"^(RSK|ISS)-[0-9]{3,}$"},
+    "type": {"enum":["risk","issue"]},
+    "title": {"type":"string","minLength":1},
+    "owner": {"type":"string","minLength":1},
+    "severity": {"enum":["low","medium","high","critical"]},
+    "status": {"enum":["open","mitigated","resolved","closed"]},
+    "revision": {"type":"integer","minimum":1},
+    "scope": {"type":"array","minItems":1,"uniqueItems":true,"items":{"type":"string","minLength":1}},
+    "evidence": {"type":"array","uniqueItems":true,"items":{"type":"string","minLength":1}},
+    "probability": {"type":["string","null"],"enum":["low","medium","high",null]},
+    "impact": {"enum":["low","medium","high","critical"]},
+    "mitigation": {"type":["string","null"]},
+    "next_action": {"type":["string","null"]}
+  }
+}

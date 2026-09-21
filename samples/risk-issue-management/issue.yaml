@@ -1,0 +1,14 @@
+schema: agora-ai-sdlc/risk-issue-record/v1
+id: ISS-001
+type: issue
+title: Contract test failure blocks release
+owner: quality-owner
+severity: critical
+status: resolved
+revision: 2
+scope: [payments-api]
+evidence: [evidence:contract-tests/run-42]
+probability: null
+impact: critical
+mitigation: null
+next_action: Re-run the release gate with the corrected contract fixture.

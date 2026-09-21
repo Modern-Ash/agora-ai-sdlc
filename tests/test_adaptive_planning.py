@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 
 from agora_ai_sdlc.adaptive_planning import (
-    AdaptivePlanningError,
     EXPECTED_LIFECYCLE,
+    AdaptivePlanningError,
     available_pathways,
     effective_depth,
     load_pathway,

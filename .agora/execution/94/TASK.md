@@ -4,7 +4,7 @@ epic: 91
 title: Define versioned AWS-original and LG-enterprise compatibility profiles
 repository: Modern-Ash/agora-ai-sdlc
 base_commit: 6b78b4103676017293649919107530232df1272f
-status: implementing
+status: review
 risk: medium
 context_size: medium
 budget:
@@ -65,15 +65,15 @@ The repository documents AWS AI-DLC fidelity and contains adoption/depth/integra
 - Checked-in JSON schema documents the public contract.
 
 ## Acceptance criteria
-- [ ] AWS-original and LG-enterprise manifests load and validate.
-- [ ] Profiles conform to the checked-in schema contract.
-- [ ] Unknown canonical stage mapping fails with a stable error code.
-- [ ] Duplicate canonical stage mapping fails with a stable error code.
-- [ ] Duplicate presentation stage ids fail deterministically.
-- [ ] Capability categories are declared and pairwise disjoint.
-- [ ] Existing profile loading/behavior remains unchanged.
-- [ ] Packaged self-test discovers both compatibility profiles.
-- [ ] Documentation explains canonical vs presentation semantics and non-affiliation/public-source scope.
+- [x] AWS-original and LG-enterprise manifests load and validate.
+- [x] Profiles conform to the checked-in schema contract.
+- [x] Unknown canonical stage mapping fails with a stable error code.
+- [x] Duplicate canonical stage mapping fails with a stable error code.
+- [x] Duplicate presentation stage ids fail deterministically.
+- [x] Capability categories are declared and pairwise disjoint.
+- [x] Existing profile loading/behavior remains unchanged.
+- [x] Packaged self-test discovers both compatibility profiles.
+- [x] Documentation explains canonical vs presentation semantics and non-affiliation/public-source scope.
 
 ## Negative cases
 - Unknown schema/version.

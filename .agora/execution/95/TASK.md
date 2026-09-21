@@ -4,7 +4,7 @@ epic: 91
 title: Implement machine-readable conformance engine and CLI
 repository: Modern-Ash/agora-ai-sdlc
 base_commit: 52a4e5a7e46a75213c7fb3a2dd4aff1dc763b47c
-status: planning
+status: implementing
 risk: medium
 context_size: medium
 budget:

@@ -22,6 +22,12 @@ def main(argv: list[str] | None = None) -> int:
     sample.add_argument("name")
     self_test = sub.add_parser("self-test", help="Verify all bundled AI-SDLC assets in temporary repositories")
     self_test.add_argument("--json", action="store_true", help="Print the schema-versioned result as JSON")
+    conformance = sub.add_parser("conformance", help="Evaluate a compatibility profile against local project facts")
+    conformance.add_argument("profile")
+    conformance.add_argument("--facts", help="Explicit conformance facts YAML file")
+    conformance.add_argument("--root", default=".", help="Project root used for default local facts discovery")
+    conformance.add_argument("--json", action="store_true", help="Print the schema-versioned report as JSON")
+    conformance.add_argument("--strict", action="store_true", help="Return non-zero when the report contains FAIL")
     starter = sub.add_parser("starter-bootstrap", help="Preview and apply the Starter profile")
     starter.add_argument("--config", required=True)
     starter.add_argument("--target", required=True)
@@ -40,6 +46,23 @@ def main(argv: list[str] | None = None) -> int:
             if summary["workspace"]:
                 print(f"Diagnostic workspace: {summary['workspace']}")
         return 0 if summary["ok"] else 1
+    if args.command == "conformance":
+        from agora_ai_sdlc.conformance import ConformanceError, evaluate_project, render_human
+
+        try:
+            report = evaluate_project(
+                args.profile,
+                project_root=Path(args.root),
+                facts_path=Path(args.facts) if args.facts else None,
+            )
+        except ConformanceError as error:
+            print(error, file=sys.stderr)
+            return 2
+        if args.json:
+            print(json.dumps(report.snapshot(), sort_keys=True))
+        else:
+            print(render_human(report))
+        return 1 if args.strict and report.has_failures else 0
     if args.command == "starter-bootstrap":
         config = json.loads(Path(args.config).read_text(encoding="utf-8"))
         target, home = Path(args.target), Path(args.home)

@@ -1,0 +1,6 @@
+schema: agora-ai-sdlc/pathway/v1
+id: trivial-change
+minimum_depth: minimal
+mandatory_steps: [clarify-intent, implementation, unit-tests, deployment, observability]
+optional_steps: [define-nfrs, assess-risks, domain-design, logical-design, threat-model, integration-tests, security-tests, performance-tests, deployment-unit, rollback-readiness]
+forbidden_skips: [clarify-intent, implementation, unit-tests, deployment, observability]

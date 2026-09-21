@@ -5,8 +5,8 @@ from __future__ import annotations
 import shutil
 import subprocess
 from dataclasses import asdict, dataclass
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import yaml
 from agora.workspace import AgoraWorkspace

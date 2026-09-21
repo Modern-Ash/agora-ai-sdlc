@@ -1,4 +1,5 @@
 schema: agora-ai-sdlc/pathway-policy-set/v1
+id: adaptive-pathways
 version: 1.0.0
 method:
   id: ai-sdlc

@@ -7,5 +7,5 @@
 - Exceptional paths need an explicit transition and gate, not a flag.
 
 
-- The Product Owner may read, create/comment through, and transition configured external issue trackers through the provider-neutral `issue.read`, `issue.write`, and `issue.transition` capabilities.
+- The Product Owner may inspect configured external issue trackers through the provider-neutral `issue.read` capability.
 - Installing or selecting a GitHub/Jira adapter does not itself grant authority; the role capability and reviewed adapter must both be present.

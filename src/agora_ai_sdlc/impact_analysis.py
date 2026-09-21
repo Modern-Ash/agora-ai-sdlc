@@ -320,3 +320,10 @@ def summary(analysis: ImpactAnalysis) -> dict:
         "confidence": analysis.confidence,
         "approved": analysis.approval_state == "approved" and analysis.approved_revision == analysis.revision,
     }
+
+
+def enterprise_review_evidence(analysis: ImpactAnalysis) -> tuple[str, ...]:
+    """Return the enterprise review evidence type only for an approved current revision."""
+
+    assert_approved(analysis)
+    return ("approved-impact-analysis",)

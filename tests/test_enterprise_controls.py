@@ -107,3 +107,15 @@ def test_unknown_profile_and_invalid_configuration_fail_with_stable_codes():
     with pytest.raises(EnterpriseControlError) as exc:
         configure(load_profile("aws-original"), estimation_enabled=True)
     assert exc.value.code == "enterprise-controls.config"
+
+
+def test_unknown_or_duplicate_facts_fail_closed():
+    profile = load_profile("lg-enterprise")
+
+    with pytest.raises(EnterpriseControlError) as exc:
+        evaluate(profile, ControlFacts(review_evidence=("review-summary", "unknown-evidence")))
+    assert exc.value.code == "enterprise-controls.fact_unknown"
+
+    with pytest.raises(EnterpriseControlError) as exc:
+        evaluate(profile, ControlFacts(test_classes=("unit", "unit")))
+    assert exc.value.code == "enterprise-controls.fact_duplicate"

@@ -73,3 +73,10 @@ steps:
 ```
 
 All validation is local, deterministic and provider-neutral.
+
+
+## Adaptive pathway policy
+
+Plan structure and approval are independent from pathway policy. After a Plan is approved, the adaptive validator can check it against a checked-in pathway and effective depth without introducing pathway-specific lifecycle states.
+
+See [adaptive pathway planning](adaptive-planning.md).

@@ -193,9 +193,11 @@ def command_plan(decision: GuidedDecision) -> tuple[tuple[str, str], ...]:
         )
         commands.append(
             (
-                "agora artifact add "
-                f"--swarm {decision.swarm} --work {decision.work} "
-                f"--kind readiness-assessment --uri repo://{artifact_path} --by {actor}",
+                (
+                    "agora artifact add "
+                    f"--swarm {decision.swarm} --work {decision.work} "
+                    f"--kind readiness-assessment --uri repo://{artifact_path} --by {actor}"
+                ),
                 "Register the accepted artifact in Agora Core.",
             )
         )
@@ -211,9 +213,11 @@ def command_plan(decision: GuidedDecision) -> tuple[tuple[str, str], ...]:
     for approval in decision.missing_approvals:
         commands.append(
             (
-                "agora approval add "
-                f"--swarm {decision.swarm} --work {decision.work} "
-                f"--role {approval} --by {actor} --note \"Reviewed and approved\"",
+                (
+                    "agora approval add "
+                    f"--swarm {decision.swarm} --work {decision.work} "
+                    f"--role {approval} --by {actor} --note \"Reviewed and approved\""
+                ),
                 "Run only after explicit confirmation from the responsible human.",
             )
         )
@@ -221,8 +225,10 @@ def command_plan(decision: GuidedDecision) -> tuple[tuple[str, str], ...]:
     if decision.target:
         commands.append(
             (
-                "agora work transition "
-                f"--swarm {decision.swarm} --work {decision.work} --to {decision.target} --by {actor}",
+                (
+                    "agora work transition "
+                    f"--swarm {decision.swarm} --work {decision.work} --to {decision.target} --by {actor}"
+                ),
                 "Attempt only after a fresh Core readiness check reports the gate satisfied.",
             )
         )

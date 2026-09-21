@@ -110,7 +110,7 @@ def run_interactive(
 
     while True:
         decision = inspect_next(root, swarm=swarm, work=work)
-        output_fn(render(decision))
+        output_fn(render(decision, show_actions=False))
 
         if decision is None:
             return GuidedSessionResult("clear", selected_runtime.id if selected_runtime else None)

@@ -10,7 +10,11 @@ The installer is credential-free. It declares runtimes, providers and models but
 agora-ai-sdlc install /path/to/project
 ```
 
-The wizard detects whether the target already contains a Git repository and asks for:
+The wizard detects whether the target already contains a Git repository. Before runtime selection it
+also performs credential-free local CLI discovery for Codex, Claude Code, OpenCode and Ollama. Detection
+is advisory only: no runtime is enabled until the user explicitly declares it.
+
+The wizard then asks for:
 
 - project id and name;
 - adoption profile and governance depth;
@@ -115,3 +119,33 @@ diagnosis. `--json` returns the same decision as machine-readable data for IDE, 
 clients without creating a second lifecycle authority.
 
 AI-SDLC owns the bootstrap and guided experience; Agora Core remains the lifecycle authority after bootstrap.
+
+
+## Runtime discovery and doctor
+
+Use runtime discovery independently from installation:
+
+```bash
+agora-ai-sdlc runtimes
+agora-ai-sdlc runtimes --root /path/to/project
+agora-ai-sdlc runtimes --json
+```
+
+The result distinguishes:
+
+- `installed`: the executable exists on the active `PATH`;
+- `responsive`: a bounded `--version` probe completed successfully;
+- `configured`: the runtime can be correlated with declared AI actors/project metadata;
+- `service`: Ollama-only local daemon responsiveness.
+
+No provider credential files are read, and authentication is never inferred from installation.
+
+For broader environment diagnostics:
+
+```bash
+agora-ai-sdlc doctor
+agora-ai-sdlc doctor --json
+```
+
+Doctor reports Agora Core, AI-SDLC, Git, GitHub CLI, project validation, guided-skill installation and
+the same runtime discovery snapshot.

@@ -18,6 +18,14 @@ agora-ai-sdlc install /path/to/project --config ai-sdlc-install.yaml --yes
 
 The installer selects adoption profile, governance depth, language/framework, optional integrations, AI runtimes and human/AI role execution. See [Project installer](docs/installer.md).
 
+After bootstrap, use the guided AI-SDLC projection for the normal human workflow:
+
+```bash
+agora-ai-sdlc continue
+```
+
+It translates Core gate blockers into human decisions and points the selected agent at the installed portable skill under `.agora/skills/agora-ai-sdlc-guided/SKILL.md`. Use `agora-ai-sdlc continue --expert` when exact Core blockers are needed for diagnosis. Agora Core remains the lifecycle authority.
+
 ## Clone
 
 ```bash

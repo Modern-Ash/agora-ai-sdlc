@@ -50,7 +50,7 @@ def test_enterprise_requires_all_five_reviews():
         policy,
         (
             fact("business-review", ["product-owner"], ["business-decision"]),
-            fact("architecture-review", ["architect"], ["architecture-review"], ["distinct-actor"]),
+            fact("architecture-review", ["architect"], ["architecture-review", "approved-impact-analysis"], ["distinct-actor"]),
             fact(
                 "security-compliance-review",
                 ["security-reviewer"],
@@ -128,7 +128,7 @@ def test_independent_review_requirement_is_enforced():
         policy,
         (
             fact("business-review", ["product-owner"], ["business-decision"]),
-            fact("architecture-review", ["architect"], ["architecture-review"], ["distinct-actor"]),
+            fact("architecture-review", ["architect"], ["architecture-review", "approved-impact-analysis"], ["distinct-actor"]),
             fact(
                 "security-compliance-review",
                 ["security-reviewer"],

@@ -3,6 +3,7 @@
 import argparse
 import json
 import runpy
+import subprocess
 import sys
 from pathlib import Path
 
@@ -54,6 +55,12 @@ def main(argv: list[str] | None = None) -> int:
     )
     bolt_validate.add_argument("path")
     bolt_validate.add_argument("--json", action="store_true")
+    install = sub.add_parser("install", help="Configure and bootstrap an Agora AI-SDLC project")
+    install.add_argument("target", nargs="?", default=".")
+    install.add_argument("--home", default="~/.agora")
+    install.add_argument("--config", help="Read a reproducible YAML/JSON install config")
+    install.add_argument("--write-config", help="Write the resolved install config without applying")
+    install.add_argument("--yes", action="store_true", help="Apply without interactive confirmation")
     starter = sub.add_parser("starter-bootstrap", help="Preview and apply the Starter profile")
     starter.add_argument("--config", required=True)
     starter.add_argument("--target", required=True)
@@ -197,6 +204,34 @@ def main(argv: list[str] | None = None) -> int:
                 f"construction_evidence_complete={summary['construction_evidence_complete']}"
             )
         return 0
+    if args.command == "install":
+        from agora_ai_sdlc import installer as project_installer
+
+        target = Path(args.target).expanduser()
+        home = Path(args.home).expanduser()
+        try:
+            config = (
+                project_installer.load_config(Path(args.config)) if args.config else project_installer.wizard(target)
+            )
+            if args.write_config:
+                output = Path(args.write_config)
+                output.write_text(project_installer.render_config(config), encoding="utf-8")
+                print(json.dumps({"status": "configured", "config": str(output)}, sort_keys=True))
+                return 0
+            plan = project_installer.preview(config, target)
+            if not args.yes:
+                print(json.dumps(plan, sort_keys=True))
+                if input("Apply Agora AI-SDLC installation? [y/N] ").strip().casefold() not in {
+                    "y",
+                    "yes",
+                }:
+                    print(json.dumps({"status": "cancelled"}, sort_keys=True))
+                    return 0
+            print(json.dumps(project_installer.apply(config, target, home), sort_keys=True))
+            return 0
+        except (project_installer.InstallerError, OSError, subprocess.CalledProcessError) as error:
+            print(error, file=sys.stderr)
+            return 2
     if args.command == "starter-bootstrap":
         config = json.loads(Path(args.config).read_text(encoding="utf-8"))
         target, home = Path(args.target), Path(args.home)

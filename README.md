@@ -2,6 +2,22 @@
 
 Vendor-neutral AI-first software-delivery distribution built on [Agora Core](https://github.com/Modern-Ash/agora). Agent contract: [AGENTS.md](AGENTS.md). Scope: [docs/product-scope.md](docs/product-scope.md).
 
+## Install a project
+
+Bootstrap a real project interactively:
+
+```bash
+agora-ai-sdlc install /path/to/project
+```
+
+Or use a reproducible, credential-free configuration:
+
+```bash
+agora-ai-sdlc install /path/to/project --config ai-sdlc-install.yaml --yes
+```
+
+The installer selects adoption profile, governance depth, language/framework, optional integrations, AI runtimes and human/AI role execution. See [Project installer](docs/installer.md).
+
 ## Clone
 
 ```bash

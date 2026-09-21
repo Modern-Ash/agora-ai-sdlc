@@ -3,7 +3,8 @@
 AI-SDLC assets shipped in the wheel and source distribution:
 
 - `depth/`: lifecycle obligation depth profiles.
-- `pathways/`: adaptive delivery pathway policies over the shared Method Pack 0.2.0 lifecycle.\n- `compatibility/`: versioned AWS-original and LG-enterprise public compatibility projections.
+- `pathways/`: adaptive delivery pathway policies over the shared Method Pack 0.2.0 lifecycle.
+- `compatibility/`: versioned AWS-original and LG-enterprise public compatibility projections.
 - `integrations/github/`: offline-first GitHub delivery profile over Agora Core Tool Packs.
 - `integrations/ci/`: provider-neutral CI/CD evidence and gate bundles.
 - `integrations/security/`: normalized scanner findings, risk decisions, and depth thresholds.

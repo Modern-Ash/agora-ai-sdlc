@@ -163,11 +163,7 @@ def available_pathways() -> tuple[str, ...]:
     root = asset_root("profiles") / "pathways"
     if not root.is_dir():
         return ()
-    return tuple(
-        path.stem
-        for path in sorted(root.glob("*.yaml"))
-        if path.name != "policy.yaml"
-    )
+    return tuple(path.stem for path in sorted(root.glob("*.yaml")) if path.name != "policy.yaml")
 
 
 def effective_depth(
@@ -235,9 +231,7 @@ def validate_adaptive_plan(
         )
 
     forbidden_skip = set(pathway.forbidden_skips) | set(mandatory)
-    skipped_forbidden = sorted(
-        step.id for step in plan.steps if step.decision == "skip" and step.id in forbidden_skip
-    )
+    skipped_forbidden = sorted(step.id for step in plan.steps if step.decision == "skip" and step.id in forbidden_skip)
     if skipped_forbidden:
         raise AdaptivePlanningError(
             "pathway.mandatory_skip",

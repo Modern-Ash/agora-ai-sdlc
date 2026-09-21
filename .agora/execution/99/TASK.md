@@ -4,7 +4,7 @@ epic: 92
 title: Make Level 1 Plan and recursive Level-N plans first-class artifacts
 repository: Modern-Ash/agora-ai-sdlc
 base_commit: b9769ccd981e58dae36f3f5e9aa90e1a36a70fe5
-status: implementing
+status: review
 risk: high
 context_size: large
 budget:
@@ -74,17 +74,17 @@ Method Pack 0.2.0 exists as a selectable candidate. AWS-original fidelity curren
 - All validation is offline/deterministic.
 
 ## Acceptance criteria
-- [ ] parser/validator and template exist.
-- [ ] Level 1 approval enforcement exists.
-- [ ] Level N parent/trace/level validation exists.
-- [ ] stale approval after revision change fails closed.
-- [ ] ordered step dependency validation exists.
-- [ ] golden Level 1 + Level 2 fixtures validate.
-- [ ] invalid graph/approval fixtures or mutations fail with stable codes.
-- [ ] generic artifact traceability accepts plan artifacts without weakening existing rules.
-- [ ] AWS fidelity golden updates level-1-plan and recursive-planning to PASS.
-- [ ] generated Marketplace compatibility evidence is updated deterministically.
-- [ ] full repository verification passes.
+- [x] parser/validator and template exist.
+- [x] Level 1 approval enforcement exists.
+- [x] Level N parent/trace/level validation exists.
+- [x] stale approval after revision change fails closed.
+- [x] ordered step dependency validation exists.
+- [x] golden Level 1 + Level 2 fixtures validate.
+- [x] invalid graph/approval fixtures or mutations fail with stable codes.
+- [x] generic artifact traceability accepts plan artifacts without weakening existing rules.
+- [x] AWS fidelity golden updates level-1-plan and recursive-planning to PASS.
+- [x] generated Marketplace compatibility evidence is updated deterministically.
+- [x] full repository verification passes.
 
 ## Focused verification
 - uv run pytest -q tests/test_plans.py tests/test_templates.py tests/conformance/test_aws_original_rules.py tests/test_marketplace_evidence.py

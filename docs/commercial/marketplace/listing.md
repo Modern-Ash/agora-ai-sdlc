@@ -28,7 +28,7 @@ Agora Core remains the lifecycle authority. External systems remain authoritativ
 
 This listing is for Professional Services, not SaaS. The Apache-2.0 repository software is available separately from paid assessment, configuration, implementation, facilitation, integration, training, and engagement support. [C07] [C09]
 
-Compatibility with public method profiles is evidence-tracked rather than asserted as a blanket claim. Current gaps remain visible in the generated matrix, and LG-enterprise is represented as a public target profile until implementation conformance rules exist. [C10]
+Compatibility with public method profiles is evidence-tracked rather than asserted as a blanket claim. Current gaps remain visible in the generated matrix. AWS-original and LG-enterprise statuses are generated from executable repository conformance over their public compatibility profiles; no proprietary implementation behavior is inferred. [C10]
 
 ## Highlights
 

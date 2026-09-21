@@ -12,6 +12,7 @@ Credential-free executable scenarios shipped in the wheel and source distributio
 - `operational-evidence`: five neutral metric mappings, release readiness, and a governed control-band proposal.
 - `starter`: preview-first bootstrap of one team, one repository, and the first Unit of Work.
 - `enterprise`: signed project-registry install and transactional upgrade with provenance and recovery metadata.
+- `lg-enterprise`: public LG-style enterprise profile with executable conformance, review gates, enterprise controls and neutral end-to-end delivery.
 - `modernization`: one incremental legacy slice with known/unknown behavior, failed equivalence, cutover and rollback gates.
 - `regulated`: signed critical actions, segregation, observed provenance, exceptions, retention metadata and a full signed lifecycle.
 - `existing-codebase-pilot`: maintained code change with fake multi-provider sessions, rejected review, correction, CI evidence and measured results.

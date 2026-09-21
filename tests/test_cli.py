@@ -112,8 +112,14 @@ def test_conformance_derive_strict_and_provider_errors(tmp_path, capsys):
     assert main(["conformance", "aws-original", "--derive", "--facts", str(facts)]) == 2
     assert "mutually exclusive" in capsys.readouterr().err
 
-    assert main(["conformance", "lg-enterprise", "--derive", "--root", str(ROOT)]) == 2
-    assert "no derived fact provider" in capsys.readouterr().err
+    assert main(["conformance", "lg-enterprise", "--derive", "--root", str(ROOT), "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"]["id"] == "lg-enterprise"
+    assert payload["facts_source"] == "derived:lg-enterprise-rules/v1"
+    assert payload["overall_status"] == "PARTIAL"
+    assert any(
+        item["capability"] == "risk-issue-management" and item["status"] == "PARTIAL" for item in payload["results"]
+    )
 
 
 def test_plan_validate_cli_authorizes_valid_pathway(capsys):

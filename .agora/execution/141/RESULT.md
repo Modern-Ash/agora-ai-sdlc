@@ -2,7 +2,7 @@
 issue: 141
 status: partial
 commit:
-pull_request:
+pull_request: 142
 updated_at: 2026-09-21
 ---
 # Result
@@ -47,4 +47,4 @@ Compatibility must be confirmed by the repository CI matrix.
 CI and independent review.
 
 ## Commit and pull request
-To be populated by PR.
+PR #142.

@@ -4,7 +4,7 @@ epic: 93
 title: Implement cross-repository impact analysis contract
 repository: Modern-Ash/agora-ai-sdlc
 base_commit: 3b8290f155b008772c129d918da75b4db461136f
-status: implementing
+status: review
 risk: medium
 context_size: medium
 budget:
@@ -68,16 +68,16 @@ Agora AI-SDLC has first-class Units, Plans, Bolt Plans, enterprise review polici
 - Multi-repo sample is offline and provider-neutral.
 
 ## Acceptance criteria
-- [ ] valid multi-repo artifact parses.
-- [ ] repository ids/components/contracts/dependencies validate.
-- [ ] unknown dependencies remain explicit and require rationale.
-- [ ] approval is exact-revision and stale approval fails closed.
-- [ ] owner/reviewer separation enforced.
-- [ ] Unit/Plan/Bolt Plan trace references validated.
-- [ ] sample covers at least three repositories and two contract types.
-- [ ] enterprise architecture review requires approved-impact-analysis evidence.
-- [ ] generic traceability accepts impact-analysis.
-- [ ] full repository verification passes.
+- [x] valid multi-repo artifact parses.
+- [x] repository ids/components/contracts/dependencies validate.
+- [x] unknown dependencies remain explicit and require rationale.
+- [x] approval is exact-revision and stale approval fails closed.
+- [x] owner/reviewer separation enforced.
+- [x] Unit/Plan/Bolt Plan trace references validated.
+- [x] sample covers at least three repositories and two contract types.
+- [x] enterprise architecture review requires approved-impact-analysis evidence.
+- [x] generic traceability accepts impact-analysis.
+- [x] full repository verification passes.
 
 ## Focused verification
 - uv run pytest -q tests/test_impact_analysis.py tests/test_templates.py tests/test_enterprise_reviews.py

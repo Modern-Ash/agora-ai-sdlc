@@ -40,6 +40,20 @@ The default view deliberately avoids raw `missing-artifacts=[...]` style output.
 advisory: human approvals still require explicit confirmation, and every mutation remains an Agora Core
 operation. Agora Core remains the lifecycle authority.
 
+## Detect local AI runtimes
+
+AI-SDLC can inspect the active `PATH` without reading credential files:
+
+```bash
+agora-ai-sdlc runtimes
+agora-ai-sdlc runtimes --json
+agora-ai-sdlc doctor
+```
+
+Discovery currently recognizes Codex, Claude Code, OpenCode and Ollama. It distinguishes executable
+installation, a responsive version probe, project configuration, and (for Ollama) local service
+responsiveness. Detection never implies authentication and never enables a runtime automatically.
+
 ## Clone
 
 ```bash

@@ -77,7 +77,9 @@ def main(argv: list[str] | None = None) -> int:
         from agora_ai_sdlc.conformance import (
             AwsOriginalRuleError,
             ConformanceError,
+            LG_ENTERPRISE_FACTS_SOURCE,
             derive_aws_original_facts,
+            derive_lg_enterprise_facts,
             evaluate,
             evaluate_project,
             render_human,
@@ -88,15 +90,20 @@ def main(argv: list[str] | None = None) -> int:
                 if args.facts:
                     print("conformance.input: --derive and --facts are mutually exclusive", file=sys.stderr)
                     return 2
-                if args.profile != "aws-original":
+                profile = load_profile(args.profile)
+                if args.profile == "aws-original":
+                    facts = derive_aws_original_facts(Path(args.root))
+                    source = "derived:aws-original-rules/v1"
+                elif args.profile == "lg-enterprise":
+                    facts = derive_lg_enterprise_facts(Path(args.root))
+                    source = LG_ENTERPRISE_FACTS_SOURCE
+                else:
                     print(
                         f"conformance.provider: no derived fact provider is available for {args.profile!r}",
                         file=sys.stderr,
                     )
                     return 2
-                profile = load_profile(args.profile)
-                facts = derive_aws_original_facts(Path(args.root))
-                report = evaluate(profile, facts, facts_source="derived:aws-original-rules/v1")
+                report = evaluate(profile, facts, facts_source=source)
             else:
                 report = evaluate_project(
                     args.profile,

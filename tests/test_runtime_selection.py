@@ -1,4 +1,5 @@
 import json
+from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
@@ -172,3 +173,70 @@ def test_selection_is_deterministic_and_rejects_unstructured_failure_signals():
     assert select_runtime(configured, signal="quota") == select_runtime(configured, signal="quota")
     with pytest.raises(ValueError, match="unsupported Core failure signal"):
         select_runtime(configured, signal="HTTP 429 in provider log")
+
+
+@dataclass
+class UsageFacts:
+    """Structural stand-in for Core's UsageSummary so the test runs on any supported Core."""
+
+    budget_limits: dict[str, int] | None
+    consumed: dict[str, int]
+    records: int
+    consumed_measurement: dict[str, str] | None = None
+
+
+def core_facts(**changes):
+    values = {
+        "budget_limits": {"tokens": 1000, "cost-micros": 500},
+        "consumed": {"tokens": 250, "cost-micros": 100},
+        "records": 2,
+        "consumed_measurement": {"tokens": "provider-reported", "cost-micros": "measured"},
+    }
+    values.update(changes)
+    return UsageFacts(**values)
+
+
+def test_core_measurement_basis_is_carried_per_dimension_into_the_decision():
+    budget = budget_from_core(core_facts(), scope="work:swarm-1/work-1")
+    assert budget.measurement == {"tokens": "provider-reported", "cost-micros": "measured"}
+    result = select_runtime(route(candidate("primary", "provider-a", {"tokens": 10})), budgets=(budget,))
+    assert result["consumed_budget"] == {"work:swarm-1/work-1": {"cost-micros": 100, "tokens": 250}}
+    assert result["consumed_measurement"] == {
+        "work:swarm-1/work-1": {"cost-micros": "measured", "tokens": "provider-reported"}
+    }
+
+
+def test_missing_measurement_is_unknown_never_measured():
+    older_core = budget_from_core(core_facts(consumed_measurement=None), scope="work:a/b")
+    partial = budget_from_core(core_facts(consumed_measurement={"tokens": "measured"}), scope="work:a/b")
+    no_records = budget_from_core(core_facts(records=0, consumed={}), scope="work:a/b")
+    assert set(older_core.measurement.values()) == {"unknown"}
+    assert partial.measurement == {"tokens": "measured", "cost-micros": "unknown"}
+    assert set(no_records.measurement.values()) == {"unknown"}
+    assert no_records.consumed == {"tokens": 0, "cost-micros": 0}
+
+
+def test_every_decision_shape_reports_the_measurement_basis():
+    budget = budget_from_core(core_facts(), scope="work:a/b")
+    expected = {"work:a/b": {"cost-micros": "measured", "tokens": "provider-reported"}}
+    shapes = (
+        select_runtime(route(candidate("primary", "provider-a")), budgets=(budget,)),
+        select_runtime(route(candidate("primary", "provider-a")), budgets=(budget,), signal="ordinary-failure"),
+        select_runtime(route(candidate("primary", "provider-a"), signals=()), budgets=(budget,), signal="quota"),
+        select_runtime(route(candidate("primary", "provider-a", {"tokens": 5000})), budgets=(budget,)),
+    )
+    for result in shapes:
+        assert result["consumed_measurement"] == expected
+
+
+def test_unsupported_measurement_basis_is_rejected():
+    budget = Budget("work:a/b", {"tokens": 10}, {"tokens": 1}, {"tokens": "estimated"})
+    with pytest.raises(ValueError, match="measured, provider-reported or unknown"):
+        select_runtime(route(candidate("primary", "provider-a")), budgets=(budget,))
+
+
+def test_budget_decisions_do_not_depend_on_the_measurement_basis():
+    for basis in ("measured", "provider-reported", "unknown"):
+        budget = Budget("work:a/b", {"tokens": 100}, {"tokens": 90}, {"tokens": basis})
+        result = select_runtime(route(candidate("primary", "provider-a", {"tokens": 20})), budgets=(budget,))
+        assert not result["allowed"] and result["fallback"]["reason"] == "budget-exhausted"

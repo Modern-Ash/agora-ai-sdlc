@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Runtime selection now carries Agora Core's usage measurement basis (measured, provider-reported, unknown) per consumed dimension; missing values are unknown, never measured.
 - Add the AI-SDLC Studio projection provider (`agora_ai_sdlc.studio_projection`) for Agora Core >=0.9, mapping the flavor manifest and Core session provenance and reporting unsupported sections as explicit unavailable.
 - Add the Regulated Delivery Readiness package and a statement of work template to the professional-services documentation.
 - Declare compatibility with Agora Core `>=0.8.2,<0.10` (verified on 0.8.2 and 0.9.0) and publish the versioning, compatibility and release policy.

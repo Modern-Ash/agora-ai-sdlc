@@ -15,7 +15,7 @@
 3. A newer Core is not assumed compatible: the manifest check fails with the installed and supported versions, and the range must be widened by a reviewed change.
 4. Anything that Core lacks is requested upstream in `Modern-Ash/agora` and consumed here only after a released boundary ([repository boundaries](../repository-boundaries.md)).
 
-Current range: `>=0.8.2,<0.10`, verified against Core 0.8.2 (locked environment) and 0.9.0.
+Current range: `>=0.8.2,<0.10`, verified against Core 0.8.2 (locked environment) and 0.9.1.
 
 ## Releases
 

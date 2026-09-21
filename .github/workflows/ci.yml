@@ -36,6 +36,6 @@ jobs:
           python-version: "3.13"
       - name: Test against the newest supported Core
         run: |
-          python -m pip install --quiet "agora-framework==0.9.0" pytest "packaging>=24" pyyaml jsonschema
+          python -m pip install --quiet "agora-framework==0.9.1" pytest "packaging>=24" pyyaml jsonschema
           python -m pip install --quiet --no-deps -e .
           python -m pytest -q

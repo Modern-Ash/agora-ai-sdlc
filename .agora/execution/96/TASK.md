@@ -35,7 +35,7 @@ The aws-original compatibility profile exists. The generic conformance engine an
 ## Allowed paths
 - `.agora/execution/96/**`
 - `profiles/compatibility/aws-original/profile.yaml`
-- `profiles/compatibility/aws-original/rules.yaml`
+- `contracts/conformance/aws-original-rules-v1.yaml`
 - `contracts/conformance/aws-original-rules-v1.schema.json`
 - `src/agora_ai_sdlc/conformance/aws_original.py`
 - `src/agora_ai_sdlc/conformance/__init__.py`

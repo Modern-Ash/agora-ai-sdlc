@@ -33,6 +33,12 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Derive supported compatibility facts from the local repository instead of reading a facts file",
     )
+    plan_validate = sub.add_parser("plan-validate", help="Validate an approved plan against an adaptive pathway")
+    plan_validate.add_argument("path")
+    plan_validate.add_argument("--pathway", required=True)
+    plan_validate.add_argument("--depth")
+    plan_validate.add_argument("--profile")
+    plan_validate.add_argument("--json", action="store_true")
     starter = sub.add_parser("starter-bootstrap", help="Preview and apply the Starter profile")
     starter.add_argument("--config", required=True)
     starter.add_argument("--target", required=True)
@@ -90,6 +96,29 @@ def main(argv: list[str] | None = None) -> int:
         else:
             print(render_human(report))
         return 1 if args.strict and report.has_failures else 0
+    if args.command == "plan-validate":
+        from agora_ai_sdlc.adaptive_planning import AdaptivePlanningError, validate_adaptive_plan
+        from agora_ai_sdlc.plans import PlanError, parse_plan
+
+        try:
+            plan = parse_plan(Path(args.path).read_text(encoding="utf-8"))
+            decision = validate_adaptive_plan(
+                plan,
+                args.pathway,
+                depth=args.depth,
+                adoption_profile=args.profile,
+            )
+        except (OSError, PlanError, AdaptivePlanningError) as error:
+            print(error, file=sys.stderr)
+            return 2
+        if args.json:
+            print(json.dumps(decision.snapshot(), sort_keys=True))
+        else:
+            print(
+                f"authorized pathway={decision.pathway} depth={decision.effective_depth} "
+                f"executed={len(decision.executed_steps)} skipped={len(decision.skipped_steps)}"
+            )
+        return 0
     if args.command == "starter-bootstrap":
         config = json.loads(Path(args.config).read_text(encoding="utf-8"))
         target, home = Path(args.target), Path(args.home)

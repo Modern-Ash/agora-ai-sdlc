@@ -16,8 +16,8 @@ candidate = method_pack_path("0.2.0")
 The lifecycle harness also accepts an explicit version:
 
 ```python
-Lifecycle(project, home)                         # 0.1.0
-Lifecycle(project, home, method_version="0.2.0") # candidate
+Lifecycle(project, home)  # 0.1.0
+Lifecycle(project, home, method_version="0.2.0")  # candidate
 ```
 
 Unknown versions fail closed.

@@ -5,3 +5,7 @@
 - Deploy, release or infrastructure changes need an explicit project environment grant held by the Operator; never implied by another role.
 - Intent and unit-of-work changes require the Product Owner or the Architect.
 - Exceptional paths need an explicit transition and gate, not a flag.
+
+
+- The Product Owner may read, create/comment through, and transition configured external issue trackers through the provider-neutral `issue.read`, `issue.write`, and `issue.transition` capabilities.
+- Installing or selecting a GitHub/Jira adapter does not itself grant authority; the role capability and reviewed adapter must both be present.

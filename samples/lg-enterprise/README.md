@@ -17,4 +17,4 @@ Run:
 
 `agora-ai-sdlc run-sample lg-enterprise`
 
-The expected repository conformance is currently PARTIAL because dedicated risk/issue management remains an explicit gap.
+The expected repository conformance is PASS for all required public LG-style capabilities; optional effort estimation remains NOT_APPLICABLE by default.

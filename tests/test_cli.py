@@ -117,7 +117,9 @@ def test_conformance_derive_strict_and_provider_errors(tmp_path, capsys):
     assert payload["profile"]["id"] == "lg-enterprise"
     assert payload["facts_source"] == "derived:lg-enterprise-rules/v1"
     assert payload["overall_status"] == "PARTIAL"
-    assert any(item["capability"] == "risk-issue-management" and item["status"] == "PARTIAL" for item in payload["results"])
+    assert any(
+        item["capability"] == "risk-issue-management" and item["status"] == "PARTIAL" for item in payload["results"]
+    )
 
 
 def test_plan_validate_cli_authorizes_valid_pathway(capsys):

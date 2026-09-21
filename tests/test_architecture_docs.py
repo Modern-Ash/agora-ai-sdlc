@@ -82,3 +82,14 @@ def test_architecture_states_ownership_layers_and_source_of_truth():
         assert f"**{layer}**" in arch
     assert "Markdown and Git remain the project source of truth" in arch
     assert "No LLM SDK" in arch
+
+
+def test_alignment_tables_use_a_closed_status_vocabulary_and_cite_public_sources():
+    text = (DOCS / "reference" / "aws-ai-dlc-mapping.md").read_text(encoding="utf-8")
+    allowed = {"aligned", "partial", "gap", "deliberate difference"}
+    rows = [line for line in text.splitlines() if line.startswith("| ") and "---" not in line]
+    statuses = {cell.strip() for row in rows for cell in row.split("|")[1:-1] if cell.strip() in allowed}
+    assert statuses == allowed
+    assert "aws.amazon.com/blogs/devops/ai-driven-development-life-cycle" in text
+    assert "aidlc.pdf" in text
+    assert "not affiliated with AWS" in text and "no text or prompts" in text.lower()

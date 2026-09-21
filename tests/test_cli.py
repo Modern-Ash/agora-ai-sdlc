@@ -270,3 +270,49 @@ def test_doctor_cli_human_and_json(monkeypatch, capsys):
     payload = json.loads(capsys.readouterr().out)
     assert payload["checks"][0]["id"] == "project"
     assert payload["runtimes"][0]["service"] == "responsive"
+
+
+def test_continue_uses_interactive_loop_on_tty(monkeypatch):
+    called = {}
+
+    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
+    monkeypatch.setattr("sys.stdout.isatty", lambda: True)
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_session.run_interactive",
+        lambda root, swarm=None, work=None: called.update(root=str(root), swarm=swarm, work=work),
+    )
+
+    assert main(["continue", "--swarm", "delivery", "--work", "first-work"]) == 0
+    assert called == {"root": ".", "swarm": "delivery", "work": "first-work"}
+
+
+def test_continue_non_interactive_flag_skips_session(monkeypatch, capsys):
+    decision = _guided_decision()
+    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
+    monkeypatch.setattr("sys.stdout.isatty", lambda: True)
+    monkeypatch.setattr("agora_ai_sdlc.guided.inspect_next", lambda *args, **kwargs: decision)
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("interactive loop must not run")
+
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.run_interactive", fail_if_called)
+
+    assert main(["continue", "--non-interactive"]) == 0
+    output = capsys.readouterr().out
+    assert "Objective: Deliver first governed outcome" in output
+
+
+def test_continue_json_stays_non_interactive_on_tty(monkeypatch, capsys):
+    decision = _guided_decision()
+    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
+    monkeypatch.setattr("sys.stdout.isatty", lambda: True)
+    monkeypatch.setattr("agora_ai_sdlc.guided.inspect_next", lambda *args, **kwargs: decision)
+
+    def fail_if_called(*args, **kwargs):
+        raise AssertionError("interactive loop must not run")
+
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.run_interactive", fail_if_called)
+
+    assert main(["continue", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["work"] == "first-work"

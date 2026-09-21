@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 from agora_ai_sdlc.depth_profiles import asset_root
 from agora_ai_sdlc.flavor_manifest import SCHEMA as MANIFEST_SCHEMA
 from agora_ai_sdlc.flavor_manifest import load_packaged_manifest
+from agora_ai_sdlc.profile_activation import adoption_profiles, profile_id_from_kind
 
 if TYPE_CHECKING:
     from agora.application import FlavorProjectionContext, FlavorProjectionContribution
@@ -92,6 +93,29 @@ def _execution(session: object) -> dict[str, object]:
     }
 
 
+def _profiles(artifacts: object) -> dict[str, object]:
+    """Active profiles recorded as Core artifacts (see profile_activation); latest record per profile wins."""
+    latest: dict[str, object] = {}
+    for artifact in artifacts:  # type: ignore[attr-defined]
+        profile = profile_id_from_kind(artifact.kind)
+        if profile is not None and (profile not in latest or artifact.timestamp >= latest[profile].timestamp):
+            latest[profile] = artifact
+    if not latest:
+        return _unavailable(
+            "projection.profiles-unavailable",
+            "No adoption profile activation is recorded for this work",
+        )
+    known = adoption_profiles()
+    items = []
+    for profile in sorted({*known, *latest}):
+        item: dict[str, object] = {"id": profile, "depth": known.get(profile, "unknown"), "active": profile in latest}
+        if profile in latest:
+            item["recorded_by"] = latest[profile].produced_by  # type: ignore[attr-defined]
+            item["recorded_at"] = latest[profile].timestamp  # type: ignore[attr-defined]
+        items.append(item)
+    return {"status": "available", "value": items}
+
+
 class AiSdlcProjectionProvider:
     """Core `FlavorProjectionProvider` for the AI-SDLC flavor."""
 
@@ -123,10 +147,7 @@ class AiSdlcProjectionProvider:
                     "supported_core": manifest.supported_core,
                 },
             },
-            "profiles": _unavailable(
-                "projection.profiles-unavailable",
-                "Agora Core does not yet project which AI-SDLC profile is active for this project",
-            ),
+            "profiles": _profiles(context.work.artifacts),
             "provenance": (
                 {
                     "status": "available",

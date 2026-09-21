@@ -34,6 +34,7 @@ from agora.workspace import AgoraWorkspace
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
+from agora_ai_sdlc import profile_activation
 from agora_ai_sdlc.depth_profiles import asset_root
 from agora_ai_sdlc.provenance import parse
 from agora_ai_sdlc.regulated import (
@@ -307,6 +308,9 @@ def main() -> dict:
 
     # 5. the full lifecycle: every critical action is signed and verified by Core
     sample.create_work()
+    sample.sign_apply(
+        profile_activation.prepare(ws, SWARM, WORK, "po", "regulated", "activate-regulated-profile"), "po"
+    )
     sample.lifecycle()
 
     validated = subprocess.run(

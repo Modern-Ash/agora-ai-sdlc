@@ -21,14 +21,14 @@ from agora.model import (
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc import profile_activation
+from agora_ai_sdlc.depth_profiles import ORDER as DEPTH_ORDER
+from agora_ai_sdlc.depth_profiles import asset_root
 from agora_ai_sdlc.flavor_manifest import (
     ManifestError,
     check_core_compatibility,
     installed_core_version,
     load_packaged_manifest,
 )
-from agora_ai_sdlc.depth_profiles import ORDER as DEPTH_ORDER
-from agora_ai_sdlc.depth_profiles import asset_root
 from agora_ai_sdlc.profile_activation import adoption_profiles
 
 SCHEMA = "agora-ai-sdlc/install-config/v1"

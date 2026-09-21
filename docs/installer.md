@@ -101,12 +101,25 @@ The default guided command renders a decision card instead of a raw gate failure
 - the explicit boundary between the responsible human and the assisting AI;
 - the recommended next interaction.
 
-Additional disclosure modes:
+On an interactive terminal the default command waits for a menu choice:
+
+```text
+[P] Prepare with AI  [R] Review context  [D] Governance details
+[C] Change agent     [X] Exit
+Select:
+```
+
+When `P` or `C` requires an assistant, AI-SDLC lists responsive detected CLIs and keeps the selected
+runtime active for the current session. Runtime selection does not imply authentication and does not
+grant lifecycle authority.
+
+Additional disclosure/non-interactive modes:
 
 ```bash
 agora-ai-sdlc continue --commands
 agora-ai-sdlc continue --expert
 agora-ai-sdlc continue --json
+agora-ai-sdlc continue --non-interactive
 ```
 
 `--commands` shows the grouped underlying Core sequence together with a reason for every step. For

@@ -4,7 +4,7 @@ epic: 91
 title: Define versioned AWS-original and LG-enterprise compatibility profiles
 repository: Modern-Ash/agora-ai-sdlc
 base_commit: 6b78b4103676017293649919107530232df1272f
-status: planning
+status: implementing
 risk: medium
 context_size: medium
 budget:

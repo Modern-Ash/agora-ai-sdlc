@@ -158,7 +158,9 @@ def parse_rules(contents: str) -> AwsOriginalRules:
         raise AwsOriginalRuleError("aws-rule.version", "rule version must be a non-empty string")
 
     profile = load_profile("aws-original")
-    declared = set(profile.required_capabilities) | set(profile.optional_capabilities) | set(profile.unsupported_capabilities)
+    declared = (
+        set(profile.required_capabilities) | set(profile.optional_capabilities) | set(profile.unsupported_capabilities)
+    )
 
     raw_base = data["base_rules"]
     if not isinstance(raw_base, list) or not raw_base:
@@ -179,7 +181,9 @@ def parse_rules(contents: str) -> AwsOriginalRules:
         if capability not in declared:
             raise AwsOriginalRuleError("aws-rule.undeclared", f"rule capability {capability!r} is not in profile")
         seen.add(capability)
-        evidence = tuple(_safe_path(path, f"base_rules[{index}].evidence") for path in _strings(raw["evidence"], "evidence"))
+        evidence = tuple(
+            _safe_path(path, f"base_rules[{index}].evidence") for path in _strings(raw["evidence"], "evidence")
+        )
         remediation = raw.get("remediation")
         if not isinstance(remediation, str) or not remediation.strip():
             raise AwsOriginalRuleError("aws-rule.type", f"base_rules[{index}].remediation must be non-empty")
@@ -208,7 +212,9 @@ def parse_rules(contents: str) -> AwsOriginalRules:
             raise AwsOriginalRuleError("aws-rule.type", f"additive_governance[{index}] must be a mapping")
         expected = {"id", "classification", "checks", "evidence", "reason"}
         if set(raw) != expected or raw.get("classification") != "agora-additive":
-            raise AwsOriginalRuleError("aws-rule.fields", f"additive_governance[{index}] has invalid fields/classification")
+            raise AwsOriginalRuleError(
+                "aws-rule.fields", f"additive_governance[{index}] has invalid fields/classification"
+            )
         rule_id = raw.get("id")
         if not isinstance(rule_id, str) or not rule_id:
             raise AwsOriginalRuleError("aws-rule.type", f"additive_governance[{index}].id must be a string")
@@ -216,8 +222,7 @@ def parse_rules(contents: str) -> AwsOriginalRules:
             raise AwsOriginalRuleError("aws-rule.duplicate", f"duplicate/colliding additive rule {rule_id!r}")
         additive_ids.add(rule_id)
         evidence = tuple(
-            _safe_path(path, f"additive_governance[{index}].evidence")
-            for path in _strings(raw["evidence"], "evidence")
+            _safe_path(path, f"additive_governance[{index}].evidence") for path in _strings(raw["evidence"], "evidence")
         )
         reason = raw.get("reason")
         if not isinstance(reason, str) or not reason.strip():

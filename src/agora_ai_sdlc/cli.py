@@ -76,6 +76,7 @@ def main(argv: list[str] | None = None) -> int:
     guided.add_argument("--commands", action="store_true", help="Show the underlying grouped Agora Core command bundle")
     guided.add_argument("--json", action="store_true", help="Print the structured guided decision as JSON")
     guided.add_argument("--skill", action="store_true", help="Print the packaged guided-agent skill path")
+    guided.add_argument("--non-interactive", action="store_true", help="Force one-shot output even on a terminal")
     starter = sub.add_parser("starter-bootstrap", help="Preview and apply the Starter profile")
     starter.add_argument("--config", required=True)
     starter.add_argument("--target", required=True)
@@ -254,8 +255,26 @@ def main(argv: list[str] | None = None) -> int:
         if args.skill:
             print(skill_path())
             return 0
+        root = Path(args.root).expanduser()
+        interactive = (
+            not args.non_interactive
+            and not args.json
+            and not args.commands
+            and not args.expert
+            and sys.stdin.isatty()
+            and sys.stdout.isatty()
+        )
+        if interactive:
+            from agora_ai_sdlc.guided_session import run_interactive
+
+            try:
+                run_interactive(root, swarm=args.swarm, work=args.work)
+            except (OSError, ValueError) as error:
+                print(error, file=sys.stderr)
+                return 2
+            return 0
         try:
-            decision = inspect_next(Path(args.root).expanduser(), swarm=args.swarm, work=args.work)
+            decision = inspect_next(root, swarm=args.swarm, work=args.work)
         except (OSError, ValueError) as error:
             print(error, file=sys.stderr)
             return 2

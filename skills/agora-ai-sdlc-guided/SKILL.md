@@ -29,6 +29,12 @@ Start with:
 agora-ai-sdlc continue
 ```
 
+When attached to a terminal, this command is an interactive session. The human chooses actions and may
+select or change among responsive locally detected assistants. Keep the selected assistant for the
+session until the human changes it. Do not treat runtime selection as approval or role transfer.
+
+Use `--non-interactive` only when a one-shot projection is required.
+
 Use:
 
 ```bash

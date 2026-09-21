@@ -62,3 +62,23 @@ The project receives:
 ## Profiles
 
 The installer supports `starter`, `enterprise`, `modernization` and `regulated`. A profile may require a minimum depth. The installer rejects weaker depth selections before writing anything.
+
+
+## Agora Core dependency and handoff
+
+Installing `agora-ai-sdlc` installs `agora-framework` as a Python dependency. Users should not normally install Core separately.
+
+Before writing project state, `agora-ai-sdlc install` now verifies:
+- the installed Agora Core package version;
+- compatibility with the flavor's supported Core range;
+- availability of the `agora` CLI in the active environment.
+
+A successful installation reports the Core version/executable and the next operational commands:
+
+```bash
+agora validate
+agora status --board
+agora continue
+```
+
+AI-SDLC owns the bootstrap experience; Agora Core remains the lifecycle authority after bootstrap.

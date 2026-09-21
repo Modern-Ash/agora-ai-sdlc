@@ -1,9 +1,13 @@
 import json
+from pathlib import Path
 
 import yaml
 
 from agora_ai_sdlc import conformance
 from agora_ai_sdlc.cli import main
+from agora_ai_sdlc.compatibility_profiles import load_profile
+
+ROOT = Path(__file__).parent.parent
 
 
 def result(ok=True):
@@ -65,7 +69,7 @@ def test_conformance_cli_json_and_human_output(tmp_path, capsys):
     assert main(["conformance", "aws-original", "--facts", str(facts)]) == 0
     output = capsys.readouterr().out
     assert "Overall: PASS" in output
-    assert "contract: 1.0.0" in output
+    assert f"contract: {load_profile('aws-original').version}" in output
 
 
 def test_conformance_strict_mode_only_fails_valid_report_with_failures(tmp_path, capsys):
@@ -86,3 +90,27 @@ def test_conformance_bad_input_returns_two(tmp_path, capsys):
 
     assert main(["conformance", "missing-profile", "--root", str(tmp_path)]) == 2
     assert "conformance.profile" in capsys.readouterr().err
+
+
+def test_conformance_derive_aws_original_uses_repository_rules(capsys):
+    assert main(["conformance", "aws-original", "--derive", "--root", str(ROOT), "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["profile"]["id"] == "aws-original"
+    assert payload["facts_source"] == "derived:aws-original-rules/v1"
+    assert payload["overall_status"] == "FAIL"
+    assert any(item["status"] == "PARTIAL" for item in payload["results"])
+    assert any(item["status"] == "PASS" for item in payload["results"])
+    assert any(item["status"] == "FAIL" for item in payload["results"])
+
+
+def test_conformance_derive_strict_and_provider_errors(tmp_path, capsys):
+    assert main(["conformance", "aws-original", "--derive", "--root", str(ROOT), "--strict"]) == 1
+    assert "Overall: FAIL" in capsys.readouterr().out
+
+    facts = tmp_path / "facts.yaml"
+    _write_conformance_facts(facts)
+    assert main(["conformance", "aws-original", "--derive", "--facts", str(facts)]) == 2
+    assert "mutually exclusive" in capsys.readouterr().err
+
+    assert main(["conformance", "lg-enterprise", "--derive", "--root", str(ROOT)]) == 2
+    assert "no derived fact provider" in capsys.readouterr().err

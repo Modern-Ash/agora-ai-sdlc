@@ -28,6 +28,11 @@ def main(argv: list[str] | None = None) -> int:
     conformance.add_argument("--root", default=".", help="Project root used for default local facts discovery")
     conformance.add_argument("--json", action="store_true", help="Print the schema-versioned report as JSON")
     conformance.add_argument("--strict", action="store_true", help="Return non-zero when the report contains FAIL")
+    conformance.add_argument(
+        "--derive",
+        action="store_true",
+        help="Derive supported compatibility facts from the local repository instead of reading a facts file",
+    )
     starter = sub.add_parser("starter-bootstrap", help="Preview and apply the Starter profile")
     starter.add_argument("--config", required=True)
     starter.add_argument("--target", required=True)
@@ -47,15 +52,37 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"Diagnostic workspace: {summary['workspace']}")
         return 0 if summary["ok"] else 1
     if args.command == "conformance":
-        from agora_ai_sdlc.conformance import ConformanceError, evaluate_project, render_human
+        from agora_ai_sdlc.compatibility_profiles import load_profile
+        from agora_ai_sdlc.conformance import (
+            AwsOriginalRuleError,
+            ConformanceError,
+            derive_aws_original_facts,
+            evaluate,
+            evaluate_project,
+            render_human,
+        )
 
         try:
-            report = evaluate_project(
-                args.profile,
-                project_root=Path(args.root),
-                facts_path=Path(args.facts) if args.facts else None,
-            )
-        except ConformanceError as error:
+            if args.derive:
+                if args.facts:
+                    print("conformance.input: --derive and --facts are mutually exclusive", file=sys.stderr)
+                    return 2
+                if args.profile != "aws-original":
+                    print(
+                        f"conformance.provider: no derived fact provider is available for {args.profile!r}",
+                        file=sys.stderr,
+                    )
+                    return 2
+                profile = load_profile(args.profile)
+                facts = derive_aws_original_facts(Path(args.root))
+                report = evaluate(profile, facts, facts_source="derived:aws-original-rules/v1")
+            else:
+                report = evaluate_project(
+                    args.profile,
+                    project_root=Path(args.root),
+                    facts_path=Path(args.facts) if args.facts else None,
+                )
+        except (ConformanceError, AwsOriginalRuleError) as error:
             print(error, file=sys.stderr)
             return 2
         if args.json:

@@ -50,3 +50,12 @@ These additions are outside the published method and remain: evidence-based gate
 1. **Phase grouping.** The lowest-risk way to match the three-phase model is presentation: group `readiness`, `intent` and `inception` as the Inception phase, `construction` as Construction, and `operations` and `completed` as Operations, while Core keeps the six states for gate enforcement.
 2. **Lifecycle shape.** Collapsing `readiness` and `intent` into Inception would match the method exactly but changes Method Pack states, gates, samples and the Studio contract, so it needs an explicit decision and a new Method Pack major version.
 3. **Roles.** Reducing the role set toward Product Owner and developers would change authority matrices and segregation controls; keep the current roles unless the adopting team chooses a smaller profile.
+
+
+## Machine-readable fidelity rules
+
+Issue #96 turns this mapping into deterministic repository checks. The rule contract is
+`contracts/conformance/aws-original-rules-v1.yaml`; it maps every capability declared by the
+`aws-original` compatibility profile to explicit Agora artifacts, Method Pack fields, templates, source modules, or documentation evidence.
+
+The rule provider reports `PASS`, `PARTIAL`, or `FAIL` for required base-method capabilities and leaves absent optional capabilities as `NOT_APPLICABLE`. Agora-specific governance additions are listed separately as `agora-additive` and are deliberately excluded from the base-method fidelity result.

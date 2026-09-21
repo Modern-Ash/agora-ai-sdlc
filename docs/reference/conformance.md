@@ -99,3 +99,28 @@ The output is intended for CI, dashboards and later evidence-backed Marketplace 
 ## Offline and neutrality guarantees
 
 Evaluation reads only packaged compatibility profiles and local files. It performs no network discovery, no provider API calls and no credential lookup. The engine does not know how AWS-original or LG-enterprise capabilities are implemented; methodology-specific fact derivation is layered on top of this generic contract.
+
+
+## AWS-original derived fidelity
+
+The `aws-original` profile also ships a public-method fidelity provider backed by the versioned rule contract
+`contracts/conformance/aws-original-rules-v1.yaml`.
+
+Run it directly against a repository checkout:
+
+```bash
+agora-ai-sdlc conformance aws-original --derive --root .
+agora-ai-sdlc conformance aws-original --derive --root . --json
+agora-ai-sdlc conformance aws-original --derive --root . --strict
+```
+
+Derived mode reads only files under the supplied root. It does not call AWS, GitHub, an LLM, or any remote service.
+
+The provider separates two classes of rule:
+
+- **base-method** rules generate the generic capability facts consumed by the conformance engine and therefore affect the AWS-original fidelity result;
+- **agora-additive** rules report governance capabilities such as fail-closed gates, independent review, provider neutrality and model/session provenance, but never increase or reduce the base-method score.
+
+Each base rule identifies explicit Agora files or contracts as evidence and includes remediation when the full method fidelity condition is not met. A successful partial check yields `PARTIAL`; a missing required method capability yields `FAIL`. Optional method capabilities with no evidence remain `NOT_APPLICABLE`.
+
+The current checked-in rule contract is intentionally descriptive of implementation evidence, not a certification claim. The rules are derived from the public sources and the project's existing fidelity/mapping decisions.

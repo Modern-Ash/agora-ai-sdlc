@@ -1,0 +1,34 @@
+schema: agora-ai-sdlc/install-config/v1
+project:
+  id: demo-service
+  name: Demo Service
+  mode: new
+profile: starter
+depth: standard
+language: java
+framework: spring-boot
+pathway: new-product
+integrations:
+  - github
+  - ci
+runtimes:
+  - id: planner
+    integration: claude
+    provider: anthropic
+    model: claude-sonnet
+  - id: builder
+    integration: generic
+    provider: ollama
+    model: qwen3-coder
+role_execution:
+  architect: planner
+  builder: builder
+  operator: human
+swarm: delivery
+objective: Deliver the first governed release
+work:
+  id: first-work
+  title: Deliver first product slice
+  criteria:
+    - id: outcome
+      text: The slice is implemented, reviewed and evidenced

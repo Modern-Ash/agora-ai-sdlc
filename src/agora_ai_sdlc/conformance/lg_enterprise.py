@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from agora_ai_sdlc.conformance.compatibility import CapabilityFact
+from agora_ai_sdlc.depth_profiles import asset_root
 
 FACTS_SOURCE = "derived:lg-enterprise-rules/v1"
 
@@ -30,7 +31,7 @@ RULES = (
     ),
     Rule(
         "technical-setup",
-        ("src/agora_ai_sdlc/enterprise.py", "docs/profiles/enterprise.md"),
+        ("src/agora_ai_sdlc/enterprise.py", "profiles/enterprise/profile.yaml"),
         remediation="Provide reviewed enterprise bootstrap/setup evidence.",
     ),
     Rule(
@@ -51,12 +52,12 @@ RULES = (
     Rule(
         "risk-issue-management",
         (),
-        ("profiles/pathways/regulated-change.yaml", "docs/policies/enterprise-review-gates.md"),
+        ("profiles/pathways/regulated-change.yaml", "profiles/reviews/enterprise.yaml"),
         "Add a dedicated provider-neutral risk/issue register contract and evaluator.",
     ),
     Rule(
         "change-configuration-management",
-        ("src/agora_ai_sdlc/change_management.py", "docs/method/change-management.md"),
+        ("src/agora_ai_sdlc/change_management.py", "templates/change-request.md"),
         remediation="Provide governed change/configuration artifact semantics.",
     ),
     Rule(
@@ -66,7 +67,7 @@ RULES = (
     ),
     Rule(
         "documentation",
-        ("docs/method/artifacts.md",),
+        ("templates/unit-of-work.md", "templates/requirements.md"),
         remediation="Document the durable enterprise artifact contracts.",
     ),
     Rule(
@@ -86,7 +87,7 @@ RULES = (
     ),
     Rule(
         "domain-knowledge",
-        ("src/agora_ai_sdlc/domain_knowledge.py", "docs/method/domain-knowledge.md"),
+        ("src/agora_ai_sdlc/domain_knowledge.py", "contracts/enterprise/domain-knowledge-source-v1.schema.json"),
         remediation="Provide provider-neutral domain-knowledge source contracts.",
     ),
     Rule(
@@ -102,25 +103,41 @@ RULES = (
 )
 
 
-def _present(root: Path, paths: tuple[str, ...]) -> bool:
-    return bool(paths) and all((root / path).is_file() for path in paths)
+def _resolve(root: Path, path: str, *, packaged_fallback: bool) -> Path:
+    repository = root / path
+    if repository.is_file() or not packaged_fallback:
+        return repository
+    if path.startswith("src/agora_ai_sdlc/"):
+        return Path(__file__).parents[1] / path.removeprefix("src/agora_ai_sdlc/")
+    first, _, remainder = path.partition("/")
+    if first in {"profiles", "templates", "contracts", "policies", "samples", "registry"}:
+        return asset_root(first) / remainder
+    return repository
 
 
-def _evidence(root: Path, paths: tuple[str, ...]) -> tuple[str, ...]:
-    return tuple(f"repo://{path}" for path in paths if (root / path).is_file())
+def _present(root: Path, paths: tuple[str, ...], *, packaged_fallback: bool) -> bool:
+    return bool(paths) and all(_resolve(root, path, packaged_fallback=packaged_fallback).is_file() for path in paths)
 
 
-def derive_facts(root: Path) -> tuple[CapabilityFact, ...]:
-    """Derive lg-enterprise capability facts from one repository root."""
+def _evidence(root: Path, paths: tuple[str, ...], *, packaged_fallback: bool) -> tuple[str, ...]:
+    return tuple(
+        f"repo://{path}"
+        for path in paths
+        if _resolve(root, path, packaged_fallback=packaged_fallback).is_file()
+    )
+
+
+def derive_facts(root: Path, *, packaged_fallback: bool = False) -> tuple[CapabilityFact, ...]:
+    """Derive lg-enterprise capability facts from a repository root or packaged distribution."""
 
     root = Path(root)
     facts: list[CapabilityFact] = []
     for rule in RULES:
-        if _present(root, rule.pass_paths):
+        if _present(root, rule.pass_paths, packaged_fallback=packaged_fallback):
             status = "PASS"
             paths = rule.pass_paths
             reason = "Public enterprise capability has complete checked-in implementation evidence."
-        elif _present(root, rule.partial_paths):
+        elif _present(root, rule.partial_paths, packaged_fallback=packaged_fallback):
             status = "PARTIAL"
             paths = rule.partial_paths
             reason = "Public enterprise capability is represented, but a dedicated complete contract is still missing."
@@ -132,7 +149,7 @@ def derive_facts(root: Path) -> tuple[CapabilityFact, ...]:
             CapabilityFact(
                 capability=rule.capability,
                 status=status,
-                evidence=_evidence(root, paths),
+                evidence=_evidence(root, paths, packaged_fallback=packaged_fallback),
                 reason=reason,
                 remediation=None if status == "PASS" else rule.remediation,
             )

@@ -22,12 +22,13 @@ from agora.model import (
 )
 from agora.workspace import AgoraWorkspace
 
-from agora_ai_sdlc.depth_profiles import asset_root
+from agora_ai_sdlc.method_versions import DEFAULT_METHOD_VERSION, method_pack_path
 
-PACK = asset_root("registry") / "methods" / "ai-sdlc"
+PACK = method_pack_path(DEFAULT_METHOD_VERSION)
 # role -> (actor id, kind, capabilities)
 ACTORS = {
     "product-owner": ("po", "human", ["specification"]),
+    "developer": ("dev", "ai-agent", ["implementation"]),
     "architect": ("arch", "ai-agent", ["specification"]),
     "builder": ("build", "ai-agent", ["implementation"]),
     "operator": ("ops", "ai-agent", ["operations"]),
@@ -37,7 +38,7 @@ SWARM, WORK = "delivery", "feature"
 
 
 class Lifecycle:
-    def __init__(self, root: Path, home: Path) -> None:
+    def __init__(self, root: Path, home: Path, method_version: str = DEFAULT_METHOD_VERSION) -> None:
         os.environ["AGORA_HOME"] = str(home)
         subprocess.run(["git", "init", "-q", str(root)], check=True)
 
@@ -50,11 +51,15 @@ class Lifecycle:
             ConfigureInput(integration="generic", provider="local", model="local", default_method="scrum")
         )
         self.ws.initialize(InitInput())
-        self.ws.install_method(InstallMethodInput(source=str(PACK), scope="project"))
+        self.method_version = method_version
+        self.ws.install_method(InstallMethodInput(source=str(method_pack_path(method_version)), scope="project"))
         for actor_id, kind, caps in ACTORS.values():
             self.ws.add_actor(AddActorInput(id=actor_id, name=actor_id, kind=kind, capabilities=caps, scope="project"))
-        self.ws.create_swarm(CreateSwarmInput(id=SWARM, objective="AI-SDLC", method="ai-sdlc", create_branch=False))
-        for role, (actor_id, _kind, _caps) in ACTORS.items():
+        swarm = self.ws.create_swarm(
+            CreateSwarmInput(id=SWARM, objective="AI-SDLC", method="ai-sdlc", create_branch=False)
+        )
+        for role in swarm.required_roles:
+            actor_id, _kind, _caps = ACTORS[role]
             self.ws.assign_actor(AssignActorInput(swarm_id=SWARM, role_id=role, actor_id=actor_id))
         self.ws.create_work(
             CreateWorkInput(

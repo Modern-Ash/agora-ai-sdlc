@@ -1,50 +1,33 @@
 ---
 issue: 99
 status: partial
-commit:
-pull_request:
+commit: 88c5000a6a6d76b7fe830464d3c9582baa25ee65
+pull_request: 116
 updated_at: 2026-09-21
 ---
 # Result
 
 ## Status
-Implementation complete; automated verification and independent review pending.
+Implementation and automated verification complete. Independent review remains required.
 
 ## Summary
-Added first-class Level 1 / Level-N plan artifacts with recursive parent relationships, ordered step decisions, trace-bound Intent/Unit scope, exact-revision human approval, stale-approval protection, graph validation, golden fixtures, documentation, and conformance evidence updates.
-
-## Files modified
-- templates/plan.md
-- src/agora_ai_sdlc/artifacts.py
-- src/agora_ai_sdlc/plans.py
-- tests/test_templates.py
-- tests/test_plans.py
-- tests/fixtures/plans/**
-- tests/fixtures/conformance/aws-original/current.yaml
-- docs/method/artifacts.md
-- docs/method/planning.md
-- templates/README.md
-- docs/commercial/marketplace/compatibility-evidence.md
-- .agora/execution/99/*
-
-## Decisions
-- Plan uses the existing artifact/v1 envelope rather than introducing a parallel generic artifact schema.
-- Plan-specific semantics live in the flavor, not Agora Core.
-- Intent, optional Unit and parent Plan references must be present in traces-to.
-- All execution is fail-closed unless the current plan revision is approved.
-- Child plan level must be parent level + 1 and preserve Intent/Unit scope.
-- #100 remains responsible for adaptive pathway selection/execution; #101 remains responsible for executable Bolts.
+Level 1 and recursive Level-N plans are now first-class flavor artifacts with exact-revision human approval, parent/child graph validation, trace-bound scope, ordered dependency-aware steps, stale-approval protection and deterministic failure codes.
 
 ## Conformance effect
-The checked-in AWS-original rule provider now has implementation evidence for both level-1-plan and recursive-planning. The generated Marketplace matrix is updated from overall FAIL to PARTIAL, while remaining gaps stay visible.
+AWS-original now reports both level-1-plan and recursive-planning as PASS. Overall AWS-original fidelity moves from FAIL to PARTIAL; remaining gaps remain visible in the generated Marketplace evidence.
 
-## Tests
-Pending pull-request CI.
+## Verification
+GitHub Actions run #118 passed:
+- Python 3.11 / 3.12 / 3.13 full verify_all.py
+- Python 3.13: 645 passed, 16 skipped
+- Agora Core 0.9.1: 659 passed, 2 skipped
+- marketplace-evidence drift check passed
 
-## Remaining risks
-- CI may expose formatting or graph/fixture assumptions.
-- Independent review remains required.
-- Plan validation does not automatically execute plan steps; that is intentionally deferred to #100.
+## Scope boundary
+Plan validation/approval is complete here. Adaptive pathway selection and conditional execution remain #100; executable Bolt semantics remain #101.
 
 ## Pull request
-Pending.
+Draft PR #116: https://github.com/Modern-Ash/agora-ai-sdlc/pull/116
+
+## Pending
+Independent review and human merge decision.

@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://modern-ash.github.io/agora-ai-sdlc/contracts/install-config-v1.schema.json",
+  "title": "Agora AI-SDLC install config v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "project",
+    "profile",
+    "depth",
+    "language",
+    "integrations",
+    "runtimes",
+    "role_execution",
+    "swarm",
+    "objective",
+    "work"
+  ],
+  "properties": {
+    "schema": {"const": "agora-ai-sdlc/install-config/v1"},
+    "project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "mode"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+        "name": {"type": "string", "minLength": 1},
+        "mode": {"enum": ["new", "existing"]}
+      }
+    },
+    "profile": {"enum": ["starter", "enterprise", "modernization", "regulated"]},
+    "depth": {"enum": ["minimal", "standard", "comprehensive", "regulated"]},
+    "language": {"type": "string", "minLength": 1},
+    "framework": {"type": ["string", "null"]},
+    "pathway": {
+      "enum": [
+        "new-product",
+        "brownfield",
+        "refactor",
+        "regulated-change",
+        "scaling",
+        "trivial-change"
+      ]
+    },
+    "integrations": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": ["github", "gitlab", "jira", "ci", "security", "observability"]
+      }
+    },
+    "runtimes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "integration", "provider", "model"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+          "integration": {"enum": ["generic", "codex", "claude"]},
+          "provider": {"type": "string", "minLength": 1},
+          "model": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "role_execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["architect", "builder", "operator"],
+      "properties": {
+        "architect": {"type": "string"},
+        "builder": {"type": "string"},
+        "operator": {"type": "string"}
+      }
+    },
+    "swarm": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+    "objective": {"type": "string", "minLength": 1},
+    "work": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "criteria"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+        "title": {"type": "string", "minLength": 1},
+        "criteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "text"],
+            "properties": {
+              "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+              "text": {"type": "string", "minLength": 1}
+            }
+          }
+        }
+      }
+    }
+  }
+}

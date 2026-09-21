@@ -44,6 +44,7 @@ Modernization templates also use structured `behaviors`, `slice-ids`, `slice-id`
 | rework-record | RWK | any | rework-record.md |
 | plan | PLN | any (plan-specific scope/parent rules apply) | plan.md |
 | bolt-plan | BLP | unit-of-work, plan | bolt-plan.md |
+| impact-analysis | IMA | unit-of-work, plan, bolt-plan | impact-analysis.md |
 | static-system-model | SSM | legacy-inventory, dependency-map | static-system-model.md |
 | dynamic-system-model | DSM | static-system-model, characterization | dynamic-system-model.md |
 | legacy-inventory | LGI | root | legacy-inventory.md |
@@ -76,3 +77,7 @@ Chain: intent -> unit of work -> requirements (criteria) -> architecture / test 
 ## Bolt-plan semantics
 
 `bolt-plan` artifacts hold the AI-proposed, human-approved Bolts that deliver one Unit of Work. [Bolts](bolts.md) defines ordering, lifecycle, conflict and evidence rules enforced by `agora_ai_sdlc.bolts`.
+
+## Impact-analysis semantics
+
+`impact-analysis` artifacts make cross-repository blast radius explicit before implementation. They record provider-neutral repository ids, affected components, API/event/schema contracts, dependency direction, known/unknown dependency status, expected changes, owners/reviewers, confidence and unresolved unknowns. Exact-revision approval is enforced by `agora_ai_sdlc.impact_analysis`. See [cross-repository impact analysis](impact-analysis.md).

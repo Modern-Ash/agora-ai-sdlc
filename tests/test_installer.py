@@ -1,4 +1,5 @@
 import json
+
 import pytest
 import yaml
 from agora.workspace import AgoraWorkspace
@@ -109,6 +110,10 @@ def test_multi_runtime_project_assigns_roles_without_credentials(tmp_path):
 
     assert result["validate"] == "ok"
     serialized = json.dumps(config).casefold()
+    assert config["runtimes"][0]["provider"] == "anthropic"
+    assert config["runtimes"][0]["model"] == "claude-sonnet"
+    assert config["runtimes"][1]["provider"] == "ollama"
+    assert config["runtimes"][1]["model"] == "qwen3-coder"
     assert "api_key" not in serialized
     assert "password" not in serialized
     assert "token" not in serialized

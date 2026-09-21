@@ -25,6 +25,6 @@ expected:
     - risk-register
     - three-phase-lifecycle
     - user-stories
-  FAIL:
+  FAIL: []
   NOT_APPLICABLE:
     - prfaq

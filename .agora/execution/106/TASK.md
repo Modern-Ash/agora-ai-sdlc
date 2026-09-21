@@ -4,7 +4,7 @@ epic: 93
 title: Add change/configuration management and domain-knowledge source contracts
 repository: Modern-Ash/agora-ai-sdlc
 base_commit: ee3a06867ebedf70fc939d4b95ca2a53034f2e2c
-status: implementing
+status: review
 risk: medium
 context_size: medium
 budget:
@@ -80,17 +80,17 @@ Cross-repository impact analysis and enterprise review gates are on main. The re
 - No network access during parse/validation.
 
 ## Acceptance criteria
-- [ ] versioned JSON schemas checked in.
-- [ ] valid change chain parses and validates.
-- [ ] unapproved/stale change plan blocks chain.
-- [ ] configuration delta forbids secret values and requires release + rollback links.
-- [ ] release evidence is reachable from configuration delta summary.
-- [ ] local domain-knowledge descriptor parses.
-- [ ] external-source descriptor parses without provider credentials/endpoints.
-- [ ] forbidden credential/endpoint fields fail closed without echoing secret values.
-- [ ] descriptors remain references only.
-- [ ] at least two executable offline samples added.
-- [ ] full repository verification passes.
+- [x] versioned JSON schemas checked in.
+- [x] valid change chain parses and validates.
+- [x] unapproved/stale change plan blocks chain.
+- [x] configuration delta forbids secret values and requires release + rollback links.
+- [x] release evidence is reachable from configuration delta summary.
+- [x] local domain-knowledge descriptor parses.
+- [x] external-source descriptor parses without provider credentials/endpoints.
+- [x] forbidden credential/endpoint fields fail closed without echoing secret values.
+- [x] descriptors remain references only.
+- [x] at least two executable offline samples added.
+- [x] full repository verification passes.
 
 ## Focused verification
 - uv run pytest -q tests/test_change_management.py tests/test_domain_knowledge.py tests/test_templates.py

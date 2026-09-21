@@ -112,9 +112,7 @@ def _profiles(context: object) -> dict[str, object]:
     latest: dict[str, object] = {}
     for artifact in artifacts:
         profile = profile_id_from_kind(artifact.kind)
-        if profile is not None and (
-            profile not in latest or artifact.timestamp >= latest[profile].timestamp
-        ):
+        if profile is not None and (profile not in latest or artifact.timestamp >= latest[profile].timestamp):
             latest[profile] = artifact
     if not latest:
         return _unavailable(
@@ -159,15 +157,9 @@ def _separation(context: object) -> dict[str, object]:
     reviewed = 0
     for uri, artifact in sorted(latest_by_uri.items()):
         digest = getattr(artifact, "content_sha256", None)
-        candidates = [
-            item
-            for item in evidence
-            if item.type == "review" and uri in item.artifact_references
-        ]
+        candidates = [item for item in evidence if item.type == "review" and uri in item.artifact_references]
         matching = [
-            item
-            for item in candidates
-            if digest is not None and item.artifact_content_sha256.get(uri) == digest
+            item for item in candidates if digest is not None and item.artifact_content_sha256.get(uri) == digest
         ]
         if not matching:
             blockers.append(

@@ -3,6 +3,7 @@
 AI-SDLC assets shipped in the wheel and source distribution:
 
 - `depth/`: lifecycle obligation depth profiles.
+- `compatibility/`: versioned AWS-original and LG-enterprise public compatibility projections.
 - `integrations/github/`: offline-first GitHub delivery profile over Agora Core Tool Packs.
 - `integrations/ci/`: provider-neutral CI/CD evidence and gate bundles.
 - `integrations/security/`: normalized scanner findings, risk decisions, and depth thresholds.
@@ -23,3 +24,5 @@ See the [Starter profile](../docs/profiles/starter.md) for guided bootstrap, run
 See the [Enterprise profile](../docs/profiles/enterprise.md) for trust bootstrap, policy boundaries, rollout, and signed upgrades.
 See the [Modernization profile](../docs/profiles/modernization.md) for behavior truth, slice traceability, equivalence and cutover gates.
 See the [Regulated profile](../docs/profiles/regulated.md) for signed actions, segregation, audit metadata, provenance, and customer responsibilities.
+
+See [compatibility profiles](../docs/reference/compatibility-profiles.md) for canonical mappings, validation and neutrality rules.

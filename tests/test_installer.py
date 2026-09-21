@@ -1,6 +1,4 @@
 import json
-from pathlib import Path
-
 import pytest
 import yaml
 from agora.workspace import AgoraWorkspace

@@ -22,7 +22,7 @@ The terminal Core state completed is intentionally absent because it is an Agora
 
 ## AWS-original profile
 
-profiles/compatibility/aws-original/profile.yaml represents only the public AWS AI-DLC method definition and public blog material. It presents three phases:
+profiles/compatibility/aws-original/profile.yaml represents only the public AWS method definition and public blog material. It presents three phases:
 
 Inception -> Construction -> Operations
 
@@ -32,7 +32,7 @@ The profile declares method capabilities as required, optional or unsupported. T
 
 ## LG-enterprise profile
 
-profiles/compatibility/lg-enterprise/profile.yaml represents only behavior described publicly for the LG CNS enterprise AI-DLC offer. Its presentation is:
+profiles/compatibility/lg-enterprise/profile.yaml represents only behavior described publicly for the LG CNS enterprise offer. Its presentation is:
 
 Initialization -> Ideation -> Inception -> Construction -> Operation
 

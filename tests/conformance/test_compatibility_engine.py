@@ -90,15 +90,16 @@ def test_partial_and_fail_facts_drive_overall_status_and_default_remediation():
     assert failed.overall_status == "FAIL" and failed.has_failures
 
 
-def test_explicit_not_applicable_fact_is_preserved_for_declared_capability():
+def test_required_not_applicable_fact_fails_closed():
     profile = load_profile("aws-original")
     facts = list(all_required(profile))
     target = facts[0].capability
     facts[0] = fact(target, "NOT_APPLICABLE", reason="not relevant for this project", evidence=[])
     report = evaluate(profile, tuple(facts))
     result = next(item for item in report.results if item.capability == target)
-    assert result.status == "NOT_APPLICABLE"
-    assert result.remediation is None
+    assert result.status == "FAIL"
+    assert "cannot be NOT_APPLICABLE" in result.reason
+    assert result.remediation
 
 
 def test_unknown_capability_fact_is_rejected():
@@ -193,3 +194,18 @@ def test_checked_in_json_schemas_match_runtime_contracts():
         "NOT_APPLICABLE",
     ]
     assert "source_contract_version" in result_schema["properties"]["results"]["items"]["properties"]
+
+
+def test_evaluation_performs_no_network_access(monkeypatch):
+    import socket
+    import urllib.request
+
+    def blocked(*_args, **_kwargs):
+        raise AssertionError("network access attempted")
+
+    monkeypatch.setattr(socket, "create_connection", blocked)
+    monkeypatch.setattr(urllib.request, "urlopen", blocked)
+
+    profile = load_profile("aws-original")
+    report = evaluate(profile, all_required(profile))
+    assert report.overall_status == "PASS"

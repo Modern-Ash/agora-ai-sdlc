@@ -62,13 +62,13 @@ The selected compatibility profile declares capabilities as `required`, `optiona
 
 | Profile declaration | No fact | Explicit fact |
 | --- | --- | --- |
-| required | FAIL | fact status |
+| required | FAIL | fact status, except NOT_APPLICABLE is converted to FAIL |
 | optional | NOT_APPLICABLE | fact status |
 | unsupported | NOT_APPLICABLE | NOT_APPLICABLE presentation; supplied evidence is retained |
 
 Facts for capabilities not declared by the selected profile are rejected. This catches misspellings and prevents unrelated evidence from silently affecting a report.
 
-Required capabilities fail closed when evidence is absent. Missing optional capabilities are not treated as failures.
+Required capabilities fail closed when evidence is absent or when a fact attempts to mark a required capability NOT_APPLICABLE. Missing optional capabilities are not treated as failures.
 
 Overall status is deterministic:
 

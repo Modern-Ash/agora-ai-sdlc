@@ -2,7 +2,6 @@
 
 from agora_ai_sdlc.conformance.compatibility import (
     FACTS_SCHEMA,
-    RESULT_SCHEMA as COMPATIBILITY_RESULT_SCHEMA,
     STATUSES,
     CapabilityFact,
     CapabilityResult,
@@ -14,6 +13,7 @@ from agora_ai_sdlc.conformance.compatibility import (
     parse_facts,
     render_human,
 )
+from agora_ai_sdlc.conformance.compatibility import RESULT_SCHEMA as COMPATIBILITY_RESULT_SCHEMA
 from agora_ai_sdlc.conformance.self_test import RESULT_SCHEMA, run_self_test
 
 __all__ = [

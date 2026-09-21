@@ -3,5 +3,25 @@
   "$id": "https://modern-ash.github.io/agora-ai-sdlc/contracts/change-management-v1.schema.json",
   "title": "Agora AI-SDLC change management v1",
   "type": "object",
-  "description": "Reference schema for change-request/change-plan/configuration-delta artifact fields."
+  "required": ["schema", "kind", "version"],
+  "properties": {
+    "schema": {"const": "agora-ai-sdlc/artifact/v1"},
+    "kind": {"enum": ["change-request", "change-plan", "configuration-delta"]},
+    "version": {"const": 1}
+  },
+  "$defs": {
+    "approvalState": {"enum": ["pending", "approved", "rejected"]},
+    "reference": {"type": "string", "pattern": "^[a-z][a-z0-9+.-]*:[^\\s]+$"},
+    "change": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "before", "after", "resource"],
+      "properties": {
+        "key": {"type": "string", "minLength": 1},
+        "before": {"type": "string", "minLength": 1},
+        "after": {"type": "string", "minLength": 1},
+        "resource": {"type": "string", "minLength": 1}
+      }
+    }
+  }
 }

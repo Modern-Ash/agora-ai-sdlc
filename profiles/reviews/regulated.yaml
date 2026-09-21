@@ -1,0 +1,29 @@
+schema: agora-ai-sdlc/review-policy/v1
+id: regulated
+adoption_profile: regulated
+reviews:
+  - id: business-review
+    mandatory: true
+    required_approval_roles: [product-owner, governance-owner]
+    required_evidence_types: [business-decision, governance-decision]
+    independent_review_profiles: [human-final]
+  - id: architecture-review
+    mandatory: true
+    required_approval_roles: [architect, governance-owner]
+    required_evidence_types: [architecture-review, governance-decision]
+    independent_review_profiles: [regulated]
+  - id: security-compliance-review
+    mandatory: true
+    required_approval_roles: [security-reviewer, governance-owner]
+    required_evidence_types: [security-review, compliance-review, governance-decision]
+    independent_review_profiles: [regulated]
+  - id: quality-review
+    mandatory: true
+    required_approval_roles: [quality-reviewer, governance-owner]
+    required_evidence_types: [quality-review, test-summary, governance-decision]
+    independent_review_profiles: [regulated]
+  - id: operational-readiness-review
+    mandatory: true
+    required_approval_roles: [operator, governance-owner]
+    required_evidence_types: [operational-readiness, rollback-evidence, governance-decision]
+    independent_review_profiles: [regulated]

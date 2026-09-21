@@ -277,17 +277,20 @@ def apply(config: dict, target: Path, home: Path) -> dict:
 
     os.environ["AGORA_HOME"] = str(home.resolve())
     workspace = AgoraWorkspace(cwd=target)
-    workspace.initialize(
-        InitInput(
-            integration="generic",
-            provider="local",
-            model="human",
-            default_method="scrum",
+    init_kwargs = {
+        "integration": "generic",
+        "provider": "local",
+        "model": "human",
+        "default_method": "scrum",
+    }
+    fields = getattr(InitInput, "__dataclass_fields__", {})
+    if "active_flavor" in fields:
+        init_kwargs.update(
             active_flavor="ai-sdlc",
             active_profile=normalized["profile"],
             active_depth=normalized["depth"],
         )
-    )
+    workspace.initialize(InitInput(**init_kwargs))
     workspace.install_method(
         InstallMethodInput(
             source=str(asset_root("registry") / "methods" / "ai-sdlc"),

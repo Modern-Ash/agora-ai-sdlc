@@ -258,6 +258,7 @@ def render(
     *,
     expert: bool = False,
     show_commands: bool = False,
+    show_actions: bool = True,
 ) -> str:
     if decision is None:
         return "Agora AI-SDLC\n\nNo governed action currently needs attention."
@@ -302,18 +303,20 @@ def render(
                 "",
                 "Decision needed",
                 "  Technical/readiness obligations are satisfied; explicit human approval is now required.",
-                "  [A] Approve  [R] Review evidence  [E] Edit proposal  [D] Governance details  [X] Stop",
             ]
         )
+        if show_actions:
+            lines.append("  [A] Approve  [R] Review evidence  [E] Edit proposal  [D] Governance details  [X] Stop")
     elif decision.blocked:
         lines.extend(
             [
                 "",
                 "Recommended action",
                 "  Let the selected AI agent prepare the non-authoritative items above, then return for human review.",
-                "  [P] Prepare with AI  [R] Review context  [D] Governance details  [X] Stop",
             ]
         )
+        if show_actions:
+            lines.append("  [P] Prepare with AI  [R] Review context  [D] Governance details  [X] Stop")
     else:
         lines.extend(["", "Recommended action", "  This governed step is ready for the responsible actor."])
 

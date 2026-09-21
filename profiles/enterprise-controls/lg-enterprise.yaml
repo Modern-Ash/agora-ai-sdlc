@@ -1,0 +1,36 @@
+schema: agora-ai-sdlc/enterprise-controls-profile/v1
+id: lg-enterprise
+compatibility_profile: lg-enterprise
+classification: enterprise-extension
+controls:
+  estimation:
+    enabled: false
+    optional: true
+    metrics:
+      - effort-range
+      - elapsed-time
+      - ai-cost
+      - human-review-time
+  test-design:
+    enabled: true
+    optional: false
+    required-test-classes:
+      - unit
+      - integration
+      - acceptance
+    coverage-obligations:
+      - changed-behavior
+      - critical-path
+  code-review:
+    enabled: true
+    optional: false
+    reviewer-separation:
+      - distinct-actor
+    required-evidence:
+      - review-summary
+      - test-summary
+    blocking-findings:
+      - critical
+      - high
+metadata:
+  scope: Public LG-style enterprise delivery extensions expressed without provider, model, cloud or SCM coupling.

@@ -7,6 +7,7 @@ from agora.workspace import AgoraWorkspace
 from agora_ai_sdlc.installer import (
     InstallerError,
     apply,
+    core_preflight,
     load_config,
     preview,
     render_config,
@@ -173,3 +174,56 @@ def test_wizard_builds_config_without_writing_target(tmp_path):
     assert config["role_execution"]["architect"] == "primary"
     assert config["role_execution"]["builder"] == "primary"
     assert config["role_execution"]["operator"] == "human"
+
+
+def test_core_preflight_reports_installed_core_and_cli(monkeypatch):
+    monkeypatch.setattr("agora_ai_sdlc.installer.installed_core_version", lambda: "0.9.0")
+    monkeypatch.setattr("agora_ai_sdlc.installer.check_core_compatibility", lambda manifest, installed=None: None)
+    monkeypatch.setattr("agora_ai_sdlc.installer.shutil.which", lambda name: "/venv/bin/agora" if name == "agora" else None)
+
+    result = core_preflight()
+
+    assert result == {"version": "0.9.0", "executable": "/venv/bin/agora"}
+
+
+def test_core_preflight_fails_when_cli_is_missing(monkeypatch):
+    monkeypatch.setattr("agora_ai_sdlc.installer.installed_core_version", lambda: "0.9.0")
+    monkeypatch.setattr("agora_ai_sdlc.installer.check_core_compatibility", lambda manifest, installed=None: None)
+    monkeypatch.setattr("agora_ai_sdlc.installer.shutil.which", lambda name: None)
+
+    with pytest.raises(InstallerError) as error:
+        core_preflight()
+
+    assert error.value.code == "installer.core.cli-missing"
+
+
+def test_core_preflight_fails_when_core_is_incompatible(monkeypatch):
+    from agora_ai_sdlc.flavor_manifest import ManifestError
+
+    monkeypatch.setattr("agora_ai_sdlc.installer.installed_core_version", lambda: "9.9.9")
+
+    def incompatible(manifest, installed=None):
+        raise ManifestError("manifest.core_incompatible", "unsupported Core")
+
+    monkeypatch.setattr("agora_ai_sdlc.installer.check_core_compatibility", incompatible)
+
+    with pytest.raises(InstallerError) as error:
+        core_preflight()
+
+    assert error.value.code == "installer.core.incompatible"
+
+
+def test_apply_reports_core_handoff_commands(tmp_path, monkeypatch):
+    monkeypatch.setattr(
+        "agora_ai_sdlc.installer.core_preflight",
+        lambda: {"version": "0.9.0", "executable": "/venv/bin/agora"},
+    )
+
+    result = apply(base_config(), tmp_path / "project", tmp_path / "home")
+
+    assert result["core_validation"] == "ok"
+    assert result["next_commands"] == [
+        "agora validate",
+        "agora status --board",
+        "agora continue",
+    ]

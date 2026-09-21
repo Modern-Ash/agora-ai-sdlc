@@ -14,5 +14,6 @@ Credential-free executable scenarios shipped in the wheel and source distributio
 - `modernization`: one incremental legacy slice with known/unknown behavior, failed equivalence, cutover and rollback gates.
 - `regulated`: signed critical actions, segregation, observed provenance, exceptions, retention metadata and a full signed lifecycle.
 - `existing-codebase-pilot`: maintained code change with fake multi-provider sessions, rejected review, correction, CI evidence and measured results.
+- `cross-repo-impact`: provider-neutral approved impact analysis spanning three repositories, components, API/event contracts and an explicit unknown dependency.
 
 Run one with `agora-ai-sdlc run-sample <name>`.

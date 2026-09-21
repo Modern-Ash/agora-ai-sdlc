@@ -115,11 +115,7 @@ def test_missing_mandatory_approval_or_evidence_blocks():
     )
 
     assert not result.allowed
-    codes = {
-        blocker["code"]
-        for review in result.reviews
-        for blocker in review.blockers
-    }
+    codes = {blocker["code"] for review in result.reviews for blocker in review.blockers}
     assert "enterprise-review.approval" in codes
     assert "enterprise-review.evidence" in codes
 

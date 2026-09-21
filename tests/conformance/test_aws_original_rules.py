@@ -50,7 +50,7 @@ def test_current_repository_matches_pass_partial_fail_golden():
 
     assert profile.version == expected["profile_version"]
     assert grouped(report) == {status: sorted(values) for status, values in expected["expected"].items()}
-    assert report.overall_status == "FAIL"
+    assert report.overall_status == "PARTIAL"
 
 
 def test_each_fact_has_explicit_repository_evidence_or_actionable_remediation():

@@ -3,6 +3,7 @@ profile_version: 1.1.0
 expected:
   PASS:
     - ai-initiated-planning
+    - bolts
     - domain-design
     - forward-backward-traceability
     - human-validation
@@ -15,7 +16,6 @@ expected:
     - recursive-planning
     - units
   PARTIAL:
-    - bolts
     - brownfield-semantic-elevation
     - deployment-units
     - logical-design

@@ -26,4 +26,4 @@ Rework transitions are deliberately ungated in this candidate pack. Core records
 
 ## Deferred capabilities
 
-First-class recursive plans, adaptive pathway selection and executable Bolt orchestration are not claimed by 0.2.0 itself. They are tracked separately in issues #99, #100 and #101.
+First-class recursive plans, adaptive pathway selection and executable Bolt plans are not claimed by 0.2.0 itself. They are provided by the flavor (issues #99, #100 and #101; see `docs/method/bolts.md`).

@@ -39,6 +39,11 @@ def main(argv: list[str] | None = None) -> int:
     plan_validate.add_argument("--depth")
     plan_validate.add_argument("--profile")
     plan_validate.add_argument("--json", action="store_true")
+    bolt_validate = sub.add_parser(
+        "bolt-validate", help="Validate a Bolt plan and print Unit -> Bolt -> evidence trace"
+    )
+    bolt_validate.add_argument("path")
+    bolt_validate.add_argument("--json", action="store_true")
     starter = sub.add_parser("starter-bootstrap", help="Preview and apply the Starter profile")
     starter.add_argument("--config", required=True)
     starter.add_argument("--target", required=True)
@@ -117,6 +122,22 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 f"authorized pathway={decision.pathway} depth={decision.effective_depth} "
                 f"executed={len(decision.executed_steps)} skipped={len(decision.skipped_steps)}"
+            )
+        return 0
+    if args.command == "bolt-validate":
+        from agora_ai_sdlc.bolts import BoltError, parse_bolt_plan, trace
+
+        try:
+            summary = trace(parse_bolt_plan(Path(args.path).read_text(encoding="utf-8")))
+        except (OSError, BoltError) as error:
+            print(error, file=sys.stderr)
+            return 2
+        if args.json:
+            print(json.dumps(summary, sort_keys=True))
+        else:
+            print(
+                f"valid unit={summary['unit']} bolts={len(summary['bolts'])} ready={','.join(summary['ready']) or '-'} "
+                f"construction_evidence_complete={summary['construction_evidence_complete']}"
             )
         return 0
     if args.command == "starter-bootstrap":

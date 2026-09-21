@@ -16,7 +16,7 @@ Goal: stay as close to the published AI-DLC method as possible while keeping thi
 | Design techniques integral to the method (a DDD flavor first) | partial | `domain-model` and `architecture` templates exist; no technique-specific flavor or Domain/Logical Design split |
 | Minimal roles (Product Owner and developers) | deliberate difference | Nine roles for governance and segregation of duties; small teams may hold several |
 | No hard-wired workflow: AI proposes a Level 1 Plan per pathway, recursively decomposed | gap | Fixed six-state lifecycle; no plan artifact tied to a pathway |
-| Bolts replace sprints (hours or days), Units of Work replace epics | partial | Both are defined terms; a Bolt is only a section of the `unit-of-work` template, not a recorded artifact |
+| Bolts replace sprints (hours or days), Units of Work replace epics | partial | Both are defined terms; Bolts are entries of the first-class `bolt-plan` artifact |
 | Retain risk practices (Risk Register) | partial | `risks` sections in intent and architecture; no organization risk-register linkage |
 | Brown-field: elevate code to static and dynamic models before construction | partial | Modernization profile: legacy inventory, dependency map, characterization; no explicit static/dynamic model artifacts |
 
@@ -31,7 +31,7 @@ Goal: stay as close to the published AI-DLC method as possible while keeping thi
 | PRFAQ (optional) | gap | not defined | add an optional `prfaq` template |
 | Risk descriptions (matching an organization's Risk Register) | partial | risks in `product-intent` and `architecture` | add a `risk-register` template with an external-reference field |
 | Measurement criteria traced to the business intent | partial | `Success measures` in `product-intent` | add a `measurement-criteria` template and trace it from stories |
-| Units and suggested Bolts | partial | `unit-of-work` template lists Bolts | record Bolts as first-class artifacts planned by AI and validated by a human |
+| Units and suggested Bolts | aligned | `bolt-plan` artifact, `agora_ai_sdlc.bolts` | — |
 | Mob Construction (collocated teams exchanging integration specifications) | gap | not defined | document the ritual; integration specifications as Unit artifacts |
 | Domain Design | aligned | `domain-model` template | none |
 | Logical Design with architecture decision records | partial | `architecture` has Decisions | add a `logical-design` template covering non-functional patterns and ADR links |

@@ -17,7 +17,7 @@ Every phase repeats: **plan -> clarify -> human decision -> execute -> validate*
 
 ## Unit of Work and bolt
 
-A **Unit of Work** is a bounded slice of the intent, delivered independently and traced to acceptance criteria. A **bolt** is a short, focused iteration over a Unit of Work inside one phase. Bolts carry no time tracking in Core: they are a working convention recorded in evidence, not a lifecycle state.
+A **Unit of Work** is a bounded slice of the intent, delivered independently and traced to acceptance criteria. A **bolt** is a short, focused iteration over a Unit of Work inside one phase. Bolts carry no time tracking in Core. Each Unit's Bolts are recorded in a human-approved `bolt-plan` artifact (sequential or parallel, with dependencies, lifecycle status and evidence links); see `docs/method/bolts.md`.
 
 ## Rules
 

@@ -18,6 +18,7 @@ from agora.model import (
 )
 from agora.workspace import AgoraWorkspace
 
+from agora_ai_sdlc import profile_activation
 from agora_ai_sdlc.depth_profiles import asset_root
 
 SCHEMA = "agora-ai-sdlc/starter-bootstrap/v1"
@@ -187,6 +188,7 @@ def apply(config: dict, target: Path, home: Path) -> dict:
             actor_id="product-owner", acceptance_criteria=normalized["work"]["criteria"],
         )
     )  # fmt: skip
+    profile_activation.activate(workspace, normalized["swarm"], normalized["work"]["id"], "product-owner", "starter")
     validation = workspace.validate()
     work = workspace.show_work(normalized["swarm"], normalized["work"]["id"])
     return {**plan, "validate": "ok" if validation.ok else "failed", "work_state": work.state}

@@ -121,9 +121,7 @@ def _present(root: Path, paths: tuple[str, ...], *, packaged_fallback: bool) -> 
 
 def _evidence(root: Path, paths: tuple[str, ...], *, packaged_fallback: bool) -> tuple[str, ...]:
     return tuple(
-        f"repo://{path}"
-        for path in paths
-        if _resolve(root, path, packaged_fallback=packaged_fallback).is_file()
+        f"repo://{path}" for path in paths if _resolve(root, path, packaged_fallback=packaged_fallback).is_file()
     )
 
 

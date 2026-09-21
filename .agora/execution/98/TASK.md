@@ -4,7 +4,7 @@ epic: 92
 title: Implement Method Pack 0.2.0 three-phase lifecycle as selectable default candidate
 repository: Modern-Ash/agora-ai-sdlc
 base_commit: 4014188dacb486bc97442d938d3e6d8ab576ff54
-status: implementing
+status: review
 risk: high
 context_size: large
 budget:
@@ -69,18 +69,18 @@ Allow teams to validate and pilot the published three-phase lifecycle without br
 - Do not claim #99/#100/#101 features as completed.
 
 ## Acceptance criteria
-- [ ] 0.1.0 path resolves to current registry/methods/ai-sdlc.
-- [ ] 0.2.0 path resolves to versioned candidate pack.
-- [ ] invalid version fails closed.
-- [ ] 0.2.0 manifest has exact three-phase lifecycle plus completed terminal state.
-- [ ] 0.2.0 required roles are product-owner and developer; quality-reviewer is optional.
-- [ ] forward transitions use inception-approved, construction-verified and completion.
-- [ ] rework edges exist without gates.
-- [ ] both versions install/validate against current Core.
-- [ ] current Lifecycle()/samples still use 0.1.0 by default.
-- [ ] Lifecycle(method_version="0.2.0") starts in inception.
-- [ ] migration note documents explicit selection and breaking state/gate/role changes.
-- [ ] full repository verification passes.
+- [x] 0.1.0 path resolves to current registry/methods/ai-sdlc.
+- [x] 0.2.0 path resolves to versioned candidate pack.
+- [x] invalid version fails closed.
+- [x] 0.2.0 manifest has exact three-phase lifecycle plus completed terminal state.
+- [x] 0.2.0 required roles are product-owner and developer; quality-reviewer is optional.
+- [x] forward transitions use inception-approved, construction-verified and completion.
+- [x] rework edges exist without gates.
+- [x] both versions install/validate against current Core.
+- [x] current Lifecycle()/samples still use 0.1.0 by default.
+- [x] Lifecycle(method_version="0.2.0") starts in inception.
+- [x] migration note documents explicit selection and breaking state/gate/role changes.
+- [x] full repository verification passes.
 
 ## Focused verification
 - uv run pytest -q tests/test_method_versions.py tests/test_method_pack.py tests/test_lifecycle.py

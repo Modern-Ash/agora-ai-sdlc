@@ -11,8 +11,8 @@ def test_lg_enterprise_sample_composes_public_profile_capabilities():
     assert summary["final_state"] == "completed"
     assert summary["validate"] == "ok"
     assert summary["profile"] == "lg-enterprise"
-    assert summary["conformance"] == "PARTIAL"
-    assert summary["risk_issue_management"] == "PARTIAL"
+    assert summary["conformance"] == "PASS"
+    assert summary["risk_issue_management"] == "PASS"
     assert summary["enterprise_reviews_allowed"] is True
     assert summary["enterprise_controls_allowed"] is True
     assert all(summary["exercised"].values())

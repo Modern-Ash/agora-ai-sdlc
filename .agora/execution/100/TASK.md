@@ -4,7 +4,7 @@ epic: 92
 title: Implement adaptive pathway planning and conditional stage execution
 repository: Modern-Ash/agora-ai-sdlc
 base_commit: 88c5000a6a6d76b7fe830464d3c9582baa25ee65
-status: implementing
+status: review
 risk: high
 context_size: large
 budget:
@@ -97,17 +97,17 @@ Use a closed method-step vocabulary aligned to existing artifacts/gates:
 - brownfield-dynamic-model
 
 ## Acceptance criteria
-- [ ] same lifecycle supports all six pathways.
-- [ ] trivial change fixture can skip non-mandatory design activities under minimal/standard depth.
-- [ ] new product fixture executes full inception/construction baseline.
-- [ ] brownfield fixture requires semantic elevation before construction.
-- [ ] regulated fixture cannot skip security/review/operations obligations.
-- [ ] active profile/depth can only increase obligations above pathway minimum.
-- [ ] invalid attempt to skip mandatory policy fails closed with stable code.
-- [ ] stale/unapproved plan cannot be execution-authorized.
-- [ ] CLI validates approved plans and returns non-zero for policy violations.
-- [ ] golden fixtures are deterministic and provider-neutral.
-- [ ] full repository verification passes.
+- [x] same lifecycle supports all six pathways.
+- [x] trivial change fixture can skip non-mandatory design activities under minimal/standard depth.
+- [x] new product fixture executes full inception/construction baseline.
+- [x] brownfield fixture requires semantic elevation before construction.
+- [x] regulated fixture cannot skip security/review/operations obligations.
+- [x] active profile/depth can only increase obligations above pathway minimum.
+- [x] invalid attempt to skip mandatory policy fails closed with stable code.
+- [x] stale/unapproved plan cannot be execution-authorized.
+- [x] CLI validates approved plans and returns non-zero for policy violations.
+- [x] golden fixtures are deterministic and provider-neutral.
+- [x] full repository verification passes.
 
 ## Focused verification
 - uv run pytest -q tests/test_adaptive_planning.py tests/test_plans.py tests/test_cli.py

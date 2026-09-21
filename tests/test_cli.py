@@ -163,3 +163,27 @@ def test_bolt_validate_cli_reports_trace_and_fails_closed(capsys, tmp_path):
     broken.write_text(fixture.read_text(encoding="utf-8").replace('writes: ["src/ui/"]', 'writes: ["src/api/"]'))
     assert main(["bolt-validate", str(broken)]) == 2
     assert "bolt.parallel_conflict" in capsys.readouterr().err
+
+
+def test_guided_continue_cli_hides_core_blockers_by_default(monkeypatch, capsys):
+    from agora_ai_sdlc.guided import GuidedDecision
+
+    decision = GuidedDecision(
+        swarm="delivery",
+        work="first-work",
+        actor="project:product-owner",
+        role="product-owner",
+        state="readiness",
+        target="intent",
+        blockers=("Gate readiness-approved failed: missing-artifacts=[readiness-assessment]",),
+        messages=("Prepare the required project evidence: readiness-assessment.",),
+    )
+    monkeypatch.setattr("agora_ai_sdlc.guided.inspect_next", lambda *args, **kwargs: decision)
+
+    assert main(["continue"]) == 0
+    output = capsys.readouterr().out
+    assert "Prepare the required project evidence" in output
+    assert "missing-artifacts" not in output
+
+    assert main(["continue", "--expert"]) == 0
+    assert "missing-artifacts=[readiness-assessment]" in capsys.readouterr().out

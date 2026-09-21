@@ -6,6 +6,7 @@ AI-SDLC assets shipped in the wheel and source distribution:
 - `reviews/`: enterprise review-gate policies for starter, enterprise, and regulated adoption.
 - `pathways/`: adaptive delivery pathway policies over the shared Method Pack 0.2.0 lifecycle.
 - `compatibility/`: versioned AWS-original and LG-enterprise public compatibility projections.
+- `enterprise-controls/`: provider-neutral estimation, test-design and code-review extension profiles.
 - `integrations/github/`: offline-first GitHub delivery profile over Agora Core Tool Packs.
 - `integrations/ci/`: provider-neutral CI/CD evidence and gate bundles.
 - `integrations/security/`: normalized scanner findings, risk decisions, and depth thresholds.
@@ -32,3 +33,4 @@ See [compatibility profiles](../docs/reference/compatibility-profiles.md) for ca
 Adaptive pathway profiles are documented in [adaptive planning](../docs/method/adaptive-planning.md).
 
 See [enterprise review gates](../docs/policies/enterprise-review-gates.md) for mandatory/optional review policy and independent-review composition.
+See [enterprise delivery controls](../docs/policies/enterprise-delivery-controls.md) for optional estimation plus test-design/code-review rules.

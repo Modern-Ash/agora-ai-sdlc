@@ -236,7 +236,7 @@ def parse_rules(contents: str) -> AwsOriginalRules:
 
 
 def load_rules() -> AwsOriginalRules:
-    path = asset_root("profiles") / "compatibility" / "aws-original" / "rules.yaml"
+    path = asset_root("contracts") / "conformance" / "aws-original-rules-v1.yaml"
     if not path.is_file():
         raise AwsOriginalRuleError("aws-rule.file", f"rules file not found: {path}")
     return parse_rules(path.read_text(encoding="utf-8"))

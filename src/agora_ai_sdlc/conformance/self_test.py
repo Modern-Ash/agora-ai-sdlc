@@ -20,6 +20,7 @@ from agora_ai_sdlc import (
     ci_evidence,
     compatibility_profiles,
     enterprise,
+    enterprise_controls,
     enterprise_reviews,
     github_delivery,
     modernization,
@@ -41,6 +42,7 @@ PROFILE_SCHEMAS = {
     adaptive_planning.PATHWAY_SCHEMA,
     adaptive_planning.POLICY_SET_SCHEMA,
     enterprise_reviews.SCHEMA,
+    enterprise_controls.SCHEMA,
 }
 
 
@@ -86,6 +88,8 @@ def _discover_assets() -> dict[str, list[str]]:
         compatibility_profiles.load_profile(profile_id)
     for profile_id in enterprise_reviews.available_policies():
         enterprise_reviews.load_policy(profile_id)
+    for profile_id in enterprise_controls.available_profiles():
+        enterprise_controls.load_profile(profile_id)
     adaptive_planning.load_policy_set()
     for pathway_id in adaptive_planning.available_pathways():
         adaptive_planning.load_pathway(pathway_id)

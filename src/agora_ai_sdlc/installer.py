@@ -229,10 +229,7 @@ def render_config(config: dict) -> str:
         **normalized,
         "work": {
             **normalized["work"],
-            "criteria": [
-                {"id": item_id, "text": text}
-                for item_id, text in normalized["work"]["criteria"]
-            ],
+            "criteria": [{"id": item_id, "text": text} for item_id, text in normalized["work"]["criteria"]],
         },
     }
     return yaml.safe_dump(serializable, sort_keys=False, allow_unicode=True)
@@ -360,11 +357,7 @@ def apply(config: dict, target: Path, home: Path) -> dict:
         "product-owner": "product-owner",
         "quality-reviewer": "quality-reviewer",
         **{
-            role: (
-                "delivery-member"
-                if runtime == "human"
-                else f"ai-{runtime}"
-            )
+            role: ("delivery-member" if runtime == "human" else f"ai-{runtime}")
             for role, runtime in normalized["role_execution"].items()
         },
     }
@@ -441,11 +434,7 @@ def wizard(
     project_name = _ask(input_fn, "Project name", target.name or project_id)
     profile = _choose(input_fn, "Adoption profile", PROFILE_IDS, "starter")
     default_depth = _profile_default_depth(profile)
-    allowed_depths = tuple(
-        depth
-        for depth in DEPTH_ORDER
-        if _depth_at_least(depth, default_depth)
-    )
+    allowed_depths = tuple(depth for depth in DEPTH_ORDER if _depth_at_least(depth, default_depth))
     depth = _choose(input_fn, "Governance depth", allowed_depths, default_depth)
     language = _ask(input_fn, "Primary programming language", "java")
     framework = _ask(input_fn, "Framework (optional)", "") or None
@@ -463,7 +452,7 @@ def wizard(
 
     runtimes = []
     while _yes_no(input_fn, "Add an AI runtime?", not runtimes):
-        runtime_id = _ask(input_fn, "Runtime id", "primary" if not runtimes else f"runtime-{len(runtimes)+1}")
+        runtime_id = _ask(input_fn, "Runtime id", "primary" if not runtimes else f"runtime-{len(runtimes) + 1}")
         integration = _choose(input_fn, "Core integration", INTEGRATIONS, "generic")
         provider = _ask(input_fn, "Provider", "local")
         model = _ask(input_fn, "Model", "local")

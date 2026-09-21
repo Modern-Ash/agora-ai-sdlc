@@ -1,0 +1,6 @@
+schema: agora-ai-sdlc/pathway/v1
+id: scaling
+minimum_depth: comprehensive
+mandatory_steps: [clarify-intent, define-nfrs, assess-risks, domain-design, logical-design, implementation, unit-tests, integration-tests, performance-tests, deployment-unit, deployment, observability, rollback-readiness]
+optional_steps: [elaborate-stories, measurement-criteria, decompose-units, threat-model, security-tests]
+forbidden_skips: [define-nfrs, performance-tests, implementation, deployment, observability]

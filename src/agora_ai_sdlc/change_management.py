@@ -10,7 +10,16 @@ from agora_ai_sdlc.artifacts import ID_PATTERN, Artifact, ArtifactError, parse_a
 APPROVAL_STATES = {"pending", "approved", "rejected"}
 RISK = {"low", "medium", "high", "critical"}
 REF = re.compile(r"^[a-z][a-z0-9+.-]*:[^\s]+$")
-FORBIDDEN_VALUE_KEYS = {"secret", "password", "token", "api_key", "apikey", "credential", "credentials", "authorization"}
+FORBIDDEN_VALUE_KEYS = {
+    "secret",
+    "password",
+    "token",
+    "api_key",
+    "apikey",
+    "credential",
+    "credentials",
+    "authorization",
+}
 
 
 class ChangeManagementError(ValueError):
@@ -142,7 +151,9 @@ def parse_change_plan(text: str) -> ChangePlan:
     revision = front.get("revision")
     if isinstance(revision, bool) or not isinstance(revision, int) or revision < 1:
         raise ChangeManagementError("change.revision", "revision must be a positive integer")
-    if approved_revision is not None and (isinstance(approved_revision, bool) or not isinstance(approved_revision, int)):
+    if approved_revision is not None and (
+        isinstance(approved_revision, bool) or not isinstance(approved_revision, int)
+    ):
         raise ChangeManagementError("change.approval_revision", "approved-revision must be integer or null")
     if approval == "approved":
         if approved_by is None:
@@ -207,8 +218,12 @@ def parse_configuration_delta(text: str) -> ConfigurationDelta:
                 _string(raw["resource"], f"changes[{index}].resource"),
             )
         )
-    release = tuple(_ref(item, "release-evidence") for item in _strings(front.get("release-evidence"), "release-evidence"))
-    rollback = tuple(_ref(item, "rollback-linkage") for item in _strings(front.get("rollback-linkage"), "rollback-linkage"))
+    release = tuple(
+        _ref(item, "release-evidence") for item in _strings(front.get("release-evidence"), "release-evidence")
+    )
+    rollback = tuple(
+        _ref(item, "rollback-linkage") for item in _strings(front.get("rollback-linkage"), "rollback-linkage")
+    )
     return ConfigurationDelta(artifact, plan, tuple(parsed), release, rollback)
 
 
@@ -220,9 +235,13 @@ def assert_approved(plan: ChangePlan) -> None:
 def validate_chain(request: ChangeRequest, plan: ChangePlan, delta: ConfigurationDelta) -> ChangeChain:
     assert_approved(plan)
     if plan.change_request != request.artifact.id:
-        raise ChangeManagementError("change.chain_request", "change plan does not reference the supplied change request")
+        raise ChangeManagementError(
+            "change.chain_request", "change plan does not reference the supplied change request"
+        )
     if delta.change_plan != plan.artifact.id:
-        raise ChangeManagementError("change.chain_plan", "configuration delta does not reference the supplied change plan")
+        raise ChangeManagementError(
+            "change.chain_plan", "configuration delta does not reference the supplied change plan"
+        )
     return ChangeChain(request, plan, delta)
 
 

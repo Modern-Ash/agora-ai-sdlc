@@ -1,0 +1,30 @@
+profile: aws-original
+profile_version: 1.1.0
+expected:
+  PASS:
+    - ai-initiated-planning
+    - domain-design
+    - forward-backward-traceability
+    - human-validation
+    - intent
+    - non-functional-requirements
+    - operations-observability
+    - persistent-context
+    - quality-reviewer
+    - units
+  PARTIAL:
+    - bolts
+    - brownfield-semantic-elevation
+    - deployment-units
+    - level-1-plan
+    - logical-design
+    - measurement-criteria
+    - minimal-roles
+    - operations-governed-remediation
+    - risk-register
+    - three-phase-lifecycle
+    - user-stories
+  FAIL:
+    - recursive-planning
+  NOT_APPLICABLE:
+    - prfaq

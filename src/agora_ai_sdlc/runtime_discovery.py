@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import shutil
 import subprocess
-from dataclasses import asdict, dataclass
 from collections.abc import Callable
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import yaml

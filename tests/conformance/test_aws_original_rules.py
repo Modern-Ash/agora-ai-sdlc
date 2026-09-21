@@ -33,9 +33,8 @@ def test_rules_cover_every_declared_profile_capability_and_separate_additive_gov
     declared = set(profile.required_capabilities) | set(profile.optional_capabilities) | set(profile.unsupported_capabilities)
 
     assert base == declared
-    assert all(rule.classification == "agora-additive" for rule in [
-        type("X", (), {"classification": "agora-additive"})()
-    ])  # documents the closed classification vocabulary
+    assert {rule.classification for rule in rules.base_rules} == {"base-method"}
+    assert {rule.classification for rule in rules.additive_governance} == {"agora-additive"}
     additive = {rule.id for rule in rules.additive_governance}
     assert additive
     assert additive.isdisjoint(declared)

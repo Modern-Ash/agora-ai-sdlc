@@ -75,9 +75,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "conformance":
         from agora_ai_sdlc.compatibility_profiles import load_profile
         from agora_ai_sdlc.conformance import (
+            LG_ENTERPRISE_FACTS_SOURCE,
             AwsOriginalRuleError,
             ConformanceError,
-            LG_ENTERPRISE_FACTS_SOURCE,
             derive_aws_original_facts,
             derive_lg_enterprise_facts,
             evaluate,

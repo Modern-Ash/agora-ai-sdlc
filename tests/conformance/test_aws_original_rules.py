@@ -30,7 +30,9 @@ def test_rules_cover_every_declared_profile_capability_and_separate_additive_gov
     profile = load_profile("aws-original")
     rules = load_rules()
     base = {rule.capability for rule in rules.base_rules}
-    declared = set(profile.required_capabilities) | set(profile.optional_capabilities) | set(profile.unsupported_capabilities)
+    declared = (
+        set(profile.required_capabilities) | set(profile.optional_capabilities) | set(profile.unsupported_capabilities)
+    )
 
     assert base == declared
     assert {rule.classification for rule in rules.base_rules} == {"base-method"}

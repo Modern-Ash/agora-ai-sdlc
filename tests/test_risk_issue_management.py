@@ -84,7 +84,9 @@ def test_closed_or_resolved_records_require_evidence():
     ],
 )
 def test_evidence_references_are_opaque_and_secret_safe(reference, expected):
-    assert code(lambda: parse_record(mutate("risk.yaml", lambda data: data.update({"evidence": [reference]})))) == expected
+    assert (
+        code(lambda: parse_record(mutate("risk.yaml", lambda data: data.update({"evidence": [reference]})))) == expected
+    )
 
 
 def test_duplicate_record_ids_fail_closed():

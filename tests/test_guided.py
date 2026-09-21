@@ -19,11 +19,13 @@ class FakeWorkspace:
             state="readiness",
             target_states=["intent"],
             blockers=[
-                "Gate readiness-approved failed: "
-                "missing-artifacts=[readiness-assessment], "
-                "missing-evidence-types=[], "
-                "missing-approvals=[product-owner], "
-                "clarifications=[clarification-not-run]"
+                (
+                    "Gate readiness-approved failed: "
+                    "missing-artifacts=[readiness-assessment], "
+                    "missing-evidence-types=[], "
+                    "missing-approvals=[product-owner], "
+                    "clarifications=[clarification-not-run]"
+                )
             ],
         )
         return [task] if swarm_id in (None, "delivery") else []

@@ -1,25 +1,40 @@
 ---
 issue: 106
 status: partial
-commit:
-pull_request:
+commit: 305c24646b6d8d6a1c23880db018ed7e4c511871
+pull_request: 124
 updated_at: 2026-09-21
 ---
 # Result
 
 ## Status
-Implementation complete; automated verification and independent review pending.
+Implementation and automated verification are complete. Independent review remains required.
 
 ## Summary
-Added governed change/configuration artifacts plus provider-neutral domain-knowledge source descriptors with secret/endpoint restrictions and offline samples.
+Added versioned governed change/configuration contracts and provider-neutral domain-knowledge source descriptors with secret/endpoint boundaries and offline samples.
 
-## Key decisions
-- Change chain: change-request -> approved change-plan -> configuration-delta -> release evidence / rollback linkage.
-- Change-plan approval is exact-revision bound.
-- Configuration deltas reject secret-bearing keys/values.
-- Domain knowledge descriptors store references/metadata only, never content.
-- Raw provider endpoints and credential fields are rejected.
-- All validation is offline and provider-neutral.
+## Change/configuration
+- change-request -> approved change-plan -> configuration-delta chain.
+- exact-revision approval.
+- release evidence and rollback linkage required.
+- secret-bearing configuration keys/values rejected.
+- generic artifact traceability retained.
+
+## Domain knowledge
+- repository-docs, wiki, files, api and vector-store source kinds.
+- reference/metadata only; no embedded content.
+- logical opaque references instead of raw provider endpoints.
+- forbidden credential/endpoint fields rejected without echoing secret values.
+- no network/provider dependency.
+
+## Verification
+- Python 3.11 / 3.12 / 3.13 full verify_all.py passed.
+- Python 3.13: 756 passed, 18 skipped.
+- Agora Core 0.9.1: 772 passed, 2 skipped.
+- 15 executable samples passed.
 
 ## Pull request
-Pending.
+Draft PR #124: https://github.com/Modern-Ash/agora-ai-sdlc/pull/124
+
+## Pending
+Independent review and human merge decision.

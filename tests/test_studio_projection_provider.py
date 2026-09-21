@@ -1,6 +1,7 @@
 import json
 import re
 from pathlib import Path
+from types import SimpleNamespace
 
 import agora.application
 import pytest
@@ -12,6 +13,9 @@ from agora_ai_sdlc.studio_projection import (
     PROJECTION_SCHEMA,
     SECTION_ORDER,
     AiSdlcProjectionProvider,
+    _metrics,
+    _profiles,
+    _separation,
     projector,
 )
 
@@ -63,17 +67,91 @@ def test_flavor_section_comes_from_the_packaged_manifest(life):
     }
 
 
-def test_sections_core_cannot_supply_are_explicitly_unavailable_with_stable_reasons(life):
+def test_missing_optional_core_facts_remain_explicitly_unavailable(life):
     result = payload(life)
     expected = {
         "profiles": "projection.profiles-unavailable",
         "separation": "projection.separation-unavailable",
-        "metrics": "projection.metrics-unavailable",
         "provenance": "projection.provenance-unavailable",
     }
     for name, code in expected.items():
-        assert result[name]["status"] == "unavailable" and result[name]["reason"]["code"] == code
+        assert result[name]["status"] == "unavailable"
+        assert result[name]["reason"]["code"] == code
         assert "value" not in result[name]
+
+    assert result["metrics"]["status"] in {"available", "unavailable"}
+
+
+def test_profiles_use_core_selection_before_legacy_artifacts():
+    context = SimpleNamespace(
+        selection=SimpleNamespace(profile="lg-enterprise", depth="regulated"),
+        work=SimpleNamespace(artifacts=()),
+    )
+    section = _profiles(context)
+    assert section == {
+        "status": "available",
+        "value": [
+            {
+                "id": "lg-enterprise",
+                "depth": "regulated",
+                "active": True,
+                "source": "core-selection",
+            }
+        ],
+    }
+
+
+def test_separation_requires_distinct_actor_and_current_digest():
+    artifact = SimpleNamespace(
+        uri="repo://src/app.py",
+        kind="implementation",
+        timestamp="2026-09-21T10:00:00Z",
+        produced_by="project:developer",
+        content_sha256="a" * 64,
+    )
+    review = SimpleNamespace(
+        type="review",
+        timestamp="2026-09-21T10:05:00Z",
+        produced_by="project:reviewer",
+        artifact_references=("repo://src/app.py",),
+        artifact_content_sha256={"repo://src/app.py": "a" * 64},
+    )
+    context = SimpleNamespace(work=SimpleNamespace(artifacts=(artifact,), evidence=(review,)))
+    section = _separation(context)
+    assert section["status"] == "available"
+    assert section["value"]["decision"] == "satisfied"
+    assert section["value"]["blockers"] == []
+
+    review.artifact_content_sha256["repo://src/app.py"] = "b" * 64
+    stale = _separation(context)
+    assert stale["value"]["decision"] == "blocked"
+    assert stale["value"]["blockers"][0]["code"] == "separation.review-missing-or-stale"
+
+
+def test_metrics_preserve_core_zero_and_measurement_provenance():
+    metric = SimpleNamespace(
+        key="usage.tokens",
+        start="2026-09-21T00:00:00Z",
+        end="2026-09-21T23:59:59Z",
+        value=0,
+        count=0,
+        status="available",
+        source_refs=(),
+        measurement="measured",
+    )
+    section = _metrics(SimpleNamespace(metrics=(metric,)))
+    assert section["status"] == "available"
+    assert section["value"]["items"] == [
+        {
+            "id": "usage.tokens",
+            "value": 0,
+            "unit": "units",
+            "source": "measured",
+            "status": "available",
+            "count": 0,
+            "source_refs": [],
+        }
+    ]
 
 
 def test_session_provenance_maps_core_bases_without_upgrading_trust(life):

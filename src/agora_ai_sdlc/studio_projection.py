@@ -96,27 +96,142 @@ def _execution(session: object) -> dict[str, object]:
     }
 
 
-def _profiles(artifacts: object) -> dict[str, object]:
-    """Active profiles recorded as Core artifacts (see profile_activation); latest record per profile wins."""
+def _profiles(context: object) -> dict[str, object]:
+    """Project active profile/depth from Core selection, with legacy artifact fallback."""
+
+    selection = getattr(context, "selection", None)
+    if selection is not None and getattr(selection, "profile", None):
+        profile_id = selection.profile
+        depth = getattr(selection, "depth", None) or "unknown"
+        return {
+            "status": "available",
+            "value": [{"id": profile_id, "depth": depth, "active": True, "source": "core-selection"}],
+        }
+
+    artifacts = getattr(getattr(context, "work", None), "artifacts", ())
     latest: dict[str, object] = {}
-    for artifact in artifacts:  # type: ignore[attr-defined]
+    for artifact in artifacts:
         profile = profile_id_from_kind(artifact.kind)
         if profile is not None and (profile not in latest or artifact.timestamp >= latest[profile].timestamp):
             latest[profile] = artifact
     if not latest:
         return _unavailable(
             "projection.profiles-unavailable",
-            "No adoption profile activation is recorded for this work",
+            "No active Core profile selection or legacy adoption profile activation is available",
         )
     known = adoption_profiles()
     items = []
     for profile in sorted({*known, *latest}):
-        item: dict[str, object] = {"id": profile, "depth": known.get(profile, "unknown"), "active": profile in latest}
+        item: dict[str, object] = {
+            "id": profile,
+            "depth": known.get(profile, "unknown"),
+            "active": profile in latest,
+            "source": "legacy-artifact",
+        }
         if profile in latest:
-            item["recorded_by"] = latest[profile].produced_by  # type: ignore[attr-defined]
-            item["recorded_at"] = latest[profile].timestamp  # type: ignore[attr-defined]
+            item["recorded_by"] = latest[profile].produced_by
+            item["recorded_at"] = latest[profile].timestamp
         items.append(item)
     return {"status": "available", "value": items}
+
+
+def _separation(context: object) -> dict[str, object]:
+    """Evaluate producer/reviewer separation from Core artifact/evidence facts only."""
+
+    work = getattr(context, "work", None)
+    artifacts = tuple(getattr(work, "artifacts", ()) or ())
+    evidence = tuple(getattr(work, "evidence", ()) or ())
+    if not artifacts or not evidence:
+        return _unavailable(
+            "projection.separation-unavailable",
+            "Core has no artifact/review evidence facts for this work",
+        )
+
+    latest_by_uri: dict[str, object] = {}
+    for artifact in artifacts:
+        current = latest_by_uri.get(artifact.uri)
+        if current is None or artifact.timestamp >= current.timestamp:
+            latest_by_uri[artifact.uri] = artifact
+
+    blockers: list[dict[str, object]] = []
+    reviewed = 0
+    for uri, artifact in sorted(latest_by_uri.items()):
+        digest = getattr(artifact, "content_sha256", None)
+        candidates = [item for item in evidence if item.type == "review" and uri in item.artifact_references]
+        matching = [
+            item for item in candidates if digest is not None and item.artifact_content_sha256.get(uri) == digest
+        ]
+        if not matching:
+            blockers.append(
+                {
+                    "code": "separation.review-missing-or-stale",
+                    "message": f"No review evidence matches the current digest for {uri}",
+                }
+            )
+            continue
+        review = max(matching, key=lambda item: item.timestamp)
+        if review.produced_by == artifact.produced_by:
+            blockers.append(
+                {
+                    "code": "separation.same-actor",
+                    "message": f"Producer and reviewer are the same actor for {uri}",
+                }
+            )
+            continue
+        reviewed += 1
+
+    return {
+        "status": "available",
+        "value": {
+            "source_schema": "agora/application/work-item-detail/v3",
+            "decision": "satisfied" if not blockers else "blocked",
+            "required_dimensions": ["distinct-actor", "current-artifact-revision"],
+            "reviewed_artifacts": reviewed,
+            "blockers": blockers,
+        },
+    }
+
+
+def _metrics(context: object) -> dict[str, object]:
+    """Project Core metric windows without inventing missing values."""
+
+    metrics = tuple(getattr(context, "metrics", ()) or ())
+    if not metrics:
+        return _unavailable(
+            "projection.metrics-unavailable",
+            "No Core metric windows are available for this work",
+        )
+
+    usable = [item for item in metrics if item.status != "unavailable" and item.value is not None]
+    if not usable:
+        return _unavailable(
+            "projection.metrics-unavailable",
+            "Core metric windows are present but contain no available values",
+        )
+
+    first = usable[0]
+    items = []
+    for metric in usable:
+        unit = "count" if metric.key.endswith(".count") else "units"
+        items.append(
+            {
+                "id": metric.key,
+                "value": metric.value,
+                "unit": unit,
+                "source": metric.measurement or "core-derived",
+                "status": metric.status,
+                "count": metric.count,
+                "source_refs": list(metric.source_refs),
+            }
+        )
+    return {
+        "status": "available",
+        "value": {
+            "source_schema": "agora/application/metric-window-summary/v1",
+            "window": f"{first.start}/{first.end}",
+            "items": items,
+        },
+    }
 
 
 class AiSdlcProjectionProvider:
@@ -154,7 +269,7 @@ class AiSdlcProjectionProvider:
                     "supported_core": manifest.supported_core,
                 },
             },
-            "profiles": _profiles(context.work.artifacts),
+            "profiles": _profiles(context),
             "provenance": (
                 {
                     "status": "available",
@@ -165,13 +280,8 @@ class AiSdlcProjectionProvider:
                     "projection.provenance-unavailable", "No execution session is associated with this work"
                 )
             ),
-            "separation": _unavailable(
-                "projection.separation-unavailable",
-                "No Core extension projection transports the reviewed-artifact facts needed to evaluate separation",
-            ),
-            "metrics": _unavailable(
-                "projection.metrics-unavailable", "No Core-backed AI-SDLC metric window is available"
-            ),
+            "separation": _separation(context),
+            "metrics": _metrics(context),
         }
         presentation: dict[str, object] = {
             "authoritative": False,

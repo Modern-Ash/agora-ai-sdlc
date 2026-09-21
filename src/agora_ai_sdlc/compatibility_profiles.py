@@ -124,14 +124,10 @@ def parse_profile(contents: str) -> CompatibilityProfile:
         raise CompatibilityProfileError("compatibility.type", "'source' must be a mapping")
     missing_source = [field for field in SOURCE_REQUIRED if field not in source]
     if missing_source:
-        raise CompatibilityProfileError(
-            "compatibility.missing", f"missing source fields: {', '.join(missing_source)}"
-        )
+        raise CompatibilityProfileError("compatibility.missing", f"missing source fields: {', '.join(missing_source)}")
     unknown_source = sorted(set(source) - set(SOURCE_REQUIRED))
     if unknown_source:
-        raise CompatibilityProfileError(
-            "compatibility.unknown", f"unknown source fields: {', '.join(unknown_source)}"
-        )
+        raise CompatibilityProfileError("compatibility.unknown", f"unknown source fields: {', '.join(unknown_source)}")
     if source["basis"] != "public":
         raise CompatibilityProfileError("compatibility.source_scope", "compatibility sources must be public")
     references = _string_list(source["references"], "source.references")
@@ -259,7 +255,9 @@ def load_profile(profile_id: str) -> CompatibilityProfile:
     profile_id = _id(profile_id, "profile_id")
     path = asset_root("profiles") / "compatibility" / profile_id / "profile.yaml"
     if not path.is_file():
-        raise CompatibilityProfileError("compatibility.profile_unknown", f"unknown compatibility profile {profile_id!r}")
+        raise CompatibilityProfileError(
+            "compatibility.profile_unknown", f"unknown compatibility profile {profile_id!r}"
+        )
     profile = parse_profile(path.read_text(encoding="utf-8"))
     if profile.id != profile_id:
         raise CompatibilityProfileError(

@@ -21,6 +21,8 @@ PREFIX = {
     "target-architecture": "TAR", "migration-plan": "MGP", "migration-slice": "MGS",
     "conversion-record": "CNV", "equivalence-report": "EQV", "cutover-plan": "CUT",
     "stabilization-report": "STB",
+    "user-stories": "USR", "prfaq": "PRF", "risk-register": "RSK", "measurement-criteria": "MSR",
+    "bolt-plan": "BLT", "logical-design": "LGD", "deployment-units": "DPU", "plan": "PLN",
 }  # fmt: skip
 # kind -> kinds it may trace to. Empty tuple = root (needs no parent); None = may trace to any kind.
 PARENTS: dict[str, tuple[str, ...] | None] = {
@@ -39,6 +41,10 @@ PARENTS: dict[str, tuple[str, ...] | None] = {
     "equivalence-report": ("characterization", "conversion-record", "migration-slice"),
     "cutover-plan": ("migration-plan", "equivalence-report"),
     "stabilization-report": ("cutover-plan",),
+    "user-stories": ("unit-of-work",), "prfaq": ("intent",), "risk-register": ("intent",),
+    "measurement-criteria": ("intent",), "bolt-plan": ("unit-of-work", "user-stories"),
+    "logical-design": ("domain-model", "requirements"), "deployment-units": ("implementation-plan",),
+    "plan": None,
 }  # fmt: skip
 # Template file (without .md) per kind when it differs from the kind name.
 TEMPLATE_FILES = {"intent": "product-intent"}

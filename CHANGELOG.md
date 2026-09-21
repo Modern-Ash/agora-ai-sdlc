@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add optional artifact kinds for the published AI-driven method's elaboration, Bolt, design and deployment outputs (user stories, PRFAQ, risk register, measurement criteria, Bolt plan, logical design, deployment units, plan), the two collaborative rituals, a recommended context-memory layout and an internal competitive-positioning note; expand the AWS AI-DLC alignment table.
 - Runtime selection now carries Agora Core's usage measurement basis (measured, provider-reported, unknown) per consumed dimension; missing values are unknown, never measured.
 - Add the AI-SDLC Studio projection provider (`agora_ai_sdlc.studio_projection`) for Agora Core >=0.9, mapping the flavor manifest and Core session provenance and reporting unsupported sections as explicit unavailable.
 - Add the Regulated Delivery Readiness package and a statement of work template to the professional-services documentation.

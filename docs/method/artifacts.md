@@ -52,8 +52,32 @@ Modernization templates also use structured `behaviors`, `slice-ids`, `slice-id`
 | equivalence-report | EQV | characterization, conversion-record, migration-slice | equivalence-report.md |
 | cutover-plan | CUT | migration-plan, equivalence-report | cutover-plan.md |
 | stabilization-report | STB | cutover-plan | stabilization-report.md |
+| user-stories | USR | unit-of-work | user-stories.md |
+| prfaq | PRF | intent | prfaq.md |
+| risk-register | RSK | intent | risk-register.md |
+| measurement-criteria | MSR | intent | measurement-criteria.md |
+| bolt-plan | BLT | unit-of-work, user-stories | bolt-plan.md |
+| logical-design | LGD | domain-model, requirements | logical-design.md |
+| deployment-units | DPU | implementation-plan | deployment-units.md |
+| plan | PLN | any | plan.md |
+
+The eight kinds from `user-stories` to `plan` are optional and gate-neutral: no gate requires them, so existing projects and samples are unaffected, and a team or depth profile opts in by requiring them. They cover the elaboration outputs, Bolts, design and deployment artifacts that the published AI-driven development method definition describes (see the [alignment table](../reference/aws-ai-dlc-mapping.md)).
 
 Chain: intent -> unit of work -> requirements (criteria) -> architecture / test strategy (coverage) -> implementation plan (code and test references) -> deployment plan.
+
+## Recommended context-memory layout
+
+Artifacts are durable context for later steps, so keep them where people and AI can find them. A convention that works with any repository (all paths are relative to the project root and registered as `repo://` URIs):
+
+| Folder | Holds |
+|---|---|
+| `ai-sdlc/plans/` | `plan` and `bolt-plan` artifacts with their approvals |
+| `ai-sdlc/requirements/` | `intent`, `requirements`, `user-stories`, `risk-register`, `measurement-criteria`, `prfaq` |
+| `ai-sdlc/design/` | `unit-of-work`, `domain-model`, `logical-design`, `architecture`, `threat-model` |
+| `ai-sdlc/delivery/` | `test-strategy`, `implementation-plan`, `deployment-units`, `deployment-plan`, `operational-readiness` |
+| `ai-sdlc/profiles/` | active-profile records |
+
+The layout is a recommendation; Core and the validators do not depend on it.
 
 ## Deterministic checks
 

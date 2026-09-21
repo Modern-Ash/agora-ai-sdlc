@@ -255,11 +255,28 @@ def test_wizard_displays_detected_runtimes_without_enabling_them(tmp_path, monke
     outputs = []
     answers = iter(
         [
-            "", "", "", "", "python", "", "",
-            "n", "n", "n", "n", "n", "n",
+            "",
+            "",
+            "",
+            "",
+            "python",
+            "",
+            "",
             "n",
-            "human", "human", "human",
-            "", "", "", "", "",
+            "n",
+            "n",
+            "n",
+            "n",
+            "n",
+            "n",
+            "human",
+            "human",
+            "human",
+            "",
+            "",
+            "",
+            "",
+            "",
         ]
     )
 

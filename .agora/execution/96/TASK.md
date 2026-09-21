@@ -4,7 +4,7 @@ epic: 91
 title: Build AWS AI-DLC fidelity conformance rules
 repository: Modern-Ash/agora-ai-sdlc
 base_commit: c95afba520b3a4d56dca110338a3e8487ca375ba
-status: planning
+status: implementing
 risk: medium
 context_size: medium
 budget:

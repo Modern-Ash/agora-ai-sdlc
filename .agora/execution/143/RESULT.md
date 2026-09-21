@@ -2,6 +2,7 @@
 issue: 143
 status: partial
 updated_at: 2026-09-21
+pull_request: 144
 ---
 # Result
 
@@ -13,3 +14,6 @@ No credential files or tokens are read. Installation does not imply authenticati
 
 ## Remaining
 Full CI and independent review.
+
+## Pull request
+PR #144.

@@ -17,6 +17,7 @@ from agora.model import AddActorInput, AddArtifactInput, AssignActorInput, Creat
 
 from agora_ai_sdlc import (
     ci_evidence,
+    compatibility_profiles,
     enterprise,
     github_delivery,
     modernization,
@@ -34,6 +35,7 @@ PROFILE_SCHEMAS = {
     "agora-ai-sdlc/depth-profile/v1",
     "agora-ai-sdlc/integration-profile/v1",
     "agora-ai-sdlc/adoption-profile/v1",
+    compatibility_profiles.SCHEMA,
 }
 
 
@@ -75,6 +77,8 @@ def _discover_assets() -> dict[str, list[str]]:
         loader()
     load_follow_on_profile("gitlab")
     load_follow_on_profile("jira")
+    for profile_id in compatibility_profiles.available_profiles():
+        compatibility_profiles.load_profile(profile_id)
 
     policies_root = asset_root("policies")
     policy_files = sorted(policies_root.rglob("*.yaml"))

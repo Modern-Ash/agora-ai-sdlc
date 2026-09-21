@@ -1,0 +1,55 @@
+schema: agora-ai-sdlc/compatibility-profile/v1
+id: lg-enterprise
+name: LG CNS enterprise AI-DLC public presentation
+version: 1.0.0
+canonical_model: agora-ai-sdlc/canonical-elements/v1
+source:
+  basis: public
+  references:
+    - https://aws.amazon.com/marketplace/pp/prodview-uusc5en5tx5ey
+  affiliation: false
+  runtime_dependency: false
+stages:
+  - id: initialization
+    label: Initialization
+    maps_from: [readiness]
+  - id: ideation
+    label: Ideation
+    maps_from: [intent]
+  - id: inception
+    label: Inception
+    maps_from: [inception]
+  - id: construction
+    label: Construction
+    maps_from: [construction]
+  - id: operation
+    label: Operation
+    maps_from: [operations]
+capabilities:
+  required:
+    - organizational-readiness
+    - technical-setup
+    - ideation
+    - review-gates
+    - quality-governance
+    - risk-issue-management
+    - change-configuration-management
+    - security-compliance
+    - documentation
+    - traceability
+    - test-design
+    - code-review
+    - domain-knowledge
+    - operational-rules
+    - cross-repository-impact
+  optional:
+    - effort-estimation
+  unsupported: []
+neutrality:
+  provider: true
+  model: true
+  cloud: true
+  scm: true
+  agent-runtime: true
+metadata:
+  scope: Public enterprise presentation compatibility target; no proprietary LG implementation details are modeled.

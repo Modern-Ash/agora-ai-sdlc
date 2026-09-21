@@ -29,6 +29,7 @@ from agora_ai_sdlc.flavor_manifest import (
     installed_core_version,
     load_packaged_manifest,
 )
+from agora_ai_sdlc.guided import skill_path
 from agora_ai_sdlc.profile_activation import adoption_profiles
 
 SCHEMA = "agora-ai-sdlc/install-config/v1"
@@ -282,6 +283,7 @@ def preview(config: dict, target: Path) -> dict:
             ".agora project state",
             "ai-sdlc/project.yaml",
             "ai-sdlc/profiles activation record",
+            ".agora/skills/agora-ai-sdlc-guided/SKILL.md",
         ],
     }
 
@@ -303,6 +305,16 @@ def _write_project_metadata(target: Path, normalized: dict) -> None:
         yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
         encoding="utf-8",
     )
+
+
+def _install_guided_skill(target: Path) -> Path:
+    source = skill_path()
+    if not source.is_file():
+        raise InstallerError("installer.skill-missing", f"packaged guided skill not found at {source}")
+    destination = target / ".agora" / "skills" / "agora-ai-sdlc-guided" / "SKILL.md"
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+    return destination
 
 
 def apply(config: dict, target: Path, home: Path) -> dict:
@@ -416,6 +428,7 @@ def apply(config: dict, target: Path, home: Path) -> dict:
         normalized["profile"],
     )
     _write_project_metadata(target, normalized)
+    installed_skill = _install_guided_skill(target)
     validation = workspace.validate()
     work = workspace.show_work(normalized["swarm"], normalized["work"]["id"])
     return {
@@ -426,10 +439,11 @@ def apply(config: dict, target: Path, home: Path) -> dict:
         "work_state": work.state,
         "swarm": normalized["swarm"],
         "work": normalized["work"]["id"],
+        "guided_skill": str(installed_skill.relative_to(target)),
         "next_commands": [
             "agora validate",
             "agora status --board",
-            "agora continue",
+            "agora-ai-sdlc continue",
         ],
     }
 

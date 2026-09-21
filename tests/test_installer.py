@@ -82,6 +82,9 @@ def test_human_only_project_bootstraps_and_records_metadata(tmp_path, monkeypatc
     assert metadata["integrations"] == ["github", "ci"]
     assert metadata["profile"] == "starter"
     assert metadata["depth"] == "standard"
+    skill = target / ".agora" / "skills" / "agora-ai-sdlc-guided" / "SKILL.md"
+    assert skill.is_file()
+    assert "Never record a human approval without explicit confirmation" in skill.read_text(encoding="utf-8")
 
 
 def test_multi_runtime_project_assigns_roles_without_credentials(tmp_path):
@@ -227,5 +230,5 @@ def test_apply_reports_core_handoff_commands(tmp_path, monkeypatch):
     assert result["next_commands"] == [
         "agora validate",
         "agora status --board",
-        "agora continue",
+        "agora-ai-sdlc continue",
     ]

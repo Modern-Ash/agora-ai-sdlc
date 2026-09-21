@@ -18,6 +18,28 @@ agora-ai-sdlc install /path/to/project --config ai-sdlc-install.yaml --yes
 
 The installer selects adoption profile, governance depth, language/framework, optional integrations, AI runtimes and human/AI role execution. See [Project installer](docs/installer.md).
 
+After bootstrap, use the guided AI-SDLC projection for the normal human workflow:
+
+```bash
+agora-ai-sdlc continue
+```
+
+It renders a decision card with objective, method, current/next stage, responsible role, gate readiness,
+satisfied/missing obligations, the human/AI responsibility boundary, and the recommended next action.
+The selected agent follows the portable skill under `.agora/skills/agora-ai-sdlc-guided/SKILL.md`.
+
+Use the disclosure modes when needed:
+
+```bash
+agora-ai-sdlc continue --commands  # show the grouped Core command bundle and why each step exists
+agora-ai-sdlc continue --expert    # add raw Core blockers and the structured decision snapshot
+agora-ai-sdlc continue --json      # machine-readable decision for IDE/TUI/automation clients
+```
+
+The default view deliberately avoids raw `missing-artifacts=[...]` style output. The command bundle is
+advisory: human approvals still require explicit confirmation, and every mutation remains an Agora Core
+operation. Agora Core remains the lifecycle authority.
+
 ## Clone
 
 ```bash

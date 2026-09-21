@@ -61,6 +61,14 @@ def main(argv: list[str] | None = None) -> int:
     install.add_argument("--config", help="Read a reproducible YAML/JSON install config")
     install.add_argument("--write-config", help="Write the resolved install config without applying")
     install.add_argument("--yes", action="store_true", help="Apply without interactive confirmation")
+    guided = sub.add_parser("continue", help="Show the next governed decision in human-friendly AI-SDLC language")
+    guided.add_argument("--root", default=".", help="Project root")
+    guided.add_argument("--swarm", help="Limit to one delivery swarm")
+    guided.add_argument("--work", help="Limit to one work item")
+    guided.add_argument("--expert", action="store_true", help="Include raw Agora Core governance blockers")
+    guided.add_argument("--commands", action="store_true", help="Show the underlying grouped Agora Core command bundle")
+    guided.add_argument("--json", action="store_true", help="Print the structured guided decision as JSON")
+    guided.add_argument("--skill", action="store_true", help="Print the packaged guided-agent skill path")
     starter = sub.add_parser("starter-bootstrap", help="Preview and apply the Starter profile")
     starter.add_argument("--config", required=True)
     starter.add_argument("--target", required=True)
@@ -203,6 +211,22 @@ def main(argv: list[str] | None = None) -> int:
                 f"valid unit={summary['unit']} bolts={len(summary['bolts'])} ready={','.join(summary['ready']) or '-'} "
                 f"construction_evidence_complete={summary['construction_evidence_complete']}"
             )
+        return 0
+    if args.command == "continue":
+        from agora_ai_sdlc.guided import inspect_next, render, skill_path
+
+        if args.skill:
+            print(skill_path())
+            return 0
+        try:
+            decision = inspect_next(Path(args.root).expanduser(), swarm=args.swarm, work=args.work)
+        except (OSError, ValueError) as error:
+            print(error, file=sys.stderr)
+            return 2
+        if args.json:
+            print(json.dumps(decision.snapshot() if decision is not None else {"status": "clear"}, sort_keys=True))
+        else:
+            print(render(decision, expert=args.expert, show_commands=args.commands))
         return 0
     if args.command == "install":
         from agora_ai_sdlc import installer as project_installer

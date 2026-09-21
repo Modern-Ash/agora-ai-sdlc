@@ -51,9 +51,11 @@ RULES = (
     ),
     Rule(
         "risk-issue-management",
-        (),
-        ("profiles/pathways/regulated-change.yaml", "profiles/reviews/enterprise.yaml"),
-        "Add a dedicated provider-neutral risk/issue register contract and evaluator.",
+        (
+            "src/agora_ai_sdlc/risk_issue_management.py",
+            "contracts/enterprise/risk-issue-record-v1.schema.json",
+        ),
+        remediation="Provide the provider-neutral risk/issue record contract and evaluator.",
     ),
     Rule(
         "change-configuration-management",

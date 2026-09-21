@@ -1,0 +1,14 @@
+schema: agora-ai-sdlc/risk-issue-record/v1
+id: RSK-001
+type: risk
+title: Payment migration may exceed the release window
+owner: delivery-owner
+severity: high
+status: mitigated
+revision: 1
+scope: [payments, release-2026-09]
+evidence: [repo://docs/plans/payment-migration.md]
+probability: medium
+impact: high
+mitigation: Split the migration into reversible deployment slices.
+next_action: null

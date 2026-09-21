@@ -165,25 +165,51 @@ def test_bolt_validate_cli_reports_trace_and_fails_closed(capsys, tmp_path):
     assert "bolt.parallel_conflict" in capsys.readouterr().err
 
 
-def test_guided_continue_cli_hides_core_blockers_by_default(monkeypatch, capsys):
+def _guided_decision():
     from agora_ai_sdlc.guided import GuidedDecision
 
-    decision = GuidedDecision(
+    return GuidedDecision(
         swarm="delivery",
         work="first-work",
+        title="Deliver first governed outcome",
+        method="ai-sdlc",
         actor="project:product-owner",
         role="product-owner",
         state="readiness",
         target="intent",
+        gate="readiness-approved",
         blockers=("Gate readiness-approved failed: missing-artifacts=[readiness-assessment]",),
         messages=("Prepare the required project evidence: readiness-assessment.",),
+        missing_artifacts=("readiness-assessment",),
     )
+
+
+def test_guided_continue_cli_hides_core_blockers_by_default(monkeypatch, capsys):
+    decision = _guided_decision()
     monkeypatch.setattr("agora_ai_sdlc.guided.inspect_next", lambda *args, **kwargs: decision)
 
     assert main(["continue"]) == 0
     output = capsys.readouterr().out
+    assert "Objective: Deliver first governed outcome" in output
     assert "Prepare the required project evidence" in output
     assert "missing-artifacts" not in output
 
     assert main(["continue", "--expert"]) == 0
-    assert "missing-artifacts=[readiness-assessment]" in capsys.readouterr().out
+    expert = capsys.readouterr().out
+    assert "missing-artifacts=[readiness-assessment]" in expert
+    assert "Structured decision" in expert
+
+
+def test_guided_continue_cli_can_show_commands_and_json(monkeypatch, capsys):
+    decision = _guided_decision()
+    monkeypatch.setattr("agora_ai_sdlc.guided.inspect_next", lambda *args, **kwargs: decision)
+
+    assert main(["continue", "--commands"]) == 0
+    commands = capsys.readouterr().out
+    assert "Underlying command bundle" in commands
+    assert "agora artifact add" in commands
+
+    assert main(["continue", "--json"]) == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["gate"] == "readiness-approved"
+    assert payload["missing_artifacts"] == ["readiness-assessment"]

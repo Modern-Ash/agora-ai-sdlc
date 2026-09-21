@@ -40,6 +40,7 @@ Method Pack 0.2.0 exists as a selectable candidate. AWS-original fidelity curren
 - src/agora_ai_sdlc/plans.py
 - tests/test_templates.py
 - tests/test_plans.py
+- tests/test_cli.py
 - tests/fixtures/plans/**
 - tests/fixtures/conformance/aws-original/current.yaml
 - docs/method/artifacts.md

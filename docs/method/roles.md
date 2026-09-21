@@ -7,10 +7,10 @@ Roles live in [registry/methods/ai-sdlc/roles](../../registry/methods/ai-sdlc/ro
 | product-owner | human, ai-agent | Creates work; approves intent, design, completion; accepts criteria; reopens completed work | No gate waivers |
 | domain-expert | human, ai-agent | Clarifications and artifacts | Advisory: no transition, no approval |
 | architect | human, ai-agent, swarm | Design, approves design, inception transitions | |
-| builder | human, ai-agent, swarm | Marks criteria built | Never approves; no merge/release/deploy |
+| builder | human, ai-agent, swarm | Marks criteria built; records resource usage | Never approves; no merge/release/deploy |
 | quality-reviewer | human, ai-agent | Verifies criteria, approves build gate | Independent of producer |
 | security-reviewer | human, ai-agent | Evidence and approvals in security gates | No transitions |
-| operator | human, ai-agent | Marks deployed | Deploy needs explicit environment grant |
+| operator | human, ai-agent | Marks deployed; records resource usage | Deploy needs explicit environment grant |
 | ai-orchestrator | ai-agent, swarm | Assign, decompose, delegate, block | No approvals, gates or transitions |
 | governance-owner | human | Waive gates, cancel, reopen | Human-only |
 

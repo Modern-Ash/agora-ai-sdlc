@@ -10,6 +10,12 @@ Fallback order is configuration, not an optimization. Agora Core recognizes exec
 
 Ordinary task failures, timeouts, output limits and non-quota nonzero exits never change provider. They return a blocker and require intervention or a fresh authorized decision. Every fallback candidate is rechecked against data, review and budget policy.
 
+## Measurement basis
+
+Usage and cost amounts are not equally trustworthy, so every consumed dimension carries the basis Agora Core recorded for it: `measured`, `provider-reported` or `unknown`. `budget_from_core` copies Core's `consumed_measurement` (Agora Core 0.9.1 or later), which is the weakest basis among the records that contributed to a dimension. Anything the summary does not state is `unknown`: an older Core without the field, a dimension it omits, and a work item with no usage records all report `unknown`, and an empty ledger is never presented as a measured zero. The decision output repeats the basis per scope and dimension in `consumed_measurement` next to `consumed_budget`.
+
+The basis is evidence metadata. Budget sufficiency, fallback signals and eligibility are computed exactly as before and never change with the basis; a caller that needs measured-only accounting must enforce that on the reported basis.
+
 ## Core Authority
 
 Core `UsageSummary` is the durable source for work consumption and limits. `budget_from_core` maps it without creating a ledger. Swarm-level limits are supplied as an additional governed budget scope. Changes to delegated budgets use Core `agora/budget-amendment/v1`; this policy does not amend budgets itself.

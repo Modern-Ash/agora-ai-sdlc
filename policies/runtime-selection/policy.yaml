@@ -12,6 +12,8 @@ budgets:
   scopes: [work, swarm]
   unavailable_amount: unknown
   unknown_is_zero: false
+  measurement_basis: [measured, provider-reported, unknown]
+  missing_basis: unknown
 records:
   - activity_class
   - selected_runtime
@@ -19,6 +21,7 @@ records:
   - fallback_used
   - fallback_reason
   - consumed_budget
+  - consumed_measurement
 core:
   usage_authority: agora/usage/v1
   budget_amendment_authority: agora/budget-amendment/v1

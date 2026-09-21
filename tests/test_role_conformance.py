@@ -134,3 +134,9 @@ def test_starter_small_team_combination_covers_required_roles():
     for role in METHOD["required-roles"]:
         kinds = ROLES[role]["allowed-actor-kinds"]
         assert "human" in kinds and "ai-agent" in kinds, role
+
+
+def test_usage_recording_is_limited_to_the_roles_that_run_executions_and_never_approves():
+    assert sorted(r for r in ROLES if can(r, "usage.add")) == ["builder", "operator"]
+    for role in ("builder", "operator"):
+        assert not can(role, "approval.add") and not can(role, "gate.waive")

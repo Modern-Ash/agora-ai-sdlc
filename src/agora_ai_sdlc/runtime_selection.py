@@ -1,17 +1,20 @@
 """Explainable runtime routing, budgets and governed fallback decisions."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol
 
 SCHEMA = "agora-ai-sdlc/runtime-selection/v1"
 FALLBACK_SIGNALS = ("quota", "runtime-unavailable", "budget-exhausted", "budget-unavailable")
 FAILURE_SIGNALS = (*FALLBACK_SIGNALS, "ordinary-failure")
+MEASUREMENTS = ("measured", "provider-reported", "unknown")
 
 
 class CoreUsageSummary(Protocol):
     budget_limits: dict[str, int] | None
     consumed: dict[str, int]
     records: int
+    # Agora Core >=0.9.1: weakest measurement basis per consumed dimension (absent on older Core).
+    consumed_measurement: dict[str, str]
 
 
 @dataclass(frozen=True)
@@ -46,13 +49,19 @@ class Budget:
     scope: str
     limits: dict[str, int]
     consumed: dict[str, int | None]
+    # How each consumed amount was obtained; a missing dimension is `unknown`, never `measured`.
+    measurement: dict[str, str] = field(default_factory=dict)
 
 
 def budget_from_core(summary: CoreUsageSummary, *, scope: str) -> Budget:
     """Use Core's durable usage summary; an absent budget means no limits."""
     limits = dict(summary.budget_limits or {})
     consumed = {dimension: summary.consumed.get(dimension) if summary.records else 0 for dimension in limits}
-    return Budget(scope=scope, limits=limits, consumed=consumed)
+    reported = getattr(summary, "consumed_measurement", None) or {}
+    measurement = {
+        dimension: reported.get(dimension, "unknown") if summary.records else "unknown" for dimension in limits
+    }
+    return Budget(scope=scope, limits=limits, consumed=consumed, measurement=measurement)
 
 
 def _blocker(code: str, message: str, **fields) -> dict:
@@ -93,6 +102,8 @@ def _validate(route: Route, budgets: tuple[Budget, ...], signal: str | None) -> 
         for amount in budget.consumed.values():
             if amount is not None and (not isinstance(amount, int) or isinstance(amount, bool) or amount < 0):
                 raise ValueError("consumed budget amounts must be non-negative integers or unavailable")
+        if any(basis not in MEASUREMENTS for basis in budget.measurement.values()):
+            raise ValueError("consumed budget measurement must be measured, provider-reported or unknown")
     for candidate in route.candidates:
         for amount in candidate.projected_usage.values():
             if amount is not None and (not isinstance(amount, int) or isinstance(amount, bool) or amount < 0):
@@ -153,6 +164,14 @@ def _consumed(budgets: tuple[Budget, ...]) -> dict[str, dict[str, int | None]]:
     return {budget.scope: dict(sorted(budget.consumed.items())) for budget in budgets}
 
 
+def _measurement(budgets: tuple[Budget, ...]) -> dict[str, dict[str, str]]:
+    """Per scope and dimension; anything not explicitly measured or provider-reported is unknown."""
+    return {
+        budget.scope: {dimension: budget.measurement.get(dimension, "unknown") for dimension in sorted(budget.consumed)}
+        for budget in budgets
+    }
+
+
 def select_runtime(
     route: Route,
     *,
@@ -172,6 +191,7 @@ def select_runtime(
             "selection_reason": None,
             "fallback": {"used": False, "reason": None},
             "consumed_budget": consumed,
+            "consumed_measurement": _measurement(budgets),
             "considered": (),
             "blockers": (
                 _blocker(
@@ -220,6 +240,7 @@ def select_runtime(
                 ),
                 "fallback": {"used": used_fallback, "reason": fallback_reason},
                 "consumed_budget": consumed,
+                "consumed_measurement": _measurement(budgets),
                 "considered": tuple(considered),
                 "blockers": (),
             }
@@ -251,6 +272,7 @@ def select_runtime(
         "selection_reason": None,
         "fallback": {"used": False, "reason": fallback_reason},
         "consumed_budget": consumed,
+        "consumed_measurement": _measurement(budgets),
         "considered": tuple(considered),
         "blockers": blockers,
     }
@@ -265,6 +287,7 @@ def _blocked_signal(route: Route, budgets: tuple[Budget, ...], signal: str) -> d
         "selection_reason": None,
         "fallback": {"used": False, "reason": signal},
         "consumed_budget": _consumed(budgets),
+        "consumed_measurement": _measurement(budgets),
         "considered": (),
         "blockers": (_blocker("fallback.unauthorized_signal", f"fallback is not authorized for Core signal {signal}"),),
     }

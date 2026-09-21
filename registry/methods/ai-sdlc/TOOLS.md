@@ -8,4 +8,4 @@
 
 
 - The Product Owner may inspect configured external issue trackers through the provider-neutral `issue.read` capability.
-- Installing or selecting a GitHub/Jira adapter does not itself grant authority; the role capability and reviewed adapter must both be present.
+- Installing or selecting an issue-tracker adapter does not itself grant authority; the role capability and reviewed adapter must both be present.

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+
 import yaml
 
 from agora_ai_sdlc.depth_profiles import ORDER, asset_root

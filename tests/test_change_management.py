@@ -80,11 +80,15 @@ def test_stale_or_unapproved_change_plan_blocks_chain():
 
 def test_configuration_delta_requires_release_and_rollback_links():
     with pytest.raises(ChangeManagementError) as exc:
-        parse_configuration_delta(mutate("configuration-delta.md", lambda front: front.update({"release-evidence": []})))
+        parse_configuration_delta(
+            mutate("configuration-delta.md", lambda front: front.update({"release-evidence": []}))
+        )
     assert exc.value.code == "change.type"
 
     with pytest.raises(ChangeManagementError) as exc:
-        parse_configuration_delta(mutate("configuration-delta.md", lambda front: front.update({"rollback-linkage": []})))
+        parse_configuration_delta(
+            mutate("configuration-delta.md", lambda front: front.update({"rollback-linkage": []}))
+        )
     assert exc.value.code == "change.type"
 
 
@@ -128,9 +132,7 @@ def test_chain_identity_mismatch_fails_closed():
     plan = parse_change_plan(text("change-plan.md"))
     delta = parse_configuration_delta(text("configuration-delta.md"))
 
-    other_request = parse_change_request(
-        mutate("change-request.md", lambda front: front.update({"id": "CRQ-002"}))
-    )
+    other_request = parse_change_request(mutate("change-request.md", lambda front: front.update({"id": "CRQ-002"})))
     with pytest.raises(ChangeManagementError) as exc:
         validate_chain(other_request, plan, delta)
     assert exc.value.code == "change.chain_request"

@@ -30,6 +30,7 @@ class PathwayPolicy:
     mandatory_steps: tuple[str, ...]
     optional_steps: tuple[str, ...]
     forbidden_skips: tuple[str, ...]
+    depth_exemptions: tuple[str, ...] = ()
 
     @property
     def allowed_steps(self) -> frozenset[str]:
@@ -126,7 +127,8 @@ def load_pathway(pathway_id: str) -> PathwayPolicy:
     if not isinstance(data, dict) or data.get("schema") != PATHWAY_SCHEMA or data.get("id") != pathway_id:
         raise AdaptivePlanningError("pathway.schema", f"invalid pathway profile {pathway_id!r}")
     expected = {"schema", "id", "minimum_depth", "mandatory_steps", "optional_steps", "forbidden_skips"}
-    if set(data) != expected:
+    allowed = expected | {"depth_exemptions"}
+    if not expected <= set(data) or not set(data) <= allowed:
         raise AdaptivePlanningError("pathway.fields", f"{pathway_id!r} has invalid fields")
     minimum_depth = data["minimum_depth"]
     if minimum_depth not in policy_set.depth_order:
@@ -134,10 +136,11 @@ def load_pathway(pathway_id: str) -> PathwayPolicy:
     mandatory = _strings(data["mandatory_steps"], "mandatory_steps")
     optional = _strings(data["optional_steps"], "optional_steps", allow_empty=True)
     forbidden = _strings(data["forbidden_skips"], "forbidden_skips", allow_empty=True)
+    exemptions = _strings(data.get("depth_exemptions", []), "depth_exemptions", allow_empty=True)
 
     known = set(policy_set.step_vocabulary)
     all_steps = set(mandatory) | set(optional)
-    unknown = sorted(all_steps - known)
+    unknown = sorted((all_steps | set(exemptions)) - known)
     if unknown:
         raise AdaptivePlanningError("pathway.step_unknown", f"unknown pathway steps: {', '.join(unknown)}")
     if set(mandatory) & set(optional):
@@ -149,14 +152,14 @@ def load_pathway(pathway_id: str) -> PathwayPolicy:
     required_at_or_above = set()
     for depth in policy_set.depth_order[min_index:]:
         required_at_or_above.update(policy_set.depth_requirements[depth])
-    missing_depth_steps = sorted(required_at_or_above - all_steps)
+    missing_depth_steps = sorted(required_at_or_above - set(exemptions) - all_steps)
     if missing_depth_steps:
         raise AdaptivePlanningError(
             "pathway.depth_coverage",
             f"pathway cannot support stricter depth obligations: {', '.join(missing_depth_steps)}",
         )
 
-    return PathwayPolicy(pathway_id, minimum_depth, mandatory, optional, forbidden)
+    return PathwayPolicy(pathway_id, minimum_depth, mandatory, optional, forbidden, exemptions)
 
 
 def available_pathways() -> tuple[str, ...]:
@@ -194,6 +197,7 @@ def _mandatory_for(pathway: PathwayPolicy, depth: str) -> tuple[str, ...]:
     promoted = set(pathway.mandatory_steps)
     for current in policy_set.depth_order[: depth_index + 1]:
         promoted.update(policy_set.depth_requirements[current])
+    promoted.difference_update(pathway.depth_exemptions)
     return tuple(step for step in policy_set.step_vocabulary if step in promoted)
 
 

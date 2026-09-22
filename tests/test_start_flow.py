@@ -1,4 +1,5 @@
 import json
+import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -12,6 +13,25 @@ from agora_ai_sdlc.start_flow import (
     prepare_start,
     render_start,
 )
+
+
+def _git(root: Path, *args: str) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(root), *args],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return result.stdout.strip()
+
+
+def _git_repo(root: Path) -> None:
+    _git(root, "init", "-b", "main")
+    _git(root, "config", "user.email", "agorix@example.test")
+    _git(root, "config", "user.name", "Agorix Test")
+    (root / "README.md").write_text("# agorix\n", encoding="utf-8")
+    _git(root, "add", "README.md")
+    _git(root, "commit", "-m", "initial")
 
 
 def runtime(runtime_id="codex", *, responsive=True, configured=True):
@@ -280,3 +300,50 @@ def test_documentation_issue_selects_documentation_pathway(tmp_path):
     assert result.pathway == "documentation"
     handoff = Path(result.handoff_path).read_text(encoding="utf-8")
     assert 'pathway: "documentation"' in handoff
+
+
+def test_new_issue_branch_is_based_on_main_not_previous_issue_branch(tmp_path):
+    if "branch" not in getattr(CreateWorkInput, "__dataclass_fields__", {}):
+        pytest.skip("per-Work branch support requires Core 0.9+")
+
+    _git_repo(tmp_path)
+    _git(tmp_path, "switch", "-c", "feat/issue-12-program-model-schema")
+    workspace = FakeWorkspace(tmp_path)
+    workspace._has_run = True
+
+    result = prepare_start(
+        tmp_path,
+        issue=13,
+        project="Modern-Ash/agorix",
+        workspace_factory=lambda cwd: workspace,
+        runtime_discovery=lambda root: (runtime("claude"),),
+    )
+
+    created = workspace.created_work_inputs[0]
+    assert created.base_branch == "main"
+    assert created.branch == "ai-sdlc/issue-13"
+    assert created.create_branch is True
+    assert _git(tmp_path, "branch", "--show-current") == "main"
+    assert result.base_branch == "main"
+
+
+def test_new_issue_refuses_to_leave_dirty_previous_issue_branch(tmp_path):
+    if "branch" not in getattr(CreateWorkInput, "__dataclass_fields__", {}):
+        pytest.skip("per-Work branch support requires Core 0.9+")
+
+    _git_repo(tmp_path)
+    _git(tmp_path, "switch", "-c", "feat/issue-12-program-model-schema")
+    (tmp_path / "README.md").write_text("# dirty issue 12\n", encoding="utf-8")
+    workspace = FakeWorkspace(tmp_path)
+
+    with pytest.raises(StartFlowError, match="commit or stash local changes first"):
+        prepare_start(
+            tmp_path,
+            issue=13,
+            project="Modern-Ash/agorix",
+            workspace_factory=lambda cwd: workspace,
+            runtime_discovery=lambda root: (runtime("claude"),),
+        )
+
+    assert workspace.created_work_inputs == []
+    assert _git(tmp_path, "branch", "--show-current") == "feat/issue-12-program-model-schema"

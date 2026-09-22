@@ -45,6 +45,17 @@ def _tool_check(command: str, args: list[str] | None = None, timeout: float = 2.
     return DoctorCheck(command, result.returncode == 0, detail)
 
 
+def _validation_detail(validation) -> str:
+    if validation.ok:
+        return "valid Agora project"
+    items = []
+    for issue in validation.issues[:3]:
+        message = " ".join(str(issue.message).split())
+        items.append(f"{issue.code}: {message[:160]}")
+    suffix = "" if len(validation.issues) <= 3 else f"; +{len(validation.issues) - 3} more"
+    return "Agora validation failed — " + "; ".join(items) + suffix
+
+
 def run_doctor(root: Path) -> tuple[tuple[DoctorCheck, ...], tuple[RuntimeDiscovery, ...]]:
     checks: list[DoctorCheck] = []
 
@@ -69,7 +80,7 @@ def run_doctor(root: Path) -> tuple[tuple[DoctorCheck, ...], tuple[RuntimeDiscov
                 DoctorCheck(
                     "project",
                     bool(validation.ok),
-                    "valid Agora project" if validation.ok else "Agora validation failed",
+                    _validation_detail(validation),
                 )
             )
         except (OSError, ValueError) as error:

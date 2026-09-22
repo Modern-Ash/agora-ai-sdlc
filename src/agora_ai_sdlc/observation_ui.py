@@ -19,6 +19,8 @@ from pathlib import Path
 from typing import TextIO
 from urllib.parse import urlsplit, urlunsplit
 
+from agora_ai_sdlc.progress import start_progress
+
 DETAILS = ("normal", "detailed", "diagnostic")
 MAX_UI_BYTES = 1024 * 1024
 _ANSI = re.compile(r"\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b\[[0-?]*[ -/]*[@-~]")
@@ -88,9 +90,11 @@ _TEXT = {
         "review-delivery": "Review delivery and branch/PR handoff; no merge or PR creation is authorized by this view.",
         "start.inspect": "Inspecting issue source and runtime availability",
         "start.runtime-ready": "Runtime selected; selection does not grant authority",
+        "start.work-ready": "Governed issue Work and branch resolved",
         "start.issue-read": "Reading issue through the governed Tool Run",
         "start.issue-reused": "Reusing the previously recorded issue snapshot",
         "start.intent-ready": "Durable Intent resolved",
+        "start.pathway": "Adaptive delivery pathway selected",
         "start.handoff": "Preparing portable Inception handoff",
         "start.prepared": "Handoff prepared; executor not launched by Start",
         "start.failed": "Start stopped; inspect the command result",
@@ -125,9 +129,11 @@ _TEXT = {
         "review-delivery": "Revisar la entrega y su rama/PR; esta vista no autoriza crear el PR ni hacer merge.",
         "start.inspect": "Inspeccionando el origen del issue y los runtimes disponibles",
         "start.runtime-ready": "Runtime seleccionado; la selección no otorga autoridad",
+        "start.work-ready": "Work gobernado y rama del issue resueltos",
         "start.issue-read": "Leyendo el issue mediante un Tool Run gobernado",
         "start.issue-reused": "Reutilizando el snapshot del issue registrado anteriormente",
         "start.intent-ready": "Intent durable resuelto",
+        "start.pathway": "Pathway adaptativo de entrega seleccionado",
         "start.handoff": "Preparando el handoff portable de Inception",
         "start.prepared": "Handoff preparado; Start no lanzó el executor",
         "start.failed": "Start detenido; revisá el resultado del comando",
@@ -273,7 +279,9 @@ class HumanChannel(AbstractContextManager):
         if code not in _TEXT["en"] or not code.startswith("start."):
             return
         elapsed = time.monotonic() - self.started
-        self.write(f"[{elapsed:.1f}s] {text(code, self.lang)}")
+        label = text(code, self.lang)
+        progress = start_progress(code, label)
+        self.write(f"[{elapsed:.1f}s] {progress or label}")
 
     def __exit__(self, *args) -> None:
         if self.owns_stream and self.stream is not None:

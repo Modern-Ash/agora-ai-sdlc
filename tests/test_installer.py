@@ -313,3 +313,28 @@ def test_legacy_execution_roles_fail_when_executors_differ():
         validate_config(config)
 
     assert error.value.code == "installer.roles_migration"
+
+
+def test_method_metadata_revalidates_but_rejects_other_versions():
+    normalized = validate_config(base_config())
+    assert validate_config(normalized)["method"] == {"id": "ai-sdlc", "version": "0.2.0"}
+
+    normalized["method"] = {"id": "ai-sdlc", "version": "0.1.1"}
+    with pytest.raises(InstallerError) as error:
+        validate_config(normalized)
+
+    assert error.value.code == "installer.method"
+
+
+def test_quality_reviewer_actor_is_optional_and_not_required_assignment(tmp_path, monkeypatch):
+    target, home = tmp_path / "project", tmp_path / "home"
+    apply(base_config(), target, home)
+
+    monkeypatch.setenv("AGORA_HOME", str(home))
+    workspace = AgoraWorkspace(cwd=target)
+    actors = {actor.id: actor for actor in workspace.list_actors()}
+    swarm = workspace.show_swarm("delivery")
+
+    assert "quality-reviewer" in actors
+    assert "quality-reviewer" not in swarm.required_roles
+    assert "developer" in swarm.required_roles

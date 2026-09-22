@@ -3,6 +3,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from agora.model import CreateWorkInput
 
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 from agora_ai_sdlc.start_flow import (
@@ -47,8 +48,8 @@ class FakeWorkspace:
             swarm_id=data.swarm_id,
             title=data.title,
             path=str(self.cwd / ".agora" / "swarms" / data.swarm_id / "work" / data.id / "WORK.md"),
-            base_branch="main",
-            branch=data.branch,
+            base_branch=getattr(data, "base_branch", None),
+            branch=getattr(data, "branch", None),
         )
         self._works.append(work)
         return work
@@ -129,13 +130,15 @@ def test_prepare_start_reads_issue_through_governed_tool_and_creates_draft_inten
 
     assert result.intent_id == "issue-11"
     assert result.work_id == "issue-11"
-    assert result.branch == "ai-sdlc/issue-11"
+    supports_work_branch = "branch" in getattr(CreateWorkInput, "__dataclass_fields__", {})
+    assert result.branch == ("ai-sdlc/issue-11" if supports_work_branch else None)
     assert result.pathway == "new-product"
     assert result.status == "human-review-required"
     assert result.handoff_path.endswith(".agora/ai-sdlc/handoffs/issue-11/INCEPTION_HANDOFF.md")
     assert len(workspace.created_work_inputs) == 1
-    assert workspace.created_work_inputs[0].create_branch is True
-    assert workspace.created_work_inputs[0].branch == "ai-sdlc/issue-11"
+    if supports_work_branch:
+        assert workspace.created_work_inputs[0].create_branch is True
+        assert workspace.created_work_inputs[0].branch == "ai-sdlc/issue-11"
     assert [item.adapter_id for item in workspace.installed_adapters] == ["github-issues"]
     assert len(workspace.invocations) == 1
     invocation = workspace.invocations[0]
@@ -171,7 +174,7 @@ def test_prepare_start_reads_issue_through_governed_tool_and_creates_draft_inten
     assert 'schema: "agora-ai-sdlc/inception-handoff/v1"' in handoff
     assert "Level 1 Plan" in handoff
     assert 'work: "issue-11"' in handoff
-    assert 'branch: "ai-sdlc/issue-11"' in handoff
+    assert f'branch: "{result.branch or ""}"' in handoff
     assert 'pathway: "new-product"' in handoff
     assert "Cohesive Units" in handoff
     assert "Suggested Bolts" in handoff

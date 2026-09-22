@@ -9,9 +9,10 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from agora.model import CreateIntentInput, InstallToolAdapterInput, InvokeToolInput
+from agora.model import CreateIntentInput, InstallMethodInput, InstallToolAdapterInput, InvokeToolInput
 from agora.workspace import AgoraWorkspace
 
+from agora_ai_sdlc.depth_profiles import asset_root
 from agora_ai_sdlc.i18n import t
 from agora_ai_sdlc.inception_handoff import write_inception_handoff
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
@@ -89,6 +90,36 @@ def _select_runtime(
     raise StartFlowError("No responsive AI CLI runtime was detected")
 
 
+_LEGACY_PRODUCT_OWNER_TOOL_CAPABILITIES = (
+    'allowed-tool-capabilities: ["repository.read", "repository.governance.read", "docs.read", "docs.write"]'
+)
+
+
+def _ensure_issue_read_capability(workspace: AgoraWorkspace, root: Path) -> None:
+    """Repair only the known packaged Product Owner role that predates issue.read."""
+
+    role = root / ".agora" / "methods" / "ai-sdlc" / "roles" / "product-owner.md"
+    if not role.is_file():
+        return
+    content = role.read_text(encoding="utf-8")
+    if '"issue.read"' in content:
+        return
+    if _LEGACY_PRODUCT_OWNER_TOOL_CAPABILITIES not in content:
+        return
+
+    source = asset_root("registry") / "method-versions" / "ai-sdlc" / "0.2.0"
+    packaged_role = source / "roles" / "product-owner.md"
+    if not packaged_role.is_file() or '"issue.read"' not in packaged_role.read_text(encoding="utf-8"):
+        raise StartFlowError("Packaged AI-SDLC Product Owner role cannot read issues")
+    workspace.install_method(
+        InstallMethodInput(
+            source=str(source),
+            scope="project",
+            force=True,
+        )
+    )
+
+
 def _issue_payload(workspace: AgoraWorkspace, run_id: str) -> dict:
     inspection = workspace.show_tool_run(run_id)
     result = inspection.result
@@ -153,6 +184,7 @@ def prepare_start(
                 )
             except (FileNotFoundError, OSError, ValueError) as error:
                 raise StartFlowError("GitHub issue adapter is unavailable") from error
+        _ensure_issue_read_capability(workspace, root)
         notify("start.issue-read")
         workspace.invoke_tool(
             InvokeToolInput(

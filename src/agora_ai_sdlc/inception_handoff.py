@@ -54,6 +54,8 @@ def write_inception_handoff(
                 "",
                 "Follow the installed Agora AI-SDLC guided skill. Agora Core remains lifecycle authority.",
                 f"Skill: `{skill}`",
+                f"Load only the Inception resource: `{skill.parent / 'references' / 'inception.md'}`.",
+                "Human observation logs are not agent context; do not load or replay them.",
                 "",
                 "## Required inputs",
                 "",

@@ -160,8 +160,7 @@ def test_prepare_start_repairs_legacy_product_owner_issue_read(tmp_path):
     role = tmp_path / ".agora" / "methods" / "ai-sdlc" / "roles" / "product-owner.md"
     role.parent.mkdir(parents=True)
     role.write_text(
-        'allowed-tool-capabilities: ["repository.read", "repository.governance.read", '
-        '"docs.read", "docs.write"]\n',
+        'allowed-tool-capabilities: ["repository.read", "repository.governance.read", "docs.read", "docs.write"]\n',
         encoding="utf-8",
     )
 

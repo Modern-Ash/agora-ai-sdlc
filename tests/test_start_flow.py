@@ -30,6 +30,7 @@ class FakeWorkspace:
     def __init__(self, cwd: Path):
         self.cwd = cwd
         self.invocations = []
+        self.installed_adapters = []
         self._has_run = False
         self._intent = None
 
@@ -49,6 +50,13 @@ class FakeWorkspace:
                 stderr="",
             )
         )
+
+    def install_tool_adapter(self, data):
+        self.installed_adapters.append(data)
+        tool = self.cwd / ".agora" / "tools" / data.adapter_id / "TOOL.md"
+        tool.parent.mkdir(parents=True, exist_ok=True)
+        tool.write_text("adapter", encoding="utf-8")
+        return SimpleNamespace(id=data.adapter_id)
 
     def invoke_tool(self, data):
         self.invocations.append(data)
@@ -92,6 +100,7 @@ def test_prepare_start_reads_issue_through_governed_tool_and_creates_draft_inten
     assert result.intent_id == "issue-11"
     assert result.status == "human-review-required"
     assert result.handoff_path.endswith(".agora/ai-sdlc/handoffs/issue-11/INCEPTION_HANDOFF.md")
+    assert [item.adapter_id for item in workspace.installed_adapters] == ["github-issues"]
     assert len(workspace.invocations) == 1
     invocation = workspace.invocations[0]
     assert invocation.tool_id == "github-issues"
@@ -161,4 +170,5 @@ def test_prepare_start_reuses_existing_durable_issue_read_and_intent(tmp_path):
     )
 
     assert result.intent_id == "issue-11"
+    assert workspace.installed_adapters == []
     assert workspace.invocations == []

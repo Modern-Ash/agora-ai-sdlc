@@ -84,18 +84,14 @@ def _render_prepare_handoff(
 ) -> None:
     output_fn("")
     output_fn(t("session.prepare_with", lang=lang, runtime=runtime.name))
-    output_fn(
-        "  " + t("session.prepare_desc", lang=lang)
-    )
+    output_fn("  " + t("session.prepare_desc", lang=lang))
     output_fn("  " + t("session.return_before_approval", lang=lang))
     if decision.missing_artifacts:
         output_fn(f"  {t('session.prepare', lang=lang)}: " + ", ".join(decision.missing_artifacts))
     if decision.clarification_issues:
         output_fn("  " + t("session.analyze_clarification", lang=lang))
     output_fn("")
-    output_fn(
-        "  " + t("session.runtime_note", lang=lang)
-    )
+    output_fn("  " + t("session.runtime_note", lang=lang))
 
 
 def run_interactive(

@@ -142,7 +142,6 @@ def prepare_start(
     payload = _issue_payload(workspace, run_id)
     number = int(payload.get("number") or issue)
     title = str(payload.get("title") or "").strip()
-    body = str(payload.get("body") or "").strip()
     if not title:
         raise StartFlowError("GitHub issue has no title")
 
@@ -154,7 +153,7 @@ def prepare_start(
                 id=intent_id,
                 author=f"project:{actor}",
                 problem=title,
-                outcome=body or title,
+                outcome=f"Deliver the outcome described by GitHub issue #{number}: {title}",
                 affected_systems=[project],
                 constraints=[],
                 open_questions=[],

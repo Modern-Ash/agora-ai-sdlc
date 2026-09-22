@@ -1,4 +1,4 @@
-"""AI-DLC aligned entry flow for starting real delivery work from an issue."""
+"""AI-SDLC aligned entry flow for starting real delivery work from an issue."""
 
 from __future__ import annotations
 

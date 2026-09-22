@@ -14,7 +14,7 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.13'
       - name: Export tracked source and offline test dependencies
         run: |
           mkdir -p /tmp/task165/wheels
@@ -23,6 +23,6 @@ jobs:
           python -m pip download --only-binary=:all: --dest /tmp/task165/wheels 'agora-framework==0.9.1'
       - uses: actions/upload-artifact@v4
         with:
-          name: task165-workspace
+          name: task165-workspace-py313
           path: /tmp/task165/
           retention-days: 1

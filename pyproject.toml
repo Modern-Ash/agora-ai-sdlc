@@ -13,6 +13,7 @@ dependencies = ["agora-framework>=0.8.2,<0.10", "packaging>=24", "pyyaml>=6"]
 
 [project.scripts]
 agora-ai-sdlc = "agora_ai_sdlc.cli:main"
+aisdlc = "agora_ai_sdlc.cli:main"
 
 [dependency-groups]
 dev = ["pytest>=8", "ruff>=0.11"]

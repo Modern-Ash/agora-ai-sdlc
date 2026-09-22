@@ -133,6 +133,7 @@ def _current_branch(root: Path) -> str | None:
     value = result.stdout.strip() if result.returncode == 0 else ""
     return value or None
 
+
 def inspect_next(
     root: Path,
     *,

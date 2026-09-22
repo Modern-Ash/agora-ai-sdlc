@@ -31,6 +31,7 @@ class FakeWorkspace:
         self.cwd = cwd
         self.invocations = []
         self.installed_adapters = []
+        self.installed_methods = []
         self._has_run = False
         self._intent = None
 
@@ -57,6 +58,17 @@ class FakeWorkspace:
         tool.parent.mkdir(parents=True, exist_ok=True)
         tool.write_text("adapter", encoding="utf-8")
         return SimpleNamespace(id=data.adapter_id)
+
+    def install_method(self, data):
+        self.installed_methods.append(data)
+        role = self.cwd / ".agora" / "methods" / "ai-sdlc" / "roles" / "product-owner.md"
+        role.parent.mkdir(parents=True, exist_ok=True)
+        role.write_text(
+            'allowed-tool-capabilities: ["repository.read", "repository.governance.read", '
+            '"docs.read", "docs.write", "issue.read"]\n',
+            encoding="utf-8",
+        )
+        return SimpleNamespace(id="ai-sdlc")
 
     def invoke_tool(self, data):
         self.invocations.append(data)
@@ -138,6 +150,35 @@ def test_prepare_start_reads_issue_through_governed_tool_and_creates_draft_inten
     assert "Suggested Bolts" in handoff
     assert "Do not enter Construction." in handoff
     assert "Do not fabricate or infer human approval." in handoff
+
+
+def test_prepare_start_repairs_legacy_product_owner_issue_read(tmp_path):
+    workspace = FakeWorkspace(tmp_path)
+    adapter = tmp_path / ".agora" / "tools" / "github-issues" / "TOOL.md"
+    adapter.parent.mkdir(parents=True)
+    adapter.write_text("adapter", encoding="utf-8")
+    role = tmp_path / ".agora" / "methods" / "ai-sdlc" / "roles" / "product-owner.md"
+    role.parent.mkdir(parents=True)
+    role.write_text(
+        'allowed-tool-capabilities: ["repository.read", "repository.governance.read", '
+        '"docs.read", "docs.write"]\n',
+        encoding="utf-8",
+    )
+
+    result = prepare_start(
+        tmp_path,
+        issue=11,
+        project="Modern-Ash/agorix",
+        workspace_factory=lambda cwd: workspace,
+        runtime_discovery=lambda root: (runtime(),),
+    )
+
+    assert result.intent_id == "issue-11"
+    assert len(workspace.installed_methods) == 1
+    repair = workspace.installed_methods[0]
+    assert repair.scope == "project"
+    assert repair.force is True
+    assert '"issue.read"' in role.read_text(encoding="utf-8")
 
 
 def test_prepare_start_rejects_unavailable_requested_runtime(tmp_path):

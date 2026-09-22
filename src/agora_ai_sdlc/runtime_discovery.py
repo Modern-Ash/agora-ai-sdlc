@@ -10,6 +10,7 @@ from pathlib import Path
 
 import yaml
 from agora.workspace import AgoraWorkspace
+from agora_ai_sdlc.i18n import t
 
 RUNTIME_CANDIDATES = (
     ("codex", "Codex", "codex"),
@@ -163,35 +164,35 @@ def discover_runtimes(
     return tuple(discoveries)
 
 
-def render_runtimes(discoveries: tuple[RuntimeDiscovery, ...]) -> str:
-    lines = ["AI runtimes", ""]
+def render_runtimes(discoveries: tuple[RuntimeDiscovery, ...], *, lang: str = "en") -> str:
+    lines = [t("runtime.title", lang=lang), ""]
     for item in discoveries:
         if not item.installed:
             marker = "-"
-            state = "not installed"
+            state = t("runtime.not_installed", lang=lang)
         elif item.responsive:
             marker = "✓"
-            state = "installed · responsive"
+            state = t("runtime.installed_responsive", lang=lang)
         else:
             marker = "!"
-            state = "installed · probe failed"
+            state = t("runtime.installed_failed", lang=lang)
         if item.configured:
-            state += " · configured"
+            state += " · " + t("runtime.configured", lang=lang)
         if item.service is not None:
-            state += f" · service {item.service}"
+            state += f" · {t('runtime.service', lang=lang)} {item.service}"
         lines.append(f"{marker} {item.name:<12} {state}")
         if item.installed and item.executable:
             lines.append(f"  {item.executable}")
         if item.version:
             lines.append(f"  {item.version}")
         if item.error:
-            lines.append(f"  probe: {item.error}")
+            lines.append(f"  {t('runtime.probe', lang=lang)}: {item.error}")
 
     lines.extend(
         [
             "",
-            "Detection is credential-free: installation does not imply authentication.",
-            "Detected runtimes are never enabled automatically.",
+            t("runtime.credential_note", lang=lang),
+            t("runtime.enable_note", lang=lang),
         ]
     )
     return "\n".join(lines)

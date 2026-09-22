@@ -92,6 +92,18 @@ def main(argv: list[str] | None = None) -> int:
     guided.add_argument("--skill", action="store_true", help="Print the packaged guided-agent skill path")
     guided.add_argument("--non-interactive", action="store_true", help="Force one-shot output even on a terminal")
     guided.add_argument("--lang", choices=SUPPORTED_LANGUAGES, help="Presentation language")
+    status = sub.add_parser("status", help="Show rich local/Core iteration status without invoking an LLM")
+    status.add_argument("--root", default=".", help="Project root")
+    status.add_argument("--swarm", help="Limit to one delivery swarm")
+    status.add_argument("--work", help="Limit to one work item")
+    status.add_argument("--detail", action="store_true", help="Include observed artifacts, evidence and activity")
+    status.add_argument("--diagnostic", action="store_true", help="Include governance diagnostics")
+    status.add_argument("--json", action="store_true", help="Print full structured iteration status")
+    status.add_argument(
+        "--agent-context",
+        action="store_true",
+        help="Print compact bounded context for an executor instead of the human status view",
+    )
     starter = sub.add_parser("starter-bootstrap", help="Preview and apply the Starter profile")
     starter.add_argument("--config", required=True)
     starter.add_argument("--target", required=True)
@@ -336,6 +348,26 @@ def main(argv: list[str] | None = None) -> int:
                 if language == "en"
                 else render(decision, expert=args.expert, show_commands=args.commands, lang=language)
             )
+        return 0
+    if args.command == "status":
+        from agora_ai_sdlc.iteration_status import inspect_iteration, render_status
+
+        try:
+            status_result = inspect_iteration(
+                Path(args.root),
+                swarm=args.swarm,
+                work=args.work,
+            )
+        except (OSError, ValueError) as error:
+            print(error, file=sys.stderr)
+            return 2
+        if args.agent_context:
+            print(json.dumps(status_result.agent_context(), sort_keys=True))
+        elif args.json:
+            print(json.dumps(status_result.snapshot(), sort_keys=True))
+        else:
+            level = "diagnostic" if args.diagnostic else ("detail" if args.detail else "normal")
+            print(render_status(status_result, detail=level))
         return 0
     if args.command == "install":
         from agora_ai_sdlc import installer as project_installer

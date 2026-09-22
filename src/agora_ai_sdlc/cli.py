@@ -264,7 +264,11 @@ def main(argv: list[str] | None = None) -> int:
             )
         else:
             language = resolve_language(args.lang)
-            print(render_doctor(checks, runtimes_found) if language == "en" else render_doctor(checks, runtimes_found, lang=language))
+            print(
+                render_doctor(checks, runtimes_found)
+                if language == "en"
+                else render_doctor(checks, runtimes_found, lang=language)
+            )
         return 0
     if args.command == "start":
         from agora_ai_sdlc.start_flow import StartFlowError, prepare_start, render_start

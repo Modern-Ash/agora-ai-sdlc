@@ -11,13 +11,15 @@ A pathway does not introduce a new state machine. It constrains an approved Leve
 The checked-in profiles under `profiles/pathways/` are:
 
 - `trivial-change`
+- `documentation`
 - `new-product`
 - `brownfield`
 - `refactor`
 - `scaling`
 - `regulated-change`
 
-Each profile declares a minimum depth, mandatory steps, optional steps and explicit forbidden skips. The shared `policy.yaml` defines the closed step vocabulary, the common three-phase lifecycle, depth ordering and additional obligations introduced by stricter depth.
+Each profile declares a minimum depth, mandatory steps, optional steps and explicit forbidden skips.
+A pathway may also declare explicit `depth_exemptions` for controls that are structurally irrelevant to that work type. Exemptions are policy facts, not agent-selected skips. The `documentation` pathway uses this to avoid forcing implementation, test, deployment and observability ceremony onto bounded document-only work. The shared `policy.yaml` defines the closed step vocabulary, the common three-phase lifecycle, depth ordering and additional obligations introduced by stricter depth.
 
 ## AI proposes, Agora validates, humans approve
 

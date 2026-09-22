@@ -3,8 +3,8 @@ import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 
-import pytest
 from agora.model import CreateWorkInput
+import pytest
 
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 from agora_ai_sdlc.start_flow import (

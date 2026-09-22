@@ -292,3 +292,44 @@ Do not force the human through one prompt per primitive command. Stop only when:
 - an independent review boundary is reached.
 
 This preserves detailed governance while minimizing ceremony.
+
+
+## Observability without prompt inflation
+
+Treat human observability and executor context as separate channels.
+
+Use:
+
+```bash
+aisdlc status
+```
+
+to show the human a rich locally rendered view of the current iteration. The status view is derived from local/Core facts and does not require an LLM call.
+
+For more human-visible detail use:
+
+```bash
+aisdlc status --detail
+aisdlc status --diagnostic
+```
+
+Changing the human detail level must not change the executor context.
+
+When an executor needs a bounded state projection use:
+
+```bash
+aisdlc status --agent-context
+```
+
+The agent-context projection is intentionally compact. It contains iteration identity, authority, unresolved governance obligations, relevant artifact/evidence references and the next permitted action. Do not replace it with the full human status output, raw activity history or diagnostic narration unless the task explicitly requires those details.
+
+Rules:
+
+- never ask an LLM to narrate status that can be rendered from local/Core facts;
+- never infer token or cost values that the runtime/Core did not report;
+- render unavailable usage as unknown, not zero;
+- keep secrets and credentials out of both projections;
+- let the user inspect rich history without automatically reinjecting it into later model context;
+- load additional repository or historical context only when the current task requires it.
+
+The human should be able to see more than the executor needs to receive.

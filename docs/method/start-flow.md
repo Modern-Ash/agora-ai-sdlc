@@ -1,9 +1,9 @@
 # Starting real work with AI-SDLC
 
-The recommended AI-SDLC-aligned entry point is:
+The recommended AI-SDLC-aligned entry point uses the short `aisdlc` alias (`agora-ai-sdlc` remains available):
 
 ```bash
-agora-ai-sdlc start --issue 11 --agent codex
+aisdlc start --issue 11 --agent codex
 ```
 
 The command is intentionally **not** an issue-to-code shortcut.
@@ -26,7 +26,7 @@ This preserves the AI-SDLC direction of travel: AI does planning and decompositi
 ```bash
 cd /home/faguero/dev-agora/agorix
 
-agora-ai-sdlc start \
+aisdlc start \
   --issue 11 \
   --agent codex
 ```
@@ -34,7 +34,7 @@ agora-ai-sdlc start \
 If the Git remote cannot be inferred:
 
 ```bash
-agora-ai-sdlc start \
+aisdlc start \
   --issue 11 \
   --project Modern-Ash/agorix \
   --agent codex

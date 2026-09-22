@@ -97,9 +97,7 @@ def _switch_clean(root: Path, branch: str) -> None:
     if current == branch:
         return
     if _run_git(root, "status", "--porcelain"):
-        raise StartFlowError(
-            f"Cannot switch from {current!r} to {branch!r}: commit or stash local changes first"
-        )
+        raise StartFlowError(f"Cannot switch from {current!r} to {branch!r}: commit or stash local changes first")
     _run_git(root, "switch", branch)
 
 
@@ -233,9 +231,7 @@ def _ensure_issue_work(
     if {"branch", "create_branch"} <= set(fields) and (root / ".git").is_dir():
         base_branch = _default_base_branch(root)
         local_branch = _git_succeeds(root, "show-ref", "--verify", "--quiet", f"refs/heads/{branch}")
-        remote_branch = _git_succeeds(
-            root, "show-ref", "--verify", "--quiet", f"refs/remotes/origin/{branch}"
-        )
+        remote_branch = _git_succeeds(root, "show-ref", "--verify", "--quiet", f"refs/remotes/origin/{branch}")
         if local_branch:
             _switch_clean(root, branch)
             return workspace.create_work(

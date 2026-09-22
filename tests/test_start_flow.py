@@ -39,7 +39,7 @@ class FakeWorkspace:
         payload = {
             "number": 11,
             "title": "Initialize TypeScript pnpm monorepo and engineering toolchain",
-            "body": "Establish the shared engineering foundation for Agorix.",
+            "body": "## Parent\n#2\n\n## Objective\nEstablish the shared engineering foundation for Agorix.",
             "url": "https://github.com/Modern-Ash/agorix/issues/11",
         }
         return SimpleNamespace(
@@ -59,6 +59,7 @@ class FakeWorkspace:
         return [] if self._intent is None else [self._intent]
 
     def create_intent(self, data):
+        self.last_intent_input = data
         self._intent = SimpleNamespace(
             id=data.id,
             path=str(self.cwd / ".agora" / "intents" / data.id / "INTENT.md"),
@@ -100,6 +101,11 @@ def test_prepare_start_reads_issue_through_governed_tool_and_creates_draft_inten
     assert invocation.launch is True
     assert workspace._intent.status == "draft"
     assert workspace._intent.source.endswith("/issues/11")
+    assert workspace.last_intent_input.outcome == (
+        "Deliver the outcome described by GitHub issue #11: "
+        "Initialize TypeScript pnpm monorepo and engineering toolchain"
+    )
+    assert "## Parent" not in workspace.last_intent_input.outcome
 
     output = render_start(result)
     assert "Candidate Intent: issue-11 (draft)" in output

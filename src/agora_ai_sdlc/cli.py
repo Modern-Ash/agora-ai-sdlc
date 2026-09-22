@@ -245,7 +245,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.json:
             print(json.dumps([item.snapshot() for item in discoveries], sort_keys=True))
         else:
-            print(render_runtimes(discoveries, lang=resolve_language(args.lang)))
+            language = resolve_language(args.lang)
+            print(render_runtimes(discoveries) if language == "en" else render_runtimes(discoveries, lang=language))
         return 0
     if args.command == "doctor":
         from agora_ai_sdlc.doctor import render_doctor, run_doctor
@@ -262,7 +263,8 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         else:
-            print(render_doctor(checks, runtimes_found, lang=resolve_language(args.lang)))
+            language = resolve_language(args.lang)
+            print(render_doctor(checks, runtimes_found) if language == "en" else render_doctor(checks, runtimes_found, lang=language))
         return 0
     if args.command == "start":
         from agora_ai_sdlc.start_flow import StartFlowError, prepare_start, render_start
@@ -303,20 +305,33 @@ def main(argv: list[str] | None = None) -> int:
             from agora_ai_sdlc.guided_session import run_interactive
 
             try:
-                run_interactive(root, swarm=args.swarm, work=args.work, lang=resolve_language(args.lang))
+                language = resolve_language(args.lang)
+                if language == "en":
+                    run_interactive(root, swarm=args.swarm, work=args.work)
+                else:
+                    run_interactive(root, swarm=args.swarm, work=args.work, lang=language)
             except (OSError, ValueError) as error:
                 print(error, file=sys.stderr)
                 return 2
             return 0
         try:
-            decision = inspect_next(root, swarm=args.swarm, work=args.work, lang=resolve_language(args.lang))
+            language = resolve_language(args.lang)
+            decision = (
+                inspect_next(root, swarm=args.swarm, work=args.work)
+                if language == "en"
+                else inspect_next(root, swarm=args.swarm, work=args.work, lang=language)
+            )
         except (OSError, ValueError) as error:
             print(error, file=sys.stderr)
             return 2
         if args.json:
             print(json.dumps(decision.snapshot() if decision is not None else {"status": "clear"}, sort_keys=True))
         else:
-            print(render(decision, expert=args.expert, show_commands=args.commands, lang=resolve_language(args.lang)))
+            print(
+                render(decision, expert=args.expert, show_commands=args.commands)
+                if language == "en"
+                else render(decision, expert=args.expert, show_commands=args.commands, lang=language)
+            )
         return 0
     if args.command == "install":
         from agora_ai_sdlc import installer as project_installer

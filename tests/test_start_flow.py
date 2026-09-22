@@ -33,6 +33,7 @@ def _git_repo(root: Path) -> None:
     _git(root, "add", "README.md")
     _git(root, "commit", "-m", "initial")
 
+
 def runtime(runtime_id="codex", *, responsive=True, configured=True):
     return RuntimeDiscovery(
         id=runtime_id,

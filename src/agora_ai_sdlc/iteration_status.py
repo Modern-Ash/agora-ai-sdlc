@@ -9,6 +9,7 @@ from pathlib import Path
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next
+from agora_ai_sdlc.progress import lifecycle_progress
 
 
 @dataclass(frozen=True)
@@ -223,6 +224,7 @@ def render_status(status: IterationStatus, *, detail: str = "normal") -> str:
     if status.title:
         lines.append(f"Objective: {status.title}")
     lines.append(f"Stage: {status.state or 'unknown'}" + (f" -> {status.target}" if status.target else ""))
+    lines.append(f"Lifecycle: {lifecycle_progress(status.state)}")
     lines.append(
         f"Branch: {status.work_branch or status.current_branch or 'unknown'}"
         + (f" (base {status.base_branch})" if status.base_branch else "")

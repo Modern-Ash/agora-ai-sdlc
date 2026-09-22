@@ -59,5 +59,6 @@ def test_agent_context_is_compact_and_excludes_ui_narration():
 def test_unknown_usage_is_rendered_as_unknown_not_zero():
     rendered = render_status(sample_status())
 
+    assert "Lifecycle: [██░░░░░░░░] 1/4  inception" in rendered
     assert "Usage: unknown" in rendered
     assert "Usage: 0" not in rendered

@@ -4,73 +4,336 @@ description: Operate Agora AI-SDLC through portable multi-agent guidance with ex
 ---
 # Agora AI-SDLC Guided Delivery Skill
 
-## Purpose and authority
+Use this skill when operating a project installed with Agora AI-SDLC.
 
-Reduce user-facing ceremony without weakening governance. This skill wraps the
-framework; Agora Core remains lifecycle authority. Runtime/model choice changes
-the executor, never the meaning of a permission, decision or gate. Multi-agent
-support does not mean launching multiple agents for every task.
+## Purpose
 
-## Always-active boundaries
+Reduce user-facing ceremony without weakening governance.
 
-1. Inspect the exact governed Work/revision and recorded branch before acting.
-   Never substitute installer `first-work` for an issue-derived Intent.
-2. Never reimplement gate logic. Query Core and obey its result. A status display
-   or parseable artifact is not an execution authorization.
-3. Never record a human approval without explicit confirmation. Existing durable
-   approvals may be consulted only for the exact valid revision/scope; they are
-   not blanket approval for later changes. Never transfer a human role to proceed.
-4. Plan approval is not Bolt Plan approval. Before a Bolt, validate the current
-   plan/revision/dependencies and check `assert_can_start` plus applicable Core
-   authority. Pending means stop the affected execution, not just its status update.
-5. Preserve producer/reviewer separation; never claim an independent review you
-   did not perform. Agents' proposals are not human-selected decisions.
-6. Do not expose secrets, tokens, child PII, private keys, raw prompts or transcripts.
-7. Use packaged templates and validate proposals before asking for approval.
-8. Group already authorized mechanical work. Ask only for material ambiguity,
-   absent/invalid authority, policy decisions, non-convergence or budget exhaustion.
-9. After a mutation, re-read Core. Do not mask a bypass with retroactive approval.
+The human should interact with intent, clarification, proposals, approvals, and review. The agent may wrap Agora Core commands, but Core remains the lifecycle authority.
 
-## Load only the phase you need
+## Mandatory rules
 
-Use `aisdlc skill --phase <phase>` for this root plus one phase resource, or
-`aisdlc skill --phase <phase> --json` for paths, hashes and byte sizes. JSON does
-not include instruction content unless `--content` is explicit. Token counts are
-not inferred from byte sizes. Do not load all resources on every turn.
+1. Inspect governed state before acting.
+2. Never reimplement gate logic. Query Agora Core and obey its result.
+3. Translate raw blockers into concise human language.
+4. Never record a human approval without explicit confirmation in the current interaction.
+5. Never transfer a human-owned role just to make progress.
+6. AI-generated artifacts are proposals until the responsible human accepts them.
+7. Preserve producer/reviewer separation.
+8. Do not expose credentials, secrets, child PII, or provider tokens in artifacts or prompts.
+9. Use packaged AI-SDLC templates for known artifact kinds.
+10. Stop when Core denies a transition; explain the remaining obligation instead of bypassing it.
 
-- [Inception](references/inception.md): Intent interpretation, Level 1 Plan,
-  cohesive Units, suggested Bolts, material decisions and proposal validation.
-- [Construction](references/construction.md): bounded authorized work and checks.
-- [Review](references/review.md): independent review, repair boundaries, evidence.
-- [Delivery](references/delivery.md): branch/PR offer and acceptance boundary.
-- [Readiness](references/readiness.md): only when the installed method requires it.
-- [Governance](references/governance.md): decision cards and exact command bundles
-  when a gate/approval needs explanation. Do not preload for routine execution.
+## Default interaction
 
-## Human visibility is not agent context
+Start with:
 
-For an exact Work, `aisdlc observe --swarm <swarm> --work <work> --json` returns a
-compact read-only snapshot. A human/host can separately run `aisdlc observe --watch
---swarm <swarm> --work <work> --detail detailed --ui-file <new-file>` and inspect
-that file. Do not feed the activity stream, heartbeats or repeated full snapshots
-back into the conversation. Never run a polling conversation just to narrate wait.
+```bash
+agora-ai-sdlc continue
+```
 
-Normal/detailed/diagnostic human views are rendered locally, not by a model.
-Their verbosity does not change the machine snapshot or phase instructions.
-`stderr` alone is not isolation: hosts capturing both streams must use the separate
-UI file/channel. Observer heartbeats indicate the observer is alive, not that an
-external agent is active. Usage without a reported basis stays unknown; never
-claim missing usage is zero. Secrets and arbitrary PII cannot be made safe merely
-by calling them diagnostics; raw process output is excluded.
+When attached to a terminal, this command is an interactive session. The human chooses actions and may
+select or change among responsive locally detected assistants. Keep the selected assistant for the
+session until the human changes it. Do not treat runtime selection as approval or role transfer.
 
-## Anticipate without crossing boundaries
+Use `--non-interactive` only when a one-shot projection is required.
 
-Explain what is happening, what was verified, what needs a human decision and
-what is next. Prepare the next step within current authority. Do not invent live
-activity, percentages, approval or completion. The current Start prepares a
-handoff but does not launch the executor: report that honestly. Phase guidance is
-portable behavior, not a claim that every host implements an enforced agent loop.
+Use:
 
-`aisdlc continue --json` exposes the existing guided projection; use explicit
-`--swarm` and `--work`. Stop if its identity differs from this iteration. Exact
-commands are available with `continue --commands`, details with `--expert`.
+```bash
+agora-ai-sdlc continue --expert
+```
+
+only when exact gate/blocker details are needed.
+
+For command transparency use:
+
+```bash
+agora-ai-sdlc continue --commands
+```
+
+For machine-readable clients use:
+
+```bash
+agora-ai-sdlc continue --json
+```
+
+## Guided human-attention flow
+
+When Core reports human attention:
+
+1. Identify work, current state, target state, responsible role, and actor.
+2. Explain required decisions in business language.
+3. Prepare non-authoritative artifacts or analysis that the actor is allowed to assist with.
+4. Show the proposal or concise diff to the human.
+5. Ask one explicit approval question.
+6. Only after an affirmative answer, record the approval with Agora Core.
+7. Attempt the governed transition.
+8. Re-read state after every mutation.
+
+## Start / Inception flow
+
+When `aisdlc start` creates or reuses a durable Intent, treat the generated
+`.agora/ai-sdlc/handoffs/<intent>/INCEPTION_HANDOFF.md` as the execution contract.
+
+The selected runtime is only the executor. Provider/model choice must not change method semantics.
+
+Mandatory Inception sequence:
+
+1. Read the durable Intent and its source issue.
+2. Load only bounded repository context referenced by the issue plus AGENTS.md.
+3. Separate source facts from AI proposals.
+4. Ask only material clarification questions. Group related choices into one human decision card where practical.
+5. Produce a Level 1 Plan before producing the final artifact.
+6. Decompose the Intent into cohesive Units.
+7. Suggest small Bolts for those Units.
+8. Trace acceptance criteria to the source issue.
+9. Identify risks, constraints and dependencies.
+10. Persist proposals using existing AI-SDLC artifact contracts where they apply.
+11. Stop for human review before Construction.
+
+### Inception output contract
+
+A Start/Inception response is incomplete unless it contains all of:
+
+- Intent interpretation
+- Material clarifications requiring human decision
+- Level 1 Plan
+- Proposed Units
+- Suggested Bolts
+- Acceptance criteria trace
+- Risks, constraints and dependencies
+- Product decisions explicitly marked as source fact, AI proposal, or human-selected decision
+- Files created or modified
+- Human decision required to continue
+
+Do not jump directly from Intent to implementation or directly to a final product artifact without first presenting the Level 1 Plan and decomposition.
+
+When several material choices are open, prefer one compact decision card with options, recommendations and trade-offs instead of making the human answer one prompt per low-level primitive.
+
+Human decisions made in conversation are not equivalent to durable Agora approval evidence. Until a first-class decision record exists, artifacts must not label conversational choices as auditable approvals.
+
+## Readiness vertical slice
+
+When the current gate requires `readiness-assessment`, clarification, and Product Owner approval:
+
+### A. Prepare the readiness assessment
+
+Use the packaged template `templates/readiness-assessment.md`.
+
+Populate all required sections from bounded repository context:
+
+- Problem and context
+- Stakeholders and accountable owner
+- Constraints and assumptions
+- Open clarifications
+- Data classification and eligible runtimes
+- Readiness decision
+
+Do not invent missing product facts. Put unresolved matters under **Open clarifications**.
+
+Persist the accepted artifact at a predictable repository path such as:
+
+```
+docs/governance/<work>-readiness.md
+```
+
+Then register it:
+
+```bash
+agora artifact add \
+  --swarm <swarm> \
+  --work <work> \
+  --kind readiness-assessment \
+  --uri repo://docs/governance/<work>-readiness.md \
+  --by <responsible-human-actor>
+```
+
+### B. Clarification
+
+If the gate requires resolved clarifications, run the Core clarification operation using the configured compatible runtime/runner.
+
+```bash
+agora work clarify --swarm <swarm> --work <work> --by <actor>
+```
+
+If the responsible actor is human and has no runtime, do not transfer the role. Use the configured AI executor/runner only as assistance where Core supports that boundary. If Core cannot execute the clarification with the available configuration, stop and explain the missing runtime capability.
+
+Relay material questions to the human. Do not convert agent suggestions into approvals.
+
+### C. Human approval
+
+After the artifact is accepted and clarifications are resolved, ask:
+
+```
+The readiness review is complete. Approve proceeding to the next governed stage?
+```
+
+Only after an explicit affirmative answer:
+
+```bash
+agora approval add \
+  --swarm <swarm> \
+  --work <work> \
+  --role product-owner \
+  --by <responsible-human-actor> \
+  --note "Readiness reviewed and approved"
+```
+
+### D. Transition
+
+Re-check:
+
+```bash
+agora next --swarm <swarm>
+```
+
+Then perform only the transition Core says is allowed:
+
+```bash
+agora work transition \
+  --swarm <swarm> \
+  --work <work> \
+  --to <target> \
+  --by <responsible-human-actor>
+```
+
+Re-run:
+
+```bash
+agora-ai-sdlc continue
+```
+
+## Presentation rules
+
+Default output should show:
+
+- current human-readable stage;
+- what is already satisfied;
+- what decision is needed;
+- recommendation and rationale;
+- available actions.
+
+Do not lead with internal arrays such as `missing-artifacts=[...]`.
+
+When the user asks for details, show:
+
+- gate id;
+- source/target state;
+- artifact/evidence requirements;
+- approval roles;
+- clarification state;
+- provenance/digest information where relevant.
+
+## Agent portability
+
+The same behavior applies to Claude Code, Codex, OpenCode, Ollama-backed agents, or any Markdown-aware executor. Provider/model selection must not change lifecycle meaning.
+
+
+## Decision-card contract
+
+Treat the guided projection as the primary human UI. Present, in this order:
+
+1. **Objective** — the current work title and bounded outcome.
+2. **Lifecycle context** — Method Pack, current stage, target stage and gate.
+3. **Responsible authority** — role and actor that own the decision.
+4. **Readiness checks** — artifacts, criteria, clarifications, evidence, repository policy and approvals.
+5. **What remains** — concise human-language obligations.
+6. **Responsibility boundary** — what AI may prepare versus what requires human authority.
+7. **Recommended action** — one next interaction, not a list of low-level commands.
+8. **Optional details** — command bundle, raw blockers, digests and structured state only when requested.
+
+Do not make the normal UI look like a debugger.
+
+## Command-bundle rules
+
+The grouped command bundle exists for transparency, automation authors and expert troubleshooting. It is not the normal user workflow.
+
+For each command include:
+
+- the exact Core primitive;
+- why it exists;
+- whether it is read-only, AI-preparable, or human-authoritative;
+- the condition that must be true before it runs;
+- the expected state change or durable record.
+
+Never present a sequence as safely executable end-to-end if one of its steps requires a fresh human decision.
+
+For example:
+
+```text
+1. prepare docs/governance/first-work-readiness.md
+   AI-preparable. Human must review before registration.
+
+2. agora artifact add ...
+   Records the accepted document in Core.
+
+3. agora work clarify ...
+   Resolves the Method Pack clarification obligation.
+
+4. agora approval add ...
+   HUMAN-AUTHORITATIVE. Execute only after explicit approval.
+
+5. agora work transition ...
+   Execute only after a fresh readiness check says the gate is satisfied.
+
+6. agora-ai-sdlc continue ...
+   Re-read Core and present the next decision.
+```
+
+## Interaction discipline
+
+When several mechanical steps can be safely grouped, execute them as one agent operation and report the resulting durable state once.
+
+Do not force the human through one prompt per primitive command. Stop only when:
+
+- a material clarification requires human input;
+- an approval belongs to a human role;
+- Core denies the proposed mutation;
+- a security/data-policy decision is required;
+- the selected runtime lacks required capability;
+- an independent review boundary is reached.
+
+This preserves detailed governance while minimizing ceremony.
+
+
+## Observability without prompt inflation
+
+Treat human observability and executor context as separate channels.
+
+Use:
+
+```bash
+aisdlc status
+```
+
+to show the human a rich locally rendered view of the current iteration. The status view is derived from local/Core facts and does not require an LLM call.
+
+For more human-visible detail use:
+
+```bash
+aisdlc status --detail
+aisdlc status --diagnostic
+```
+
+Changing the human detail level must not change the executor context.
+
+When an executor needs a bounded state projection use:
+
+```bash
+aisdlc status --agent-context
+```
+
+The agent-context projection is intentionally compact. It contains iteration identity, authority, unresolved governance obligations, relevant artifact/evidence references and the next permitted action. Do not replace it with the full human status output, raw activity history or diagnostic narration unless the task explicitly requires those details.
+
+Rules:
+
+- never ask an LLM to narrate status that can be rendered from local/Core facts;
+- never infer token or cost values that the runtime/Core did not report;
+- render unavailable usage as unknown, not zero;
+- keep secrets and credentials out of both projections;
+- let the user inspect rich history without automatically reinjecting it into later model context;
+- load additional repository or historical context only when the current task requires it.
+
+The human should be able to see more than the executor needs to receive.

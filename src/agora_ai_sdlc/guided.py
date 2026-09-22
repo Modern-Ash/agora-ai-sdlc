@@ -10,6 +10,7 @@ from pathlib import Path
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.depth_profiles import asset_root
+from agora_ai_sdlc.i18n import t
 
 _BLOCKER_LIST = re.compile(r"(?P<name>[a-z-]+)=\[(?P<items>[^\]]*)\]")
 
@@ -72,6 +73,7 @@ def _combined_blocker_details(blockers: tuple[str, ...]) -> dict[str, tuple[str,
 def _humanize(
     blockers: tuple[str, ...],
     *,
+    lang: str = "en",
     missing_artifacts: tuple[str, ...] = (),
     missing_evidence: tuple[str, ...] = (),
     missing_approvals: tuple[str, ...] = (),
@@ -81,19 +83,19 @@ def _humanize(
 ) -> tuple[str, ...]:
     messages: list[str] = []
     if missing_artifacts:
-        messages.append("Prepare the required project evidence: " + ", ".join(missing_artifacts) + ".")
+        messages.append(t("guided.prepare_evidence", lang=lang, items=", ".join(missing_artifacts)))
     if unsatisfied_criteria:
-        messages.append("Complete the required acceptance criteria: " + ", ".join(unsatisfied_criteria) + ".")
+        messages.append(t("guided.complete_criteria", lang=lang, items=", ".join(unsatisfied_criteria)))
     if clarification_issues:
-        messages.append("Resolve the current clarification requirement before proceeding.")
+        messages.append(t("guided.resolve_clarification", lang=lang))
     if missing_evidence:
-        messages.append("Collect the required verification evidence: " + ", ".join(missing_evidence) + ".")
+        messages.append(t("guided.collect_evidence", lang=lang, items=", ".join(missing_evidence)))
     if git_issues:
-        messages.append("Resolve the repository policy requirement: " + "; ".join(git_issues) + ".")
+        messages.append(t("guided.resolve_policy", lang=lang, items="; ".join(git_issues)))
     if missing_approvals:
-        messages.append("Ask the responsible human to approve: " + ", ".join(missing_approvals) + ".")
+        messages.append(t("guided.ask_approval", lang=lang, items=", ".join(missing_approvals)))
     if blockers and not messages:
-        messages.append("Agora Core reported a governed blocker; inspect details before continuing.")
+        messages.append(t("guided.core_blocker", lang=lang))
     return tuple(messages)
 
 
@@ -121,6 +123,7 @@ def inspect_next(
     *,
     swarm: str | None = None,
     work: str | None = None,
+    lang: str = "en",
 ) -> GuidedDecision | None:
     """Project the next Core action without mutating lifecycle state."""
 
@@ -147,6 +150,7 @@ def inspect_next(
 
     messages = _humanize(
         blockers,
+        lang=lang,
         missing_artifacts=missing_artifacts,
         missing_evidence=missing_evidence,
         missing_approvals=missing_approvals,
@@ -242,14 +246,14 @@ def command_plan(decision: GuidedDecision) -> tuple[tuple[str, str], ...]:
     return tuple(commands)
 
 
-def _status_items(decision: GuidedDecision) -> tuple[tuple[str, bool], ...]:
+def _status_items(decision: GuidedDecision, *, lang: str = "en") -> tuple[tuple[str, bool], ...]:
     return (
-        ("Required artifacts", not decision.missing_artifacts),
-        ("Acceptance criteria", not decision.unsatisfied_criteria),
-        ("Clarifications", not decision.clarification_issues),
-        ("Verification evidence", not decision.missing_evidence),
-        ("Git/repository policy", not decision.git_issues),
-        ("Human approvals", not decision.missing_approvals),
+        (t("guided.required_artifacts", lang=lang), not decision.missing_artifacts),
+        (t("guided.acceptance_criteria", lang=lang), not decision.unsatisfied_criteria),
+        (t("guided.clarifications", lang=lang), not decision.clarification_issues),
+        (t("guided.verification_evidence", lang=lang), not decision.missing_evidence),
+        (t("guided.repository_policy", lang=lang), not decision.git_issues),
+        (t("guided.human_approvals", lang=lang), not decision.missing_approvals),
     )
 
 
@@ -259,81 +263,82 @@ def render(
     expert: bool = False,
     show_commands: bool = False,
     show_actions: bool = True,
+    lang: str = "en",
 ) -> str:
     if decision is None:
-        return "Agora AI-SDLC\n\nNo governed action currently needs attention."
+        return "Agora AI-SDLC\n\n" + t("guided.none", lang=lang)
 
     lines = ["Agora AI-SDLC", ""]
     if decision.title:
-        lines.append(f"Objective: {decision.title}")
+        lines.append(f"{t('guided.objective', lang=lang)}: {decision.title}")
     lines.extend(
         [
-            f"Work: {decision.swarm}/{decision.work}",
-            f"Method: {decision.method or 'unknown'}",
-            f"Stage: {decision.state or 'unknown'}" + (f"  ->  {decision.target}" if decision.target else ""),
+            f"{t('guided.work', lang=lang)}: {decision.swarm}/{decision.work}",
+            f"{t('guided.method', lang=lang)}: {decision.method or t('guided.unknown', lang=lang)}",
+            f"{t('guided.stage', lang=lang)}: {decision.state or t('guided.unknown', lang=lang)}" + (f"  ->  {decision.target}" if decision.target else ""),
         ]
     )
     if decision.gate:
-        lines.append(f"Decision gate: {decision.gate}")
+        lines.append(f"{t('guided.decision_gate', lang=lang)}: {decision.gate}")
     if decision.role:
         owner = decision.role
         if decision.actor:
             owner += f" ({decision.actor})"
-        lines.append(f"Responsible: {owner}")
+        lines.append(f"{t('guided.responsible', lang=lang)}: {owner}")
 
-    lines.extend(["", "Readiness"])
-    for label, satisfied in _status_items(decision):
+    lines.extend(["", t("guided.readiness", lang=lang)])
+    for label, satisfied in _status_items(decision, lang=lang):
         marker = "✓" if satisfied else "!"
         lines.append(f"  {marker} {label}")
 
     if decision.messages:
-        lines.extend(["", "What remains"])
+        lines.extend(["", t("guided.what_remains", lang=lang)])
         for index, message in enumerate(decision.messages, start=1):
             lines.append(f"  {index}. {message}")
 
-    lines.extend(["", "Responsibility boundary"])
+    lines.extend(["", t("guided.boundary", lang=lang)])
     if decision.actor and decision.role:
-        lines.append(f"  Human/assigned authority: {decision.actor} as {decision.role}.")
-    lines.append("  AI may inspect, explain, draft artifacts and execute explicitly delegated bounded work.")
-    lines.append("  AI may not invent approval, transfer a human role, or bypass a Core gate.")
+        lines.append("  " + t("guided.authority", lang=lang, actor=decision.actor, role=decision.role))
+    lines.append("  " + t("guided.ai_may", lang=lang))
+    lines.append("  " + t("guided.ai_may_not", lang=lang))
 
     if decision.ready_for_human_approval and decision.missing_approvals:
         lines.extend(
             [
                 "",
-                "Decision needed",
-                "  Technical/readiness obligations are satisfied; explicit human approval is now required.",
+                t("guided.decision_needed", lang=lang),
+                "  " + t("guided.approval_needed", lang=lang),
             ]
         )
         if show_actions:
-            lines.append("  [A] Approve  [R] Review evidence  [E] Edit proposal  [D] Governance details  [X] Stop")
+            lines.append("  " + t("guided.actions_approval", lang=lang))
     elif decision.blocked:
         lines.extend(
             [
                 "",
-                "Recommended action",
-                "  Let the selected AI agent prepare the non-authoritative items above, then return for human review.",
+                t("guided.recommended", lang=lang),
+                "  " + t("guided.prepare_recommendation", lang=lang),
             ]
         )
         if show_actions:
-            lines.append("  [P] Prepare with AI  [R] Review context  [D] Governance details  [X] Stop")
+            lines.append("  " + t("guided.actions_prepare", lang=lang))
     else:
-        lines.extend(["", "Recommended action", "  This governed step is ready for the responsible actor."])
+        lines.extend(["", t("guided.recommended", lang=lang), "  " + t("guided.ready_actor", lang=lang)])
 
     if show_commands:
-        lines.extend(["", "Underlying command bundle"])
+        lines.extend(["", t("guided.command_bundle", lang=lang)])
         for index, (command, reason) in enumerate(command_plan(decision), start=1):
             lines.append(f"  {index}. {command}")
             lines.append(f"     {reason}")
 
     if expert:
-        lines.extend(["", "Governance details"])
+        lines.extend(["", t("guided.governance_details", lang=lang)])
         if decision.blockers:
             lines.extend(f"  - {blocker}" for blocker in decision.blockers)
         else:
-            lines.append("  - No Core blockers.")
+            lines.append("  - " + t("guided.no_blockers", lang=lang))
         lines.append("")
-        lines.append("Structured decision")
+        lines.append(t("guided.structured", lang=lang))
         lines.append(json.dumps(decision.snapshot(), indent=2, sort_keys=True))
 
     return "\n".join(lines)

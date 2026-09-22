@@ -32,8 +32,26 @@ class FakeWorkspace:
         self.invocations = []
         self.installed_adapters = []
         self.installed_methods = []
+        self.created_work_inputs = []
+        self._works = []
         self._has_run = False
         self._intent = None
+
+    def list_work(self, swarm_id=None):
+        return list(self._works)
+
+    def create_work(self, data):
+        self.created_work_inputs.append(data)
+        work = SimpleNamespace(
+            id=data.id,
+            swarm_id=data.swarm_id,
+            title=data.title,
+            path=str(self.cwd / ".agora" / "swarms" / data.swarm_id / "work" / data.id / "WORK.md"),
+            base_branch="main",
+            branch=data.branch,
+        )
+        self._works.append(work)
+        return work
 
     def show_tool_run(self, run_id):
         if not self._has_run:
@@ -110,8 +128,14 @@ def test_prepare_start_reads_issue_through_governed_tool_and_creates_draft_inten
     )
 
     assert result.intent_id == "issue-11"
+    assert result.work_id == "issue-11"
+    assert result.branch == "ai-sdlc/issue-11"
+    assert result.pathway == "new-product"
     assert result.status == "human-review-required"
     assert result.handoff_path.endswith(".agora/ai-sdlc/handoffs/issue-11/INCEPTION_HANDOFF.md")
+    assert len(workspace.created_work_inputs) == 1
+    assert workspace.created_work_inputs[0].create_branch is True
+    assert workspace.created_work_inputs[0].branch == "ai-sdlc/issue-11"
     assert [item.adapter_id for item in workspace.installed_adapters] == ["github-issues"]
     assert len(workspace.invocations) == 1
     invocation = workspace.invocations[0]
@@ -146,6 +170,9 @@ def test_prepare_start_reads_issue_through_governed_tool_and_creates_draft_inten
     handoff = Path(result.handoff_path).read_text(encoding="utf-8")
     assert 'schema: "agora-ai-sdlc/inception-handoff/v1"' in handoff
     assert "Level 1 Plan" in handoff
+    assert 'work: "issue-11"' in handoff
+    assert 'branch: "ai-sdlc/issue-11"' in handoff
+    assert 'pathway: "new-product"' in handoff
     assert "Cohesive Units" in handoff
     assert "Suggested Bolts" in handoff
     assert "Do not enter Construction." in handoff
@@ -195,6 +222,16 @@ def test_prepare_start_rejects_unavailable_requested_runtime(tmp_path):
 def test_prepare_start_reuses_existing_durable_issue_read_and_intent(tmp_path):
     workspace = FakeWorkspace(tmp_path)
     workspace._has_run = True
+    workspace._works = [
+        SimpleNamespace(
+            id="issue-11",
+            swarm_id="delivery",
+            title="Deliver GitHub issue #11",
+            path=str(tmp_path / ".agora" / "swarms" / "delivery" / "work" / "issue-11" / "WORK.md"),
+            base_branch="main",
+            branch="ai-sdlc/issue-11",
+        )
+    ]
     workspace._intent = SimpleNamespace(
         id="issue-11",
         path=str(tmp_path / ".agora" / "intents" / "issue-11" / "INTENT.md"),
@@ -210,5 +247,35 @@ def test_prepare_start_reuses_existing_durable_issue_read_and_intent(tmp_path):
     )
 
     assert result.intent_id == "issue-11"
+    assert len(workspace.created_work_inputs) == 0
     assert workspace.installed_adapters == []
     assert workspace.invocations == []
+
+
+def test_documentation_issue_selects_documentation_pathway(tmp_path):
+    workspace = FakeWorkspace(tmp_path)
+    workspace._has_run = True
+
+    def show_tool_run(run_id):
+        payload = {
+            "number": 9,
+            "title": "Define child-facing content, feedback and first-mission copy",
+            "body": "## Deliverable\n`docs/product/CONTENT_GUIDE.md`\n",
+            "url": "https://github.com/Modern-Ash/agorix/issues/9",
+        }
+        return SimpleNamespace(
+            result=SimpleNamespace(status="completed", stdout=json.dumps(payload), stderr="")
+        )
+
+    workspace.show_tool_run = show_tool_run
+    result = prepare_start(
+        tmp_path,
+        issue=9,
+        project="Modern-Ash/agorix",
+        workspace_factory=lambda cwd: workspace,
+        runtime_discovery=lambda root: (runtime(),),
+    )
+
+    assert result.pathway == "documentation"
+    handoff = Path(result.handoff_path).read_text(encoding="utf-8")
+    assert 'pathway: "documentation"' in handoff

@@ -207,13 +207,9 @@ def inspect_iteration(
         artifact_kinds=artifact_kinds,
         evidence_results=evidence_results,
         last_activity=(
-            _last_activity(workspace, resolved_swarm, resolved_work)
-            if resolved_swarm and resolved_work
-            else None
+            _last_activity(workspace, resolved_swarm, resolved_work) if resolved_swarm and resolved_work else None
         ),
-        ready_for_human_approval=(
-            decision.ready_for_human_approval if decision is not None else False
-        ),
+        ready_for_human_approval=(decision.ready_for_human_approval if decision is not None else False),
         ready_to_transition=decision.ready_to_transition if decision is not None else False,
     )
 
@@ -226,18 +222,12 @@ def render_status(status: IterationStatus, *, detail: str = "normal") -> str:
     lines.append(f"Work: {status.swarm or '-'} / {status.work or '-'}")
     if status.title:
         lines.append(f"Objective: {status.title}")
-    lines.append(
-        f"Stage: {status.state or 'unknown'}"
-        + (f" -> {status.target}" if status.target else "")
-    )
+    lines.append(f"Stage: {status.state or 'unknown'}" + (f" -> {status.target}" if status.target else ""))
     lines.append(
         f"Branch: {status.work_branch or status.current_branch or 'unknown'}"
         + (f" (base {status.base_branch})" if status.base_branch else "")
     )
-    lines.append(
-        f"Authority: {status.role or 'unknown'}"
-        + (f" ({status.actor})" if status.actor else "")
-    )
+    lines.append(f"Authority: {status.role or 'unknown'}" + (f" ({status.actor})" if status.actor else ""))
     lines.append(f"Usage: {status.usage_status}")
 
     obligations = (
@@ -258,13 +248,9 @@ def render_status(status: IterationStatus, *, detail: str = "normal") -> str:
     if detail in {"detail", "diagnostic"}:
         lines.extend(["", "Observed facts"])
         lines.append(f"  Current Git branch: {status.current_branch or 'unknown'}")
+        lines.append("  Artifact kinds: " + (", ".join(status.artifact_kinds) if status.artifact_kinds else "none"))
         lines.append(
-            "  Artifact kinds: "
-            + (", ".join(status.artifact_kinds) if status.artifact_kinds else "none")
-        )
-        lines.append(
-            "  Evidence results: "
-            + (", ".join(status.evidence_results) if status.evidence_results else "none")
+            "  Evidence results: " + (", ".join(status.evidence_results) if status.evidence_results else "none")
         )
         lines.append(f"  Last activity: {status.last_activity or 'unknown'}")
 

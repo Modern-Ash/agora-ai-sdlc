@@ -177,9 +177,7 @@ def _ensure_issue_work(
             current = _run_git(root, "branch", "--show-current")
             if current != existing.branch:
                 if _run_git(root, "status", "--porcelain"):
-                    raise StartFlowError(
-                        f"Cannot switch to Work branch {existing.branch!r} with local changes present"
-                    )
+                    raise StartFlowError(f"Cannot switch to Work branch {existing.branch!r} with local changes present")
                 _run_git(root, "switch", existing.branch)
         return existing
 
@@ -189,9 +187,7 @@ def _ensure_issue_work(
         id=work_id,
         title=f"Deliver GitHub issue #{issue}",
         actor_id=actor,
-        acceptance_criteria=[
-            ("source-issue", f"Satisfy the acceptance criteria from GitHub issue #{issue}")
-        ],
+        acceptance_criteria=[("source-issue", f"Satisfy the acceptance criteria from GitHub issue #{issue}")],
         description=f"Source issue: {issue_url}",
         branch=branch,
         create_branch=True,
@@ -203,9 +199,7 @@ def _ensure_issue_work(
         if not (root / ".git").is_dir():
             raise
         if _run_git(root, "status", "--porcelain"):
-            raise StartFlowError(
-                f"Cannot bind existing Work branch {branch!r} with local changes present"
-            ) from error
+            raise StartFlowError(f"Cannot bind existing Work branch {branch!r} with local changes present") from error
         base = _run_git(root, "branch", "--show-current")
         if base != branch:
             _run_git(root, "switch", branch)
@@ -215,9 +209,7 @@ def _ensure_issue_work(
                 id=work_id,
                 title=f"Deliver GitHub issue #{issue}",
                 actor_id=actor,
-                acceptance_criteria=[
-                    ("source-issue", f"Satisfy the acceptance criteria from GitHub issue #{issue}")
-                ],
+                acceptance_criteria=[("source-issue", f"Satisfy the acceptance criteria from GitHub issue #{issue}")],
                 description=f"Source issue: {issue_url}",
                 base_branch=None if base == branch else base,
                 branch=branch,

@@ -1,0 +1,28 @@
+name: task165-workspace
+on:
+  push:
+    branches: [feat/165-token-efficient-observability]
+    paths: [.github/workflows/task165-workspace.yml]
+permissions:
+  contents: read
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Export tracked source and offline test dependencies
+        run: |
+          mkdir -p /tmp/task165/wheels
+          git archive --format=tar HEAD > /tmp/task165/source.tar
+          python -m pip download --only-binary=:all: --dest /tmp/task165/wheels 'agora-framework==0.8.2' 'ruff==0.16.8' pytest pyyaml packaging hatchling build
+          python -m pip download --only-binary=:all: --dest /tmp/task165/wheels 'agora-framework==0.9.1'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: task165-workspace
+          path: /tmp/task165/
+          retention-days: 1

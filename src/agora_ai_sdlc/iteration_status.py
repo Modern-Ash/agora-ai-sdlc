@@ -147,6 +147,7 @@ def inspect_iteration(
 
     root = root.expanduser().resolve()
     workspace = AgoraWorkspace(cwd=root)
+    current_branch = _current_branch(root)
     decision = _decision_or_none(root, swarm=swarm, work=work)
 
     resolved_swarm = decision.swarm if decision is not None else swarm
@@ -164,7 +165,7 @@ def inspect_iteration(
         except (OSError, ValueError):
             candidates = []
         if candidates:
-            record = candidates[0]
+            record = next((item for item in candidates if item.branch == current_branch), candidates[0])
             resolved_work = record.id
     else:
         try:
@@ -172,7 +173,7 @@ def inspect_iteration(
         except (OSError, ValueError):
             candidates = []
         if candidates:
-            record = candidates[0]
+            record = next((item for item in candidates if item.branch == current_branch), candidates[0])
             resolved_swarm = record.swarm_id
             resolved_work = record.id
 
@@ -198,7 +199,7 @@ def inspect_iteration(
         role=decision.role if decision is not None else None,
         base_branch=getattr(record, "base_branch", None) if record is not None else None,
         work_branch=getattr(record, "branch", None) if record is not None else None,
-        current_branch=_current_branch(root),
+        current_branch=current_branch,
         missing_artifacts=decision.missing_artifacts if decision is not None else (),
         missing_evidence=decision.missing_evidence if decision is not None else (),
         missing_approvals=decision.missing_approvals if decision is not None else (),

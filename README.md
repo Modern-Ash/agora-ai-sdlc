@@ -4,10 +4,11 @@ Vendor-neutral AI-first software-delivery distribution built on [Agora Core](htt
 
 ## Install a project
 
-Bootstrap a real project interactively:
+Bootstrap a real project interactively. `aisdlc` is the short alias for `agora-ai-sdlc`:
 
 ```bash
-agora-ai-sdlc install /path/to/project
+aisdlc install /path/to/project
+# equivalent: agora-ai-sdlc install /path/to/project
 ```
 
 Or use a reproducible, credential-free configuration:
@@ -21,7 +22,7 @@ The installer selects adoption profile, governance depth, language/framework, op
 After bootstrap, use the guided AI-SDLC workflow:
 
 ```bash
-agora-ai-sdlc continue
+aisdlc continue
 ```
 
 On a real terminal, `continue` is interactive: it waits for a menu selection, can choose or change among
@@ -50,9 +51,9 @@ operation. Agora Core remains the lifecycle authority.
 AI-SDLC can inspect the active `PATH` without reading credential files:
 
 ```bash
-agora-ai-sdlc runtimes
-agora-ai-sdlc runtimes --json
-agora-ai-sdlc doctor
+aisdlc runtimes
+aisdlc runtimes --json
+aisdlc doctor
 ```
 
 Discovery currently recognizes Codex, Claude Code, OpenCode and Ollama. It distinguishes executable

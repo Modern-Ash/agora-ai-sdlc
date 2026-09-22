@@ -65,6 +65,44 @@ def _run_git(root: Path, *args: str) -> str:
     return result.stdout.strip()
 
 
+def _git_succeeds(root: Path, *args: str) -> bool:
+    result = subprocess.run(
+        ["git", "-C", str(root), *args],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return result.returncode == 0
+
+
+def _default_base_branch(root: Path) -> str:
+    """Resolve a local base branch without contacting the remote."""
+
+    result = subprocess.run(
+        ["git", "-C", str(root), "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if result.returncode == 0 and result.stdout.strip().startswith("origin/"):
+        return result.stdout.strip().removeprefix("origin/")
+    for candidate in ("main", "master"):
+        if _git_succeeds(root, "show-ref", "--verify", "--quiet", f"refs/heads/{candidate}"):
+            return candidate
+    return _run_git(root, "branch", "--show-current")
+
+
+def _switch_clean(root: Path, branch: str) -> None:
+    current = _run_git(root, "branch", "--show-current")
+    if current == branch:
+        return
+    if _run_git(root, "status", "--porcelain"):
+        raise StartFlowError(
+            f"Cannot switch from {current!r} to {branch!r}: commit or stash local changes first"
+        )
+    _run_git(root, "switch", branch)
+
+
 def infer_project(root: Path) -> str:
     """Infer owner/repository from origin without contacting GitHub."""
 
@@ -192,10 +230,38 @@ def _ensure_issue_work(
         "description": f"Source issue: {issue_url}",
     }
     fields = getattr(CreateWorkInput, "__dataclass_fields__", {})
-    if {"branch", "create_branch"} <= set(fields):
+    if {"branch", "create_branch"} <= set(fields) and (root / ".git").is_dir():
+        base_branch = _default_base_branch(root)
+        local_branch = _git_succeeds(root, "show-ref", "--verify", "--quiet", f"refs/heads/{branch}")
+        remote_branch = _git_succeeds(
+            root, "show-ref", "--verify", "--quiet", f"refs/remotes/origin/{branch}"
+        )
+        if local_branch:
+            _switch_clean(root, branch)
+            return workspace.create_work(
+                CreateWorkInput(
+                    **common,
+                    base_branch=base_branch,
+                    branch=branch,
+                    create_branch=False,
+                )
+            )
+        if remote_branch:
+            _switch_clean(root, base_branch)
+            _run_git(root, "switch", "-c", branch, "--track", f"origin/{branch}")
+            return workspace.create_work(
+                CreateWorkInput(
+                    **common,
+                    base_branch=base_branch,
+                    branch=branch,
+                    create_branch=False,
+                )
+            )
+        _switch_clean(root, base_branch)
         return workspace.create_work(
             CreateWorkInput(
                 **common,
+                base_branch=base_branch,
                 branch=branch,
                 create_branch=True,
             )

@@ -544,9 +544,7 @@ def wizard(
         )
 
     runtime_choices = ("human", *(runtime["id"] for runtime in runtimes))
-    role_execution = {
-        "developer": _choose(input_fn, "Executor for developer", runtime_choices, runtime_choices[-1])
-    }
+    role_execution = {"developer": _choose(input_fn, "Executor for developer", runtime_choices, runtime_choices[-1])}
     swarm = _ask(input_fn, "Delivery swarm id", "delivery")
     objective = _ask(input_fn, "Project objective", f"Deliver {project_name}")
     work_id = _ask(input_fn, "First work id", "first-work")

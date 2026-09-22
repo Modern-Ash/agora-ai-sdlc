@@ -5,13 +5,18 @@ from __future__ import annotations
 import json
 import re
 import subprocess
-
-import yaml
 from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from agora.model import CreateIntentInput, CreateWorkInput, InstallMethodInput, InstallToolAdapterInput, InvokeToolInput
+import yaml
+from agora.model import (
+    CreateIntentInput,
+    CreateWorkInput,
+    InstallMethodInput,
+    InstallToolAdapterInput,
+    InvokeToolInput,
+)
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.depth_profiles import asset_root

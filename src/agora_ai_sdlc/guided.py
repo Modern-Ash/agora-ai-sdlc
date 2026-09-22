@@ -119,7 +119,6 @@ def _transition_details(
     )
 
 
-
 def _current_branch(root: Path) -> str | None:
     try:
         result = subprocess.run(
@@ -150,14 +149,9 @@ def inspect_next(
     else:
         current = _current_branch(root)
         if current:
-            records = {
-                (item.swarm_id, item.id): item
-                for item in workspace.list_work(swarm_id=swarm)
-            }
+            records = {(item.swarm_id, item.id): item for item in workspace.list_work(swarm_id=swarm)}
             branch_tasks = [
-                item
-                for item in tasks
-                if getattr(records.get((item.swarm_id, item.work_id)), "branch", None) == current
+                item for item in tasks if getattr(records.get((item.swarm_id, item.work_id)), "branch", None) == current
             ]
             if branch_tasks:
                 tasks = branch_tasks

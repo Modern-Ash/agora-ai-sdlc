@@ -91,8 +91,7 @@ def _select_runtime(
 
 
 _LEGACY_PRODUCT_OWNER_TOOL_CAPABILITIES = (
-    'allowed-tool-capabilities: ["repository.read", "repository.governance.read", '
-    '"docs.read", "docs.write"]'
+    'allowed-tool-capabilities: ["repository.read", "repository.governance.read", "docs.read", "docs.write"]'
 )
 
 

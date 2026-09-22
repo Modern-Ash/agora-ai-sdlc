@@ -137,7 +137,7 @@ def test_start_json_uses_explicit_file_for_progress(tmp_path, monkeypatch, capsy
     human = file.read_text()
     assert "Start no lanzó el executor" in human
     assert "Leyendo el issue" in human
-    assert "100%  8/8" in human
+    assert "100% 8/8" in human
     assert "Work gobernado y rama del issue resueltos" in human
     assert "[" not in out.out.split("intent_id")[0]  # no progress prefix
 

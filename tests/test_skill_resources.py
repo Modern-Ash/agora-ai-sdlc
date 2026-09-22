@@ -2,6 +2,7 @@ import json
 import os
 import subprocess
 import sys
+import shutil
 import zipfile
 from pathlib import Path
 
@@ -55,6 +56,9 @@ def test_install_rejects_symlink_before_any_write(tmp_path):
 
 def test_wheel_contains_progressive_resources_and_loads_outside_repo(tmp_path):
     # Exercise installed asset discovery from the built wheel without a source-tree fallback.
+    # Core-compat jobs intentionally install Core with plain pip and may not provide uv.
+    if shutil.which("uv") is None:
+        pytest.skip("uv is required only for the wheel packaging integration check")
     root = Path(__file__).resolve().parents[1]
     env = dict(os.environ)
     env.pop("PYTHONPATH", None)

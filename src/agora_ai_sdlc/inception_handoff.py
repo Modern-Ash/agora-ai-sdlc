@@ -14,6 +14,11 @@ class InceptionHandoff:
     issue_url: str
     runtime_id: str
     runtime_name: str
+    swarm_id: str
+    work_id: str
+    branch: str | None
+    base_branch: str | None
+    pathway: str
     path: str
     skill: str
 
@@ -26,6 +31,11 @@ def write_inception_handoff(
     issue_title: str,
     runtime_id: str,
     runtime_name: str,
+    swarm_id: str,
+    work_id: str,
+    branch: str | None,
+    base_branch: str | None,
+    pathway: str,
 ) -> InceptionHandoff:
     """Persist the portable Start -> Inception contract for any compatible agent."""
 
@@ -41,6 +51,11 @@ def write_inception_handoff(
                 f'intent: "{intent_id}"',
                 f'issue: "{issue_url}"',
                 f'runtime: "{runtime_id}"',
+                f'swarm: "{swarm_id}"',
+                f'work: "{work_id}"',
+                f'branch: "{branch or ""}"',
+                f'base-branch: "{base_branch or ""}"',
+                f'pathway: "{pathway}"',
                 'status: "prepared"',
                 "---",
                 "",
@@ -60,6 +75,9 @@ def write_inception_handoff(
                 "## Required inputs",
                 "",
                 f"- Durable Intent: `.agora/intents/{intent_id}/INTENT.md`",
+                f"- Governed Work: `{swarm_id}/{work_id}`",
+                f"- Work branch: `{branch or 'unbound'}` (base: `{base_branch or 'unknown'}`)",
+                f"- Adaptive pathway: `{pathway}`",
                 f"- Source issue: {issue_url}",
                 "- Repository AGENTS.md and bounded product/architecture context referenced by the issue",
                 "",
@@ -71,7 +89,7 @@ def write_inception_handoff(
                 "2. Material clarifications requiring human decision.",
                 "3. Level 1 Plan.",
                 "4. Cohesive Units.",
-                "5. Suggested Bolts.",
+                "5. Suggested Bolts only when they add execution value for this pathway.",
                 "6. Acceptance criteria traced to the source issue.",
                 "7. Risks, constraints and dependencies.",
                 "8. Explicit distinction between source facts and proposed product decisions.",
@@ -83,7 +101,8 @@ def write_inception_handoff(
                 "- Do not enter Construction.",
                 "- Do not implement product code.",
                 "- Do not fabricate or infer human approval.",
-                "- Stop on material ambiguity and ask one bounded decision question.",
+                "- Do not ask the human to reconfirm a decision already fixed by the source issue or referenced authoritative docs.",
+                "- Stop on unresolved material ambiguity and ask one bounded decision question.",
                 "- Stop after presenting the complete Inception proposal for human review.",
                 "",
                 "## Runtime",
@@ -101,6 +120,11 @@ def write_inception_handoff(
         issue_url=issue_url,
         runtime_id=runtime_id,
         runtime_name=runtime_name,
+        swarm_id=swarm_id,
+        work_id=work_id,
+        branch=branch,
+        base_branch=base_branch,
+        pathway=pathway,
         path=str(target),
         skill=str(skill),
     )

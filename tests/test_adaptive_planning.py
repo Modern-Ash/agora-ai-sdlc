@@ -33,6 +33,7 @@ def test_all_pathways_share_method_pack_020_lifecycle():
     assert policy.lifecycle == EXPECTED_LIFECYCLE
     assert available_pathways() == (
         "brownfield",
+        "documentation",
         "new-product",
         "refactor",
         "regulated-change",
@@ -55,6 +56,25 @@ def test_trivial_change_can_skip_non_mandatory_design_at_low_depth(depth):
     assert "domain-design" in decision.skipped_steps
     assert "logical-design" in decision.skipped_steps
     assert "implementation" in decision.mandatory_steps
+
+
+def test_documentation_pathway_does_not_promote_irrelevant_engineering_steps():
+    decision = validate_adaptive_plan(
+        fixture("documentation"),
+        "documentation",
+        adoption_profile="enterprise",
+    )
+
+    assert decision.effective_depth == "comprehensive"
+    assert decision.mandatory_steps == (
+        "clarify-intent",
+        "content-design",
+        "document-authoring",
+        "document-review",
+    )
+    assert "unit-tests" not in decision.mandatory_steps
+    assert "deployment" not in decision.mandatory_steps
+    assert "observability" not in decision.mandatory_steps
 
 
 def test_new_product_executes_full_standard_baseline():

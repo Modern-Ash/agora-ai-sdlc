@@ -9,7 +9,14 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from agora.model import CreateIntentInput, InstallMethodInput, InstallToolAdapterInput, InvokeToolInput
+import yaml
+from agora.model import (
+    CreateIntentInput,
+    CreateWorkInput,
+    InstallMethodInput,
+    InstallToolAdapterInput,
+    InvokeToolInput,
+)
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.depth_profiles import asset_root
@@ -30,6 +37,11 @@ class StartFlowResult:
     issue_title: str
     intent_id: str
     intent_path: str
+    work_id: str
+    work_path: str
+    base_branch: str | None
+    branch: str | None
+    pathway: str
     runtime_id: str
     runtime_name: str
     tool_run_id: str
@@ -120,6 +132,77 @@ def _ensure_issue_read_capability(workspace: AgoraWorkspace, root: Path) -> None
     )
 
 
+def _configured_pathway(root: Path) -> str:
+    metadata = root / "ai-sdlc" / "project.yaml"
+    if metadata.is_file():
+        try:
+            payload = yaml.safe_load(metadata.read_text(encoding="utf-8")) or {}
+        except (OSError, yaml.YAMLError):
+            payload = {}
+        pathway = payload.get("pathway")
+        if isinstance(pathway, str) and pathway:
+            return pathway
+    return "new-product"
+
+
+def _select_pathway(root: Path, payload: dict) -> str:
+    """Select a deterministic low-ceremony pathway from explicit source scope."""
+
+    title = str(payload.get("title") or "").strip().casefold()
+    body = str(payload.get("body") or "").casefold()
+    documentation_only = (
+        "documentation-only" in body
+        or "do not implement" in body
+        or "no implement" in body
+        or (title.startswith(("define ", "document ")) and ".md" in body)
+    )
+    return "documentation" if documentation_only else _configured_pathway(root)
+
+
+def _ensure_issue_work(
+    workspace: AgoraWorkspace,
+    root: Path,
+    *,
+    swarm: str,
+    actor: str,
+    issue: int,
+    issue_url: str,
+):
+    """Create/reuse one governed Work and Core-owned branch for the issue."""
+
+    work_id = f"issue-{issue}"
+    existing = next((item for item in workspace.list_work(swarm_id=swarm) if item.id == work_id), None)
+    if existing is not None:
+        existing_branch = getattr(existing, "branch", None)
+        if existing_branch and (root / ".git").is_dir():
+            current = _run_git(root, "branch", "--show-current")
+            if current != existing_branch:
+                if _run_git(root, "status", "--porcelain"):
+                    raise StartFlowError(f"Cannot switch to Work branch {existing_branch!r} with local changes present")
+                _run_git(root, "switch", existing_branch)
+        return existing
+
+    branch = f"ai-sdlc/issue-{issue}"
+    common = {
+        "swarm_id": swarm,
+        "id": work_id,
+        "title": f"Deliver GitHub issue #{issue}",
+        "actor_id": actor,
+        "acceptance_criteria": [("source-issue", f"Satisfy the acceptance criteria from GitHub issue #{issue}")],
+        "description": f"Source issue: {issue_url}",
+    }
+    fields = getattr(CreateWorkInput, "__dataclass_fields__", {})
+    if {"branch", "create_branch"} <= set(fields):
+        return workspace.create_work(
+            CreateWorkInput(
+                **common,
+                branch=branch,
+                create_branch=True,
+            )
+        )
+    return workspace.create_work(CreateWorkInput(**common))
+
+
 def _issue_payload(workspace: AgoraWorkspace, run_id: str) -> dict:
     inspection = workspace.show_tool_run(run_id)
     result = inspection.result
@@ -165,6 +248,15 @@ def prepare_start(
     workspace = workspace_factory(cwd=root)
 
     issue_url = f"https://github.com/{project}/issues/{issue}"
+    work_record = _ensure_issue_work(
+        workspace,
+        root,
+        swarm=swarm,
+        actor=actor,
+        issue=issue,
+        issue_url=issue_url,
+    )
+    notify("start.work-ready")
     run_id = f"ai-dlc-start-issue-{issue}"
 
     try:
@@ -223,6 +315,8 @@ def prepare_start(
         intent = existing
 
     notify("start.intent-ready")
+    pathway = _select_pathway(root, payload)
+    notify("start.pathway")
     notify("start.handoff")
     handoff = write_inception_handoff(
         root,
@@ -231,6 +325,11 @@ def prepare_start(
         issue_title=title,
         runtime_id=runtime.id,
         runtime_name=runtime.name,
+        swarm_id=swarm,
+        work_id=work_record.id,
+        branch=getattr(work_record, "branch", None),
+        base_branch=getattr(work_record, "base_branch", None),
+        pathway=pathway,
     )
 
     notify("start.prepared")
@@ -241,6 +340,11 @@ def prepare_start(
         issue_title=title,
         intent_id=intent.id,
         intent_path=intent.path,
+        work_id=work_record.id,
+        work_path=work_record.path,
+        base_branch=getattr(work_record, "base_branch", None),
+        branch=getattr(work_record, "branch", None),
+        pathway=pathway,
         runtime_id=runtime.id,
         runtime_name=runtime.name,
         tool_run_id=run_id,
@@ -259,6 +363,10 @@ def render_start(result: StartFlowResult, *, lang: str = "en") -> str:
             f"Issue: #{result.issue} {result.issue_title}",
             f"{t('start.project', lang=lang)}: {result.project}",
             f"{t('start.candidate_intent', lang=lang)}: {result.intent_id} ({t('common.draft', lang=lang)})",
+            f"{t('start.work', lang=lang)}: {result.work_id}",
+            f"{t('start.branch', lang=lang)}: {result.branch or 'unknown'}"
+            + (f" ({t('start.base_branch', lang=lang)}: {result.base_branch})" if result.base_branch else ""),
+            f"{t('start.pathway', lang=lang)}: {result.pathway}",
             f"{t('start.selected_ai', lang=lang)}: {result.runtime_name}",
             "",
             t("start.ai_next_move", lang=lang),

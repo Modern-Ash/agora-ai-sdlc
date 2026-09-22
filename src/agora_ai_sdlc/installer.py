@@ -158,6 +158,7 @@ def validate_config(config: dict) -> dict:
         "regulated-change",
         "scaling",
         "trivial-change",
+        "documentation",
     }
     if pathway not in allowed_pathways:
         raise InstallerError("installer.pathway", f"unsupported pathway {pathway!r}")
@@ -532,7 +533,7 @@ def wizard(
     pathway = _choose(
         input_fn,
         "Delivery pathway",
-        ("new-product", "brownfield", "refactor", "regulated-change", "scaling", "trivial-change"),
+        ("new-product", "brownfield", "refactor", "regulated-change", "scaling", "trivial-change", "documentation"),
         "brownfield" if existing else "new-product",
     )
 

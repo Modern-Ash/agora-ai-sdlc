@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -118,6 +119,21 @@ def _transition_details(
     )
 
 
+def _current_branch(root: Path) -> str | None:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "branch", "--show-current"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=2,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    value = result.stdout.strip() if result.returncode == 0 else ""
+    return value or None
+
+
 def inspect_next(
     root: Path,
     *,
@@ -131,6 +147,15 @@ def inspect_next(
     tasks = workspace.next_actions(swarm_id=swarm, human_only=False, limit=1000)
     if work is not None:
         tasks = [item for item in tasks if item.work_id == work]
+    else:
+        current = _current_branch(root)
+        if current:
+            records = {(item.swarm_id, item.id): item for item in workspace.list_work(swarm_id=swarm)}
+            branch_tasks = [
+                item for item in tasks if getattr(records.get((item.swarm_id, item.work_id)), "branch", None) == current
+            ]
+            if branch_tasks:
+                tasks = branch_tasks
     if not tasks:
         return None
 

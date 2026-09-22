@@ -1,6 +1,6 @@
 schema: agora-ai-sdlc/pathway-policy-set/v1
 id: adaptive-pathways
-version: 1.0.0
+version: 1.1.0
 method:
   id: ai-sdlc
   version: 0.2.0
@@ -47,3 +47,6 @@ step_vocabulary:
   - rollback-readiness
   - brownfield-static-model
   - brownfield-dynamic-model
+  - content-design
+  - document-authoring
+  - document-review

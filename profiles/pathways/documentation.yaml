@@ -1,0 +1,16 @@
+schema: agora-ai-sdlc/pathway/v1
+id: documentation
+minimum_depth: minimal
+mandatory_steps: [clarify-intent, content-design, document-authoring, document-review]
+optional_steps: [assess-risks, measurement-criteria]
+forbidden_skips: [clarify-intent, content-design, document-authoring, document-review]
+depth_exemptions:
+  - domain-design
+  - logical-design
+  - threat-model
+  - integration-tests
+  - security-tests
+  - performance-tests
+  - deployment-unit
+  - rollback-readiness
+  - observability

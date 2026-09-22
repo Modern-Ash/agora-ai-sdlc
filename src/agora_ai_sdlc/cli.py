@@ -71,7 +71,9 @@ def main(argv: list[str] | None = None) -> int:
     start = sub.add_parser("start", help="Start AI-DLC work from a real issue and stop at human plan review")
     start.add_argument("--issue", type=int, required=True, help="Issue number to use as the candidate Intent source")
     start.add_argument("--project", help="GitHub owner/repository; inferred from origin when omitted")
-    start.add_argument("--agent", choices=["codex", "claude", "opencode", "ollama"], help="AI runtime for Level 1 Plan preparation")
+    start.add_argument(
+        "--agent", choices=["codex", "claude", "opencode", "ollama"], help="AI runtime for Level 1 Plan preparation"
+    )
     start.add_argument("--swarm", default="delivery", help="Agora delivery swarm used for the governed issue read")
     start.add_argument("--actor", default="product-owner", help="Agora actor used for the governed issue read")
     start.add_argument("--root", default=".", help="Project root")

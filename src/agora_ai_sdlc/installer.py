@@ -158,6 +158,7 @@ def validate_config(config: dict) -> dict:
         "regulated-change",
         "scaling",
         "trivial-change",
+        "documentation",
     }
     if pathway not in allowed_pathways:
         raise InstallerError("installer.pathway", f"unsupported pathway {pathway!r}")

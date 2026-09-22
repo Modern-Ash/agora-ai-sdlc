@@ -11,6 +11,7 @@ from pathlib import Path
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc import __version__
+from agora_ai_sdlc.i18n import t
 from agora_ai_sdlc.flavor_manifest import installed_core_version
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
 
@@ -87,29 +88,34 @@ def run_doctor(root: Path) -> tuple[tuple[DoctorCheck, ...], tuple[RuntimeDiscov
     return tuple(checks), runtimes
 
 
-def render_doctor(checks: tuple[DoctorCheck, ...], runtimes: tuple[RuntimeDiscovery, ...]) -> str:
-    lines = ["Agora AI-SDLC environment", ""]
+def render_doctor(
+    checks: tuple[DoctorCheck, ...],
+    runtimes: tuple[RuntimeDiscovery, ...],
+    *,
+    lang: str = "en",
+) -> str:
+    lines = [t("doctor.title", lang=lang), ""]
     for check in checks:
         marker = "✓" if check.ok else "!"
         lines.append(f"{marker} {check.id:<15} {check.detail}")
 
-    lines.extend(["", "AI runtimes"])
+    lines.extend(["", t("doctor.runtime_title", lang=lang)])
     for runtime in runtimes:
         if runtime.installed and runtime.responsive:
             marker = "✓"
-            state = "responsive"
+            state = t("doctor.responsive", lang=lang)
         elif runtime.installed:
             marker = "!"
-            state = f"installed, probe failed ({runtime.error or 'unknown'})"
+            state = t("doctor.installed_failed", lang=lang, error=runtime.error or "unknown")
         else:
             marker = "-"
-            state = "not installed"
+            state = t("doctor.not_installed", lang=lang)
         if runtime.configured:
-            state += " · configured"
+            state += " · " + t("doctor.configured", lang=lang)
         if runtime.service is not None:
-            state += f" · service {runtime.service}"
+            state += f" · {t('doctor.service', lang=lang)} {runtime.service}"
         lines.append(f"{marker} {runtime.name:<15} {state}")
 
     overall = all(check.ok for check in checks if check.id != "gh")
-    lines.extend(["", "Ready for guided delivery." if overall else "Environment needs attention."])
+    lines.extend(["", t("doctor.ready" if overall else "doctor.attention", lang=lang)])
     return "\n".join(lines)

@@ -58,7 +58,6 @@ def test_trivial_change_can_skip_non_mandatory_design_at_low_depth(depth):
     assert "implementation" in decision.mandatory_steps
 
 
-
 def test_documentation_pathway_does_not_promote_irrelevant_engineering_steps():
     decision = validate_adaptive_plan(
         fixture("documentation"),
@@ -76,6 +75,7 @@ def test_documentation_pathway_does_not_promote_irrelevant_engineering_steps():
     assert "unit-tests" not in decision.mandatory_steps
     assert "deployment" not in decision.mandatory_steps
     assert "observability" not in decision.mandatory_steps
+
 
 def test_new_product_executes_full_standard_baseline():
     decision = validate_adaptive_plan(fixture("new-product"), "new-product")

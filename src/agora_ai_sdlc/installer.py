@@ -37,7 +37,10 @@ SCHEMA = "agora-ai-sdlc/install-config/v1"
 PROJECT_SCHEMA = "agora-ai-sdlc/project-config/v1"
 INTEGRATIONS = ("generic", "codex", "claude")
 PROFILE_IDS = ("starter", "enterprise", "modernization", "regulated")
-EXECUTION_ROLES = ("architect", "builder", "operator")
+METHOD_ID = "ai-sdlc"
+METHOD_VERSION = "0.2.0"
+EXECUTION_ROLES = ("developer",)
+LEGACY_EXECUTION_ROLES = ("architect", "builder", "operator")
 OPTIONAL_INTEGRATIONS = ("github", "gitlab", "jira", "ci", "security", "observability")
 SLUG = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
@@ -183,11 +186,24 @@ def validate_config(config: dict) -> dict:
         raise InstallerError("installer.runtime", "runtime ids must be unique")
 
     role_execution = config.get("role_execution")
-    if not isinstance(role_execution, dict) or set(role_execution) != set(EXECUTION_ROLES):
+    if not isinstance(role_execution, dict):
+        raise InstallerError("installer.roles", "role_execution must be a mapping")
+
+    if set(role_execution) == set(LEGACY_EXECUTION_ROLES):
+        executors = {role_execution[role] for role in LEGACY_EXECUTION_ROLES}
+        if len(executors) != 1:
+            raise InstallerError(
+                "installer.roles_migration",
+                "AI-SDLC 0.2.0 replaces architect/builder/operator with developer; "
+                "legacy role_execution can migrate only when all three roles use the same executor",
+            )
+        role_execution = {"developer": executors.pop()}
+    elif set(role_execution) != set(EXECUTION_ROLES):
         raise InstallerError(
             "installer.roles",
-            "role_execution must define architect, builder and operator",
+            "role_execution must define developer",
         )
+
     for role, executor in role_execution.items():
         if executor != "human" and executor not in runtime_ids:
             raise InstallerError(
@@ -237,6 +253,7 @@ def validate_config(config: dict) -> dict:
         "integrations": integrations,
         "runtimes": normalized_runtimes,
         "role_execution": {role: role_execution[role] for role in EXECUTION_ROLES},
+        "method": {"id": METHOD_ID, "version": METHOD_VERSION},
         "swarm": swarm,
         "objective": objective,
         "work": {"id": work_id, "title": title, "criteria": normalized_criteria},
@@ -280,6 +297,7 @@ def preview(config: dict, target: Path) -> dict:
         "integrations": normalized["integrations"],
         "runtimes": normalized["runtimes"],
         "role_execution": normalized["role_execution"],
+        "method": normalized["method"],
         "writes": [
             ".agora project state",
             "ai-sdlc/project.yaml",
@@ -303,6 +321,7 @@ def _write_project_metadata(target: Path, normalized: dict) -> None:
         "depth": normalized["depth"],
         "runtimes": normalized["runtimes"],
         "role_execution": normalized["role_execution"],
+        "method": normalized["method"],
     }
     (directory / "project.yaml").write_text(
         yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
@@ -343,9 +362,10 @@ def apply(config: dict, target: Path, home: Path) -> dict:
             active_depth=normalized["depth"],
         )
     workspace.initialize(InitInput(**init_kwargs))
+    method_source = asset_root("registry") / "method-versions" / METHOD_ID / METHOD_VERSION
     workspace.install_method(
         InstallMethodInput(
-            source=str(asset_root("registry") / "methods" / "ai-sdlc"),
+            source=str(method_source),
             scope="project",
         )
     )
@@ -393,17 +413,18 @@ def apply(config: dict, target: Path, home: Path) -> dict:
         CreateSwarmInput(
             id=normalized["swarm"],
             objective=normalized["objective"],
-            method="ai-sdlc",
+            method=METHOD_ID,
             create_branch=False,
         )
     )
     assignments = {
         "product-owner": "product-owner",
         "quality-reviewer": "quality-reviewer",
-        **{
-            role: ("delivery-member" if runtime == "human" else f"ai-{runtime}")
-            for role, runtime in normalized["role_execution"].items()
-        },
+        "developer": (
+            "delivery-member"
+            if normalized["role_execution"]["developer"] == "human"
+            else f"ai-{normalized['role_execution']['developer']}"
+        ),
     }
     for role, actor in assignments.items():
         workspace.assign_actor(
@@ -524,8 +545,7 @@ def wizard(
 
     runtime_choices = ("human", *(runtime["id"] for runtime in runtimes))
     role_execution = {
-        role: _choose(input_fn, f"Executor for {role}", runtime_choices, runtime_choices[-1])
-        for role in EXECUTION_ROLES
+        "developer": _choose(input_fn, "Executor for developer", runtime_choices, runtime_choices[-1])
     }
     swarm = _ask(input_fn, "Delivery swarm id", "delivery")
     objective = _ask(input_fn, "Project objective", f"Deliver {project_name}")

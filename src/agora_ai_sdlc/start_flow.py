@@ -173,49 +173,34 @@ def _ensure_issue_work(
     work_id = f"issue-{issue}"
     existing = next((item for item in workspace.list_work(swarm_id=swarm) if item.id == work_id), None)
     if existing is not None:
-        if existing.branch and (root / ".git").is_dir():
+        existing_branch = getattr(existing, "branch", None)
+        if existing_branch and (root / ".git").is_dir():
             current = _run_git(root, "branch", "--show-current")
-            if current != existing.branch:
+            if current != existing_branch:
                 if _run_git(root, "status", "--porcelain"):
-                    raise StartFlowError(f"Cannot switch to Work branch {existing.branch!r} with local changes present")
-                _run_git(root, "switch", existing.branch)
+                    raise StartFlowError(f"Cannot switch to Work branch {existing_branch!r} with local changes present")
+                _run_git(root, "switch", existing_branch)
         return existing
 
     branch = f"ai-sdlc/issue-{issue}"
-    data = CreateWorkInput(
-        swarm_id=swarm,
-        id=work_id,
-        title=f"Deliver GitHub issue #{issue}",
-        actor_id=actor,
-        acceptance_criteria=[("source-issue", f"Satisfy the acceptance criteria from GitHub issue #{issue}")],
-        description=f"Source issue: {issue_url}",
-        branch=branch,
-        create_branch=True,
-    )
-    try:
-        return workspace.create_work(data)
-    except FileExistsError as error:
-        # Compatibility path for a deterministic branch created manually before this policy existed.
-        if not (root / ".git").is_dir():
-            raise
-        if _run_git(root, "status", "--porcelain"):
-            raise StartFlowError(f"Cannot bind existing Work branch {branch!r} with local changes present") from error
-        base = _run_git(root, "branch", "--show-current")
-        if base != branch:
-            _run_git(root, "switch", branch)
+    common = {
+        "swarm_id": swarm,
+        "id": work_id,
+        "title": f"Deliver GitHub issue #{issue}",
+        "actor_id": actor,
+        "acceptance_criteria": [("source-issue", f"Satisfy the acceptance criteria from GitHub issue #{issue}")],
+        "description": f"Source issue: {issue_url}",
+    }
+    fields = getattr(CreateWorkInput, "__dataclass_fields__", {})
+    if {"branch", "create_branch"} <= set(fields):
         return workspace.create_work(
             CreateWorkInput(
-                swarm_id=swarm,
-                id=work_id,
-                title=f"Deliver GitHub issue #{issue}",
-                actor_id=actor,
-                acceptance_criteria=[("source-issue", f"Satisfy the acceptance criteria from GitHub issue #{issue}")],
-                description=f"Source issue: {issue_url}",
-                base_branch=None if base == branch else base,
+                **common,
                 branch=branch,
-                create_branch=False,
+                create_branch=True,
             )
         )
+    return workspace.create_work(CreateWorkInput(**common))
 
 
 def _issue_payload(workspace: AgoraWorkspace, run_id: str) -> dict:
@@ -342,8 +327,8 @@ def prepare_start(
         runtime_name=runtime.name,
         swarm_id=swarm,
         work_id=work_record.id,
-        branch=work_record.branch,
-        base_branch=work_record.base_branch,
+        branch=getattr(work_record, "branch", None),
+        base_branch=getattr(work_record, "base_branch", None),
         pathway=pathway,
     )
 
@@ -357,8 +342,8 @@ def prepare_start(
         intent_path=intent.path,
         work_id=work_record.id,
         work_path=work_record.path,
-        base_branch=work_record.base_branch,
-        branch=work_record.branch,
+        base_branch=getattr(work_record, "base_branch", None),
+        branch=getattr(work_record, "branch", None),
         pathway=pathway,
         runtime_id=runtime.id,
         runtime_name=runtime.name,

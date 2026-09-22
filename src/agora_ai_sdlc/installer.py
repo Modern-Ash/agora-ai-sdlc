@@ -113,10 +113,18 @@ def validate_config(config: dict) -> dict:
         "swarm",
         "objective",
         "work",
+        "method",
     }
     unknown = set(config) - allowed
     if unknown:
         raise InstallerError("installer.fields", f"unknown fields: {', '.join(sorted(unknown))}")
+
+    method = config.get("method")
+    if method is not None and method != {"id": METHOD_ID, "version": METHOD_VERSION}:
+        raise InstallerError(
+            "installer.method",
+            f"method must be {METHOD_ID} version {METHOD_VERSION}",
+        )
 
     project = config.get("project")
     if not isinstance(project, dict):
@@ -419,7 +427,6 @@ def apply(config: dict, target: Path, home: Path) -> dict:
     )
     assignments = {
         "product-owner": "product-owner",
-        "quality-reviewer": "quality-reviewer",
         "developer": (
             "delivery-member"
             if normalized["role_execution"]["developer"] == "human"

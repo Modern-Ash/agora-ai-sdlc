@@ -275,7 +275,8 @@ def render(
         [
             f"{t('guided.work', lang=lang)}: {decision.swarm}/{decision.work}",
             f"{t('guided.method', lang=lang)}: {decision.method or t('guided.unknown', lang=lang)}",
-            f"{t('guided.stage', lang=lang)}: {decision.state or t('guided.unknown', lang=lang)}" + (f"  ->  {decision.target}" if decision.target else ""),
+            f"{t('guided.stage', lang=lang)}: {decision.state or t('guided.unknown', lang=lang)}"
+            +  (f"  ->  {decision.target}" if decision.target else ""),
         ]
     )
     if decision.gate:

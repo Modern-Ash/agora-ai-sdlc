@@ -91,6 +91,7 @@ def test_prepare_start_reads_issue_through_governed_tool_and_creates_draft_inten
 
     assert result.intent_id == "issue-11"
     assert result.status == "human-review-required"
+    assert result.handoff_path.endswith(".agora/ai-sdlc/handoffs/issue-11/INCEPTION_HANDOFF.md")
     assert len(workspace.invocations) == 1
     invocation = workspace.invocations[0]
     assert invocation.tool_id == "github-issues"
@@ -112,7 +113,17 @@ def test_prepare_start_reads_issue_through_governed_tool_and_creates_draft_inten
     assert "Propose the Level 1 Plan" in output
     assert "Propose cohesive Units and suggested Bolts" in output
     assert "No Intent acceptance" in output
+    assert "Portable Inception handoff" in output
+    assert "No ad hoc methodology prompt is required." in output
     assert "human-review-required" in output
+
+    handoff = Path(result.handoff_path).read_text(encoding="utf-8")
+    assert 'schema: "agora-ai-sdlc/inception-handoff/v1"' in handoff
+    assert "Level 1 Plan" in handoff
+    assert "Cohesive Units" in handoff
+    assert "Suggested Bolts" in handoff
+    assert "Do not enter Construction." in handoff
+    assert "Do not fabricate or infer human approval." in handoff
 
 
 def test_prepare_start_rejects_unavailable_requested_runtime(tmp_path):

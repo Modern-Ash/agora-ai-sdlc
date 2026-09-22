@@ -9,6 +9,7 @@ from pathlib import Path
 
 from agora_ai_sdlc import __version__
 from agora_ai_sdlc.depth_profiles import DEFAULT, ProfileError, asset_root, resolve
+from agora_ai_sdlc.i18n import SUPPORTED_LANGUAGES, resolve_language
 from agora_ai_sdlc.starter import apply as apply_starter
 from agora_ai_sdlc.starter import interactive as interactive_starter
 
@@ -59,9 +60,11 @@ def main(argv: list[str] | None = None) -> int:
     runtimes.add_argument("--root", default=".", help="Project root used to correlate configured runtimes")
     runtimes.add_argument("--json", action="store_true", help="Print deterministic machine-readable output")
     runtimes.add_argument("--timeout", type=float, default=2.0, help="Probe timeout in seconds")
+    runtimes.add_argument("--lang", choices=SUPPORTED_LANGUAGES, help="Presentation language")
     doctor = sub.add_parser("doctor", help="Diagnose the local AI-SDLC environment")
     doctor.add_argument("--root", default=".", help="Project root")
     doctor.add_argument("--json", action="store_true", help="Print machine-readable diagnostics")
+    doctor.add_argument("--lang", choices=SUPPORTED_LANGUAGES, help="Presentation language")
     install = sub.add_parser("install", help="Configure and bootstrap an Agora AI-SDLC project")
     install.add_argument("target", nargs="?", default=".")
     install.add_argument("--home", default="~/.agora")
@@ -78,6 +81,7 @@ def main(argv: list[str] | None = None) -> int:
     start.add_argument("--actor", default="product-owner", help="Agora actor used for the governed issue read")
     start.add_argument("--root", default=".", help="Project root")
     start.add_argument("--json", action="store_true", help="Print machine-readable start handoff")
+    start.add_argument("--lang", choices=SUPPORTED_LANGUAGES, help="Presentation language")
     guided = sub.add_parser("continue", help="Show the next governed decision in human-friendly AI-SDLC language")
     guided.add_argument("--root", default=".", help="Project root")
     guided.add_argument("--swarm", help="Limit to one delivery swarm")
@@ -87,6 +91,7 @@ def main(argv: list[str] | None = None) -> int:
     guided.add_argument("--json", action="store_true", help="Print the structured guided decision as JSON")
     guided.add_argument("--skill", action="store_true", help="Print the packaged guided-agent skill path")
     guided.add_argument("--non-interactive", action="store_true", help="Force one-shot output even on a terminal")
+    guided.add_argument("--lang", choices=SUPPORTED_LANGUAGES, help="Presentation language")
     starter = sub.add_parser("starter-bootstrap", help="Preview and apply the Starter profile")
     starter.add_argument("--config", required=True)
     starter.add_argument("--target", required=True)
@@ -240,7 +245,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.json:
             print(json.dumps([item.snapshot() for item in discoveries], sort_keys=True))
         else:
-            print(render_runtimes(discoveries))
+            print(render_runtimes(discoveries, lang=resolve_language(args.lang)))
         return 0
     if args.command == "doctor":
         from agora_ai_sdlc.doctor import render_doctor, run_doctor
@@ -257,7 +262,7 @@ def main(argv: list[str] | None = None) -> int:
                 )
             )
         else:
-            print(render_doctor(checks, runtimes_found))
+            print(render_doctor(checks, runtimes_found, lang=resolve_language(args.lang)))
         return 0
     if args.command == "start":
         from agora_ai_sdlc.start_flow import StartFlowError, prepare_start, render_start
@@ -277,7 +282,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.json:
             print(json.dumps(result.snapshot(), sort_keys=True))
         else:
-            print(render_start(result))
+            print(render_start(result, lang=resolve_language(args.lang)))
         return 0
     if args.command == "continue":
         from agora_ai_sdlc.guided import inspect_next, render, skill_path
@@ -298,20 +303,20 @@ def main(argv: list[str] | None = None) -> int:
             from agora_ai_sdlc.guided_session import run_interactive
 
             try:
-                run_interactive(root, swarm=args.swarm, work=args.work)
+                run_interactive(root, swarm=args.swarm, work=args.work, lang=resolve_language(args.lang))
             except (OSError, ValueError) as error:
                 print(error, file=sys.stderr)
                 return 2
             return 0
         try:
-            decision = inspect_next(root, swarm=args.swarm, work=args.work)
+            decision = inspect_next(root, swarm=args.swarm, work=args.work, lang=resolve_language(args.lang))
         except (OSError, ValueError) as error:
             print(error, file=sys.stderr)
             return 2
         if args.json:
             print(json.dumps(decision.snapshot() if decision is not None else {"status": "clear"}, sort_keys=True))
         else:
-            print(render(decision, expert=args.expert, show_commands=args.commands))
+            print(render(decision, expert=args.expert, show_commands=args.commands, lang=resolve_language(args.lang)))
         return 0
     if args.command == "install":
         from agora_ai_sdlc import installer as project_installer

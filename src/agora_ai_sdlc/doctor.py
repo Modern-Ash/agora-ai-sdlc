@@ -44,7 +44,6 @@ def _tool_check(command: str, args: list[str] | None = None, timeout: float = 2.
     detail = output[0].strip() if output else executable
     return DoctorCheck(command, result.returncode == 0, detail)
 
-
 def _validation_detail(validation) -> str:
     if validation.ok:
         return "valid Agora project"

@@ -11,8 +11,8 @@ from pathlib import Path
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc import __version__
-from agora_ai_sdlc.i18n import t
 from agora_ai_sdlc.flavor_manifest import installed_core_version
+from agora_ai_sdlc.i18n import t
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
 
 

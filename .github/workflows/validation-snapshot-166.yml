@@ -1,0 +1,29 @@
+name: validation-snapshot-166
+on:
+  push:
+    branches: [feat/166-observable-guided-experience]
+    paths: [.github/workflows/validation-snapshot-166.yml]
+permissions:
+  contents: read
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Prepare reproducible source and public dependency bundle
+        run: |
+          mkdir -p validation-bundle/wheels
+          git archive --format=tar HEAD > validation-bundle/source.tar
+          git rev-parse HEAD > validation-bundle/source-sha.txt
+          python -m pip download --dest validation-bundle/wheels "agora-framework==0.9.1" "ruff==0.16.8" hatchling packaging pyyaml pytest
+          python -m pip download --no-deps --dest validation-bundle/wheels "agora-framework==0.8.2"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: offline-validation-166
+          path: validation-bundle/
+          retention-days: 1

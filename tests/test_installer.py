@@ -83,7 +83,9 @@ def test_human_only_project_bootstraps_and_records_metadata(tmp_path, monkeypatc
     assert metadata["runtimes"] == []
     assert metadata["role_execution"] == {"developer": "human"}
     assert metadata["method"] == {"id": "ai-sdlc", "version": "0.2.0"}
-    installed_method = yaml.safe_load(\n        (target / ".agora" / "methods" / "ai-sdlc" / "METHOD.md").read_text(encoding="utf-8").split("---", 2)[1]\n    )
+    installed_method = yaml.safe_load(
+        (target / ".agora" / "methods" / "ai-sdlc" / "METHOD.md").read_text(encoding="utf-8").split("---", 2)[1]
+    )
     assert installed_method["version"] == "0.2.0"
     assert installed_method["work-states"] == ["inception", "construction", "operations", "completed"]
     skill = target / ".agora" / "skills" / "agora-ai-sdlc-guided" / "SKILL.md"

@@ -9,7 +9,7 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
-from agora.model import CreateIntentInput, InvokeToolInput
+from agora.model import CreateIntentInput, InstallToolAdapterInput, InvokeToolInput
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.i18n import t
@@ -142,6 +142,17 @@ def prepare_start(
             raise StartFlowError(f"Existing governed issue read {run_id} is not completed")
         notify("start.issue-reused")
     except FileNotFoundError:
+        adapter = root / ".agora" / "tools" / "github-issues" / "TOOL.md"
+        if not adapter.is_file():
+            try:
+                workspace.install_tool_adapter(
+                    InstallToolAdapterInput(
+                        adapter_id="github-issues",
+                        scope="project",
+                    )
+                )
+            except (FileNotFoundError, OSError, ValueError) as error:
+                raise StartFlowError("GitHub issue adapter is unavailable") from error
         notify("start.issue-read")
         workspace.invoke_tool(
             InvokeToolInput(

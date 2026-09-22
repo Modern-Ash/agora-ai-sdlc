@@ -17,6 +17,7 @@ from agora.model import (
     CreateWorkInput,
     InitInput,
     InstallMethodInput,
+    InstallToolAdapterInput,
 )
 from agora.workspace import AgoraWorkspace
 
@@ -379,6 +380,13 @@ def apply(config: dict, target: Path, home: Path) -> dict:
             scope="project",
         )
     )
+    if "github" in normalized["integrations"]:
+        workspace.install_tool_adapter(
+            InstallToolAdapterInput(
+                adapter_id="github-issues",
+                scope="project",
+            )
+        )
 
     actors = [
         AddActorInput(

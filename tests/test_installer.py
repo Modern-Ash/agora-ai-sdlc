@@ -91,6 +91,7 @@ def test_human_only_project_bootstraps_and_records_metadata(tmp_path, monkeypatc
     skill = target / ".agora" / "skills" / "agora-ai-sdlc-guided" / "SKILL.md"
     assert skill.is_file()
     assert "Never record a human approval without explicit confirmation" in skill.read_text(encoding="utf-8")
+    assert (target / ".agora" / "tools" / "github-issues" / "TOOL.md").is_file()
 
 
 def test_multi_runtime_project_assigns_roles_without_credentials(tmp_path):

@@ -1,5 +1,3 @@
-import os
-
 from agora_ai_sdlc.i18n import normalize_language, resolve_language, t
 
 

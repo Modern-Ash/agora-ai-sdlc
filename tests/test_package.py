@@ -1,5 +1,6 @@
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -32,3 +33,9 @@ def test_module_importable_without_provider_sdk():
         check=True,
     ).stdout
     assert out.strip() == "[]"
+
+
+def test_pyproject_exposes_short_cli_alias():
+    pyproject = (Path(__file__).parents[1] / "pyproject.toml").read_text(encoding="utf-8")
+    assert 'agora-ai-sdlc = "agora_ai_sdlc.cli:main"' in pyproject
+    assert 'aisdlc = "agora_ai_sdlc.cli:main"' in pyproject

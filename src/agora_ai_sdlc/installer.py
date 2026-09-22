@@ -32,6 +32,7 @@ from agora_ai_sdlc.flavor_manifest import (
 from agora_ai_sdlc.guided import skill_path
 from agora_ai_sdlc.profile_activation import adoption_profiles
 from agora_ai_sdlc.runtime_discovery import discover_runtimes, render_runtimes
+from agora_ai_sdlc.skill_resources import install_resources
 
 SCHEMA = "agora-ai-sdlc/install-config/v1"
 PROJECT_SCHEMA = "agora-ai-sdlc/project-config/v1"
@@ -341,10 +342,11 @@ def _install_guided_skill(target: Path) -> Path:
     source = skill_path()
     if not source.is_file():
         raise InstallerError("installer.skill-missing", f"packaged guided skill not found at {source}")
-    destination = target / ".agora" / "skills" / "agora-ai-sdlc-guided" / "SKILL.md"
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
-    return destination
+    destination = target / ".agora" / "skills" / "agora-ai-sdlc-guided"
+    try:
+        return install_resources(source.parent, destination)
+    except ValueError as error:
+        raise InstallerError("installer.skill-invalid", str(error)) from error
 
 
 def apply(config: dict, target: Path, home: Path) -> dict:

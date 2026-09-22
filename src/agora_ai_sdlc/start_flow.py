@@ -115,12 +115,22 @@ def prepare_start(
     actor: str = "product-owner",
     workspace_factory: Callable[..., AgoraWorkspace] = AgoraWorkspace,
     runtime_discovery: Callable[[Path], tuple[RuntimeDiscovery, ...]] = discover_runtimes,
+    progress: Callable[[str], None] | None = None,
 ) -> StartFlowResult:
     """Read one issue through Core, persist a draft Intent, and stop for human review."""
 
+    def notify(code: str) -> None:
+        if progress is not None:
+            try:
+                progress(code)
+            except OSError:
+                pass  # Human presentation cannot invalidate an already performed Core operation.
+
+    notify("start.inspect")
     root = root.expanduser().resolve()
     project = project or infer_project(root)
     runtime = _select_runtime(root, agent, discovery=runtime_discovery)
+    notify("start.runtime-ready")
     workspace = workspace_factory(cwd=root)
 
     issue_url = f"https://github.com/{project}/issues/{issue}"
@@ -130,7 +140,9 @@ def prepare_start(
         inspection = workspace.show_tool_run(run_id)
         if inspection.result is None or inspection.result.status != "completed":
             raise StartFlowError(f"Existing governed issue read {run_id} is not completed")
+        notify("start.issue-reused")
     except FileNotFoundError:
+        notify("start.issue-read")
         workspace.invoke_tool(
             InvokeToolInput(
                 id=run_id,
@@ -167,6 +179,8 @@ def prepare_start(
     else:
         intent = existing
 
+    notify("start.intent-ready")
+    notify("start.handoff")
     handoff = write_inception_handoff(
         root,
         intent_id=intent.id,
@@ -176,6 +190,7 @@ def prepare_start(
         runtime_name=runtime.name,
     )
 
+    notify("start.prepared")
     return StartFlowResult(
         project=project,
         issue=number,

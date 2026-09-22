@@ -18,6 +18,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="agora-ai-sdlc")
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     sub = parser.add_subparsers(dest="command")
+    from agora_ai_sdlc.observation_cli import add_commands
+
+    add_commands(sub)
     show = sub.add_parser("profile", help="Print the resolved obligations of a depth profile as JSON")
     show.add_argument("depth", nargs="?", default=DEFAULT)
     sample = sub.add_parser("run-sample", help="Run a bundled credential-free sample and print a JSON summary")
@@ -82,6 +85,7 @@ def main(argv: list[str] | None = None) -> int:
     start.add_argument("--root", default=".", help="Project root")
     start.add_argument("--json", action="store_true", help="Print machine-readable start handoff")
     start.add_argument("--lang", choices=SUPPORTED_LANGUAGES, help="Presentation language")
+    start.add_argument("--ui-file", help="Write human progress to a new file, separate from agent output")
     guided = sub.add_parser("continue", help="Show the next governed decision in human-friendly AI-SDLC language")
     guided.add_argument("--root", default=".", help="Project root")
     guided.add_argument("--swarm", help="Limit to one delivery swarm")
@@ -110,6 +114,10 @@ def main(argv: list[str] | None = None) -> int:
     starter.add_argument("--home", required=True)
     starter.add_argument("--yes", action="store_true", help="Apply the preview non-interactively")
     args = parser.parse_args(argv)
+    if args.command in {"observe", "skill"}:
+        from agora_ai_sdlc.observation_cli import dispatch
+
+        return dispatch(args)
     if args.command == "self-test":
         from agora_ai_sdlc.conformance import run_self_test
 
@@ -283,24 +291,34 @@ def main(argv: list[str] | None = None) -> int:
             )
         return 0
     if args.command == "start":
+        from agora_ai_sdlc.observation_ui import HumanChannel, safe_text
         from agora_ai_sdlc.start_flow import StartFlowError, prepare_start, render_start
 
         try:
-            result = prepare_start(
-                Path(args.root),
-                issue=args.issue,
-                project=args.project,
-                agent=args.agent,
-                swarm=args.swarm,
-                actor=args.actor,
-            )
+            with HumanChannel(
+                path=Path(args.ui_file) if args.ui_file else None,
+                stream=sys.stderr if not args.json and not args.ui_file and sys.stderr.isatty() else None,
+                lang=resolve_language(args.lang),
+            ) as channel:
+                options = {"progress": channel.event} if channel.active else {}
+                result = prepare_start(
+                    Path(args.root),
+                    issue=args.issue,
+                    project=args.project,
+                    agent=args.agent,
+                    swarm=args.swarm,
+                    actor=args.actor,
+                    **options,
+                )
+                if args.json:
+                    print(json.dumps(result.snapshot(), sort_keys=True))
+                elif args.ui_file:
+                    channel.write(render_start(result, lang=resolve_language(args.lang)))
+                else:
+                    print(render_start(result, lang=resolve_language(args.lang)))
         except (OSError, StartFlowError, ValueError, PermissionError) as error:
-            print(error, file=sys.stderr)
+            print(safe_text(str(error), max_chars=1024), file=sys.stderr)
             return 2
-        if args.json:
-            print(json.dumps(result.snapshot(), sort_keys=True))
-        else:
-            print(render_start(result, lang=resolve_language(args.lang)))
         return 0
     if args.command == "continue":
         from agora_ai_sdlc.guided import inspect_next, render, skill_path

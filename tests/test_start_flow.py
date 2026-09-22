@@ -1,0 +1,142 @@
+import json
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+
+from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
+from agora_ai_sdlc.start_flow import (
+    StartFlowError,
+    infer_project,
+    prepare_start,
+    render_start,
+)
+
+
+def runtime(runtime_id="codex", *, responsive=True, configured=True):
+    return RuntimeDiscovery(
+        id=runtime_id,
+        name={"codex": "Codex", "claude": "Claude Code"}.get(runtime_id, runtime_id),
+        command=runtime_id,
+        installed=True,
+        executable=f"/bin/{runtime_id}",
+        responsive=responsive,
+        version="1.0",
+        configured=configured,
+    )
+
+
+class FakeWorkspace:
+    def __init__(self, cwd: Path):
+        self.cwd = cwd
+        self.invocations = []
+        self._has_run = False
+        self._intent = None
+
+    def show_tool_run(self, run_id):
+        if not self._has_run:
+            raise FileNotFoundError(run_id)
+        payload = {
+            "number": 11,
+            "title": "Initialize TypeScript pnpm monorepo and engineering toolchain",
+            "body": "Establish the shared engineering foundation for Agorix.",
+            "url": "https://github.com/Modern-Ash/agorix/issues/11",
+        }
+        return SimpleNamespace(
+            result=SimpleNamespace(
+                status="completed",
+                stdout=json.dumps(payload),
+                stderr="",
+            )
+        )
+
+    def invoke_tool(self, data):
+        self.invocations.append(data)
+        self._has_run = True
+        return SimpleNamespace(id=data.id)
+
+    def list_intents(self):
+        return [] if self._intent is None else [self._intent]
+
+    def create_intent(self, data):
+        self._intent = SimpleNamespace(
+            id=data.id,
+            path=str(self.cwd / ".agora" / "intents" / data.id / "INTENT.md"),
+            source=data.source,
+            status="draft",
+        )
+        return self._intent
+
+
+def test_infer_project_from_https_origin(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        "agora_ai_sdlc.start_flow._run_git",
+        lambda root, *args: "https://github.com/Modern-Ash/agorix.git",
+    )
+    assert infer_project(tmp_path) == "Modern-Ash/agorix"
+
+
+def test_prepare_start_reads_issue_through_governed_tool_and_creates_draft_intent(tmp_path):
+    workspace = FakeWorkspace(tmp_path)
+
+    result = prepare_start(
+        tmp_path,
+        issue=11,
+        project="Modern-Ash/agorix",
+        agent="codex",
+        workspace_factory=lambda cwd: workspace,
+        runtime_discovery=lambda root: (runtime(),),
+    )
+
+    assert result.intent_id == "issue-11"
+    assert result.status == "human-review-required"
+    assert len(workspace.invocations) == 1
+    invocation = workspace.invocations[0]
+    assert invocation.tool_id == "github-issues"
+    assert invocation.operation_id == "view"
+    assert invocation.actor_id == "product-owner"
+    assert invocation.swarm_id == "delivery"
+    assert invocation.inputs == {"issue": "https://github.com/Modern-Ash/agorix/issues/11"}
+    assert invocation.launch is True
+    assert workspace._intent.status == "draft"
+    assert workspace._intent.source.endswith("/issues/11")
+
+    output = render_start(result)
+    assert "Candidate Intent: issue-11 (draft)" in output
+    assert "Propose the Level 1 Plan" in output
+    assert "Propose cohesive Units and suggested Bolts" in output
+    assert "No Intent acceptance" in output
+    assert "human-review-required" in output
+
+
+def test_prepare_start_rejects_unavailable_requested_runtime(tmp_path):
+    with pytest.raises(StartFlowError, match="not installed and responsive"):
+        prepare_start(
+            tmp_path,
+            issue=11,
+            project="Modern-Ash/agorix",
+            agent="claude",
+            workspace_factory=FakeWorkspace,
+            runtime_discovery=lambda root: (runtime("codex"),),
+        )
+
+
+def test_prepare_start_reuses_existing_durable_issue_read_and_intent(tmp_path):
+    workspace = FakeWorkspace(tmp_path)
+    workspace._has_run = True
+    workspace._intent = SimpleNamespace(
+        id="issue-11",
+        path=str(tmp_path / ".agora" / "intents" / "issue-11" / "INTENT.md"),
+        status="draft",
+    )
+
+    result = prepare_start(
+        tmp_path,
+        issue=11,
+        project="Modern-Ash/agorix",
+        workspace_factory=lambda cwd: workspace,
+        runtime_discovery=lambda root: (runtime(),),
+    )
+
+    assert result.intent_id == "issue-11"
+    assert workspace.invocations == []

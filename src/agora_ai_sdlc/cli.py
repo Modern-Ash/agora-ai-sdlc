@@ -68,6 +68,16 @@ def main(argv: list[str] | None = None) -> int:
     install.add_argument("--config", help="Read a reproducible YAML/JSON install config")
     install.add_argument("--write-config", help="Write the resolved install config without applying")
     install.add_argument("--yes", action="store_true", help="Apply without interactive confirmation")
+    start = sub.add_parser("start", help="Start AI-SDLC work from a real issue and stop at human plan review")
+    start.add_argument("--issue", type=int, required=True, help="Issue number to use as the candidate Intent source")
+    start.add_argument("--project", help="GitHub owner/repository; inferred from origin when omitted")
+    start.add_argument(
+        "--agent", choices=["codex", "claude", "opencode", "ollama"], help="AI runtime for Level 1 Plan preparation"
+    )
+    start.add_argument("--swarm", default="delivery", help="Agora delivery swarm used for the governed issue read")
+    start.add_argument("--actor", default="product-owner", help="Agora actor used for the governed issue read")
+    start.add_argument("--root", default=".", help="Project root")
+    start.add_argument("--json", action="store_true", help="Print machine-readable start handoff")
     guided = sub.add_parser("continue", help="Show the next governed decision in human-friendly AI-SDLC language")
     guided.add_argument("--root", default=".", help="Project root")
     guided.add_argument("--swarm", help="Limit to one delivery swarm")
@@ -248,6 +258,26 @@ def main(argv: list[str] | None = None) -> int:
             )
         else:
             print(render_doctor(checks, runtimes_found))
+        return 0
+    if args.command == "start":
+        from agora_ai_sdlc.start_flow import StartFlowError, prepare_start, render_start
+
+        try:
+            result = prepare_start(
+                Path(args.root),
+                issue=args.issue,
+                project=args.project,
+                agent=args.agent,
+                swarm=args.swarm,
+                actor=args.actor,
+            )
+        except (OSError, StartFlowError, ValueError, PermissionError) as error:
+            print(error, file=sys.stderr)
+            return 2
+        if args.json:
+            print(json.dumps(result.snapshot(), sort_keys=True))
+        else:
+            print(render_start(result))
         return 0
     if args.command == "continue":
         from agora_ai_sdlc.guided import inspect_next, render, skill_path

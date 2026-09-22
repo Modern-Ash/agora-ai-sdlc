@@ -117,6 +117,11 @@ def test_prepare_start_reads_issue_through_governed_tool_and_creates_draft_inten
     assert "No ad hoc methodology prompt is required." in output
     assert "human-review-required" in output
 
+    spanish = render_start(result, lang="es")
+    assert "Agora AI-SDLC | Inicio" in spanish
+    assert "Intent candidato: issue-11 (borrador)" in spanish
+    assert "Estado: human-review-required" in spanish
+
     handoff = Path(result.handoff_path).read_text(encoding="utf-8")
     assert 'schema: "agora-ai-sdlc/inception-handoff/v1"' in handoff
     assert "Level 1 Plan" in handoff

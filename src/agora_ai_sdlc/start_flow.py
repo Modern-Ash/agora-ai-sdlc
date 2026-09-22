@@ -12,6 +12,7 @@ from pathlib import Path
 from agora.model import CreateIntentInput, InvokeToolInput
 from agora.workspace import AgoraWorkspace
 
+from agora_ai_sdlc.i18n import t
 from agora_ai_sdlc.inception_handoff import write_inception_handoff
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
 
@@ -190,37 +191,37 @@ def prepare_start(
     )
 
 
-def render_start(result: StartFlowResult) -> str:
-    """Render the AI-led handoff without fabricating plan approval."""
+def render_start(result: StartFlowResult, *, lang: str = "en") -> str:
+    """Render the localized AI-led handoff without changing persisted semantics."""
 
     return "\n".join(
         [
-            "Agora AI-SDLC | Start",
+            t("start.title", lang=lang),
             "",
             f"Issue: #{result.issue} {result.issue_title}",
-            f"Project: {result.project}",
-            f"Candidate Intent: {result.intent_id} (draft)",
-            f"Selected AI: {result.runtime_name}",
+            f"{t('start.project', lang=lang)}: {result.project}",
+            f"{t('start.candidate_intent', lang=lang)}: {result.intent_id} ({t('common.draft', lang=lang)})",
+            f"{t('start.selected_ai', lang=lang)}: {result.runtime_name}",
             "",
-            "AI next move",
-            "  1. Inspect the Intent, issue, repository context and constraints.",
-            "  2. Ask clarifying questions only for material ambiguity.",
-            "  3. Propose the Level 1 Plan for this Intent.",
-            "  4. Propose cohesive Units and suggested Bolts from that plan.",
+            t("start.ai_next_move", lang=lang),
+            f"  1. {t('start.step1', lang=lang)}",
+            f"  2. {t('start.step2', lang=lang)}",
+            f"  3. {t('start.step3', lang=lang)}",
+            f"  4. {t('start.step4', lang=lang)}",
             "",
-            "Human review boundary",
-            "  Review and refine the AI proposal before any Construction begins.",
-            "  No Intent acceptance, plan approval, Unit/Bolt approval, or implementation is performed here.",
+            t("start.human_boundary", lang=lang),
+            f"  {t('start.boundary1', lang=lang)}",
+            f"  {t('start.boundary2', lang=lang)}",
             "",
-            f"Governed issue read: {result.tool_run_id}",
-            f"Durable Intent: {result.intent_path}",
-            f"Portable Inception handoff: {result.handoff_path}",
-            f"Guided skill: {result.skill_path}",
+            f"{t('start.governed_issue_read', lang=lang)}: {result.tool_run_id}",
+            f"{t('start.durable_intent', lang=lang)}: {result.intent_path}",
+            f"{t('start.portable_handoff', lang=lang)}: {result.handoff_path}",
+            f"{t('start.guided_skill', lang=lang)}: {result.skill_path}",
             "",
-            "Next executor action",
-            f"  Launch {result.runtime_name} and have it follow the portable Inception handoff above.",
-            "  No ad hoc methodology prompt is required.",
+            t("start.next_executor", lang=lang),
+            f"  {t('start.launch_executor', lang=lang, runtime=result.runtime_name)}",
+            f"  {t('start.no_prompt', lang=lang)}",
             "",
-            f"Status: {result.status}",
+            f"{t('start.status', lang=lang)}: {result.status}",
         ]
     )

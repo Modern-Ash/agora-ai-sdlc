@@ -28,9 +28,7 @@ def base_config():
         "integrations": ["github", "ci"],
         "runtimes": [],
         "role_execution": {
-            "architect": "human",
-            "builder": "human",
-            "operator": "human",
+            "developer": "human",
         },
         "swarm": "delivery",
         "objective": "Deliver Demo",
@@ -74,7 +72,7 @@ def test_human_only_project_bootstraps_and_records_metadata(tmp_path, monkeypatc
     workspace = AgoraWorkspace(cwd=target)
 
     assert result["validate"] == "ok"
-    assert result["work_state"] == "readiness"
+    assert result["work_state"] == "inception"
     assert workspace.validate().ok
     metadata = yaml.safe_load((target / "ai-sdlc" / "project.yaml").read_text(encoding="utf-8"))
     assert metadata["language"] == "java"
@@ -83,7 +81,13 @@ def test_human_only_project_bootstraps_and_records_metadata(tmp_path, monkeypatc
     assert metadata["profile"] == "starter"
     assert metadata["depth"] == "standard"
     assert metadata["runtimes"] == []
-    assert metadata["role_execution"] == {"architect": "human", "builder": "human", "operator": "human"}
+    assert metadata["role_execution"] == {"developer": "human"}
+    assert metadata["method"] == {"id": "ai-sdlc", "version": "0.2.0"}
+    installed_method = yaml.safe_load(
+        (target / ".agora" / "methods" / "ai-sdlc" / "METHOD.md").read_text(encoding="utf-8").split("---", 2)[1]
+    )
+    assert installed_method["version"] == "0.2.0"
+    assert installed_method["work-states"] == ["inception", "construction", "operations", "completed"]
     skill = target / ".agora" / "skills" / "agora-ai-sdlc-guided" / "SKILL.md"
     assert skill.is_file()
     assert "Never record a human approval without explicit confirmation" in skill.read_text(encoding="utf-8")
@@ -106,9 +110,7 @@ def test_multi_runtime_project_assigns_roles_without_credentials(tmp_path):
         },
     ]
     config["role_execution"] = {
-        "architect": "planner",
-        "builder": "builder",
-        "operator": "human",
+        "developer": "builder",
     }
 
     target, home = tmp_path / "project", tmp_path / "home"
@@ -159,8 +161,6 @@ def test_wizard_builds_config_without_writing_target(tmp_path):
             "qwen3-coder",
             "n",  # another runtime
             "primary",
-            "primary",
-            "human",
             "",  # swarm
             "",  # objective
             "",  # work id
@@ -176,9 +176,7 @@ def test_wizard_builds_config_without_writing_target(tmp_path):
     assert config["framework"] == "fastapi"
     assert config["integrations"] == ["ci"]
     assert config["runtimes"][0]["provider"] == "ollama"
-    assert config["role_execution"]["architect"] == "primary"
-    assert config["role_execution"]["builder"] == "primary"
-    assert config["role_execution"]["operator"] == "human"
+    assert config["role_execution"]["developer"] == "primary"
 
 
 def test_core_preflight_reports_installed_core_and_cli(monkeypatch):
@@ -270,8 +268,6 @@ def test_wizard_displays_detected_runtimes_without_enabling_them(tmp_path, monke
             "n",
             "n",
             "human",
-            "human",
-            "human",
             "",
             "",
             "",
@@ -285,3 +281,60 @@ def test_wizard_displays_detected_runtimes_without_enabling_them(tmp_path, monke
     assert config["runtimes"] == []
     assert any("Codex" in output and "responsive" in output for output in outputs)
     assert any("does not configure" in output for output in outputs)
+
+
+def test_legacy_execution_roles_migrate_when_executor_is_shared():
+    config = base_config()
+    config["role_execution"] = {
+        "architect": "human",
+        "builder": "human",
+        "operator": "human",
+    }
+
+    normalized = validate_config(config)
+
+    assert normalized["role_execution"] == {"developer": "human"}
+    assert normalized["method"] == {"id": "ai-sdlc", "version": "0.2.0"}
+
+
+def test_legacy_execution_roles_fail_when_executors_differ():
+    config = base_config()
+    config["runtimes"] = [
+        {"id": "planner", "integration": "generic", "provider": "local", "model": "planner"},
+        {"id": "builder", "integration": "generic", "provider": "local", "model": "builder"},
+    ]
+    config["role_execution"] = {
+        "architect": "planner",
+        "builder": "builder",
+        "operator": "human",
+    }
+
+    with pytest.raises(InstallerError) as error:
+        validate_config(config)
+
+    assert error.value.code == "installer.roles_migration"
+
+
+def test_method_metadata_revalidates_but_rejects_other_versions():
+    normalized = validate_config(base_config())
+    assert validate_config(normalized)["method"] == {"id": "ai-sdlc", "version": "0.2.0"}
+
+    normalized["method"] = {"id": "ai-sdlc", "version": "0.1.1"}
+    with pytest.raises(InstallerError) as error:
+        validate_config(normalized)
+
+    assert error.value.code == "installer.method"
+
+
+def test_quality_reviewer_actor_is_optional_and_not_required_assignment(tmp_path, monkeypatch):
+    target, home = tmp_path / "project", tmp_path / "home"
+    apply(base_config(), target, home)
+
+    monkeypatch.setenv("AGORA_HOME", str(home))
+    workspace = AgoraWorkspace(cwd=target)
+    actors = {actor.id: actor for actor in workspace.list_actors()}
+    swarm = workspace.show_swarm("delivery")
+
+    assert "quality-reviewer" in actors
+    assert "quality-reviewer" not in swarm.required_roles
+    assert "developer" in swarm.required_roles

@@ -1,6 +1,6 @@
 # Starting real work with AI-SDLC
 
-The recommended AI-DLC-aligned entry point is:
+The recommended AI-SDLC-aligned entry point is:
 
 ```bash
 agora-ai-sdlc start --issue 11 --agent codex
@@ -19,7 +19,7 @@ It performs the minimum AI-led intake needed before Inception work:
 
 No Intent acceptance, plan approval, Unit/Bolt approval, or Construction is performed by `start`.
 
-This preserves the AI-DLC direction of travel: AI does planning and decomposition, while humans validate and moderate critical decisions. Core continues to own durable Tool Runs, Intent records, approvals, evidence, provenance, and traceability underneath the simplified UX.
+This preserves the AI-SDLC direction of travel: AI does planning and decomposition, while humans validate and moderate critical decisions. Core continues to own durable Tool Runs, Intent records, approvals, evidence, provenance, and traceability underneath the simplified UX.
 
 ## Example: Agorix
 

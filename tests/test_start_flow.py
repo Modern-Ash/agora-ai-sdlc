@@ -263,9 +263,7 @@ def test_documentation_issue_selects_documentation_pathway(tmp_path):
             "body": "## Deliverable\n`docs/product/CONTENT_GUIDE.md`\n",
             "url": "https://github.com/Modern-Ash/agorix/issues/9",
         }
-        return SimpleNamespace(
-            result=SimpleNamespace(status="completed", stdout=json.dumps(payload), stderr="")
-        )
+        return SimpleNamespace(result=SimpleNamespace(status="completed", stdout=json.dumps(payload), stderr=""))
 
     workspace.show_tool_run = show_tool_run
     result = prepare_start(

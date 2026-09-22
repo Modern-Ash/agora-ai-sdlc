@@ -12,6 +12,7 @@ from pathlib import Path
 from agora.model import CreateIntentInput, InvokeToolInput
 from agora.workspace import AgoraWorkspace
 
+from agora_ai_sdlc.inception_handoff import write_inception_handoff
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
 
 
@@ -30,6 +31,8 @@ class StartFlowResult:
     runtime_id: str
     runtime_name: str
     tool_run_id: str
+    handoff_path: str
+    skill_path: str
     status: str = "human-review-required"
 
     def snapshot(self) -> dict:
@@ -163,6 +166,15 @@ def prepare_start(
     else:
         intent = existing
 
+    handoff = write_inception_handoff(
+        root,
+        intent_id=intent.id,
+        issue_url=issue_url,
+        issue_title=title,
+        runtime_id=runtime.id,
+        runtime_name=runtime.name,
+    )
+
     return StartFlowResult(
         project=project,
         issue=number,
@@ -173,6 +185,8 @@ def prepare_start(
         runtime_id=runtime.id,
         runtime_name=runtime.name,
         tool_run_id=run_id,
+        handoff_path=handoff.path,
+        skill_path=handoff.skill,
     )
 
 
@@ -200,6 +214,13 @@ def render_start(result: StartFlowResult) -> str:
             "",
             f"Governed issue read: {result.tool_run_id}",
             f"Durable Intent: {result.intent_path}",
+            f"Portable Inception handoff: {result.handoff_path}",
+            f"Guided skill: {result.skill_path}",
+            "",
+            "Next executor action",
+            f"  Launch {result.runtime_name} and have it follow the portable Inception handoff above.",
+            "  No ad hoc methodology prompt is required.",
+            "",
             f"Status: {result.status}",
         ]
     )

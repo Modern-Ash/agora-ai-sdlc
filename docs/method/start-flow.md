@@ -50,3 +50,22 @@ The expected stopping point is a draft Intent plus an AI handoff that asks the s
 - return the proposal for human review before Construction.
 
 The legacy `continue` command remains available for projects still using the 0.1.x lifecycle projection.
+
+
+## Portable Inception handoff
+
+`aisdlc start` now persists a provider-neutral handoff at:
+
+```text
+.agora/ai-sdlc/handoffs/<intent>/INCEPTION_HANDOFF.md
+```
+
+The handoff points to the packaged guided skill and carries the mandatory Inception output contract:
+Intent interpretation, material clarifications, Level 1 Plan, Units, suggested Bolts, acceptance trace,
+risks/dependencies, proposal-vs-fact distinctions, modified files and the next human decision.
+
+This removes the need for the user to recreate the methodology in an ad hoc prompt. The selected
+runtime only executes the handoff; it does not define the method.
+
+Automatic runtime launch through an Agora governed Session is the next integration step. Until that
+lands, the handoff is durable and portable but execution is still initiated by the user or host.

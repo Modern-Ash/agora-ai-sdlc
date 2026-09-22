@@ -10,6 +10,7 @@ from pathlib import Path
 
 import yaml
 from agora.workspace import AgoraWorkspace
+
 from agora_ai_sdlc.i18n import t
 
 RUNTIME_CANDIDATES = (

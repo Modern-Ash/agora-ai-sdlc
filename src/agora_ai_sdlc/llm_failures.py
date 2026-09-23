@@ -21,6 +21,20 @@ RECOVERABLE_LLM_MARKERS = (
     "model not found",
     "provider is not configured",
     "free model selection failed",
+    "service temporarily overloaded",
+    "service overloaded",
+    "service unavailable",
+    "temporarily unavailable",
+    "server_error",
+    "upstream error",
+    "bad gateway",
+    "gateway timeout",
+    "connection reset",
+    "connection aborted",
+    "connection refused",
+    "[502]",
+    "[503]",
+    "[504]",
 )
 
 

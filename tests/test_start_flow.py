@@ -190,17 +190,22 @@ def test_prepare_start_reads_issue_through_governed_tool_and_creates_draft_inten
     assert "## Parent" not in workspace.last_intent_input.outcome
 
     output = render_start(result)
-    assert "Candidate Intent: issue-11 (draft)" in output
-    assert "Propose the Level 1 Plan" in output
-    assert "Propose cohesive Units and suggested Bolts" in output
-    assert "No Intent acceptance" in output
-    assert "Portable Inception handoff" in output
+    assert "Agora Flow | Start" in output
+    assert "Issue #11" in output
+    assert "INCEPTION READY" in output
+    assert "Construction is not authorized yet" in output
+    assert "Human review boundary" in output
     assert "No ad hoc methodology prompt is required." in output
+    assert "Portable Inception handoff" not in output
     assert "human-review-required" in output
 
+    detailed = render_start(result, details=True)
+    assert "Portable Inception handoff" in detailed
+    assert result.handoff_path in detailed
+
     spanish = render_start(result, lang="es")
-    assert "Agora AI-SDLC | Inicio" in spanish
-    assert "Intent candidato: issue-11 (borrador)" in spanish
+    assert "Agora Flow | Inicio" in spanish
+    assert "INCEPTION LISTA" in spanish
     assert "Estado: human-review-required" in spanish
 
     handoff = Path(result.handoff_path).read_text(encoding="utf-8")

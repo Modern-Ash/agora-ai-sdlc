@@ -26,6 +26,31 @@ def runtime(runtime_id: str = "opencode") -> RuntimeDiscovery:
     )
 
 
+def valid_inception_output(marker: str = "Plan ready.") -> str:
+    return (
+        "## Intent interpretation\n\n"
+        "Implement the deterministic canonical program interpreter described by the governed Intent.\n\n"
+        "## Material clarifications\n\n"
+        "No unresolved material clarification.\n\n"
+        "## Level 1 Plan\n\n"
+        f"{marker} Define semantics, deterministic transitions, budget, stop behavior, and tests.\n\n"
+        "## Proposed Units\n\n"
+        "One cohesive interpreter unit.\n\n"
+        "## Suggested Bolts\n\n"
+        "One implementation bolt after approval.\n\n"
+        "## Acceptance criteria trace\n\n"
+        "Trace deterministic interpreter behavior to issue acceptance criteria.\n\n"
+        "## Risks, constraints and dependencies\n\n"
+        "No eval; depends on the canonical program model.\n\n"
+        "## Source facts and proposed decisions\n\n"
+        "Source fact: deterministic canonical interpreter. AI proposal: bounded implementation unit.\n\n"
+        "## Files created or modified\n\n"
+        "No product files modified during Inception.\n\n"
+        "## Human decision required\n\n"
+        "Approve or modify before Construction.\n"
+    )
+
+
 def write_result(session_path: Path, output: str) -> None:
     session_path.mkdir(parents=True, exist_ok=True)
     result = render_markdown(
@@ -61,7 +86,7 @@ class Workspace:
     def start_session(self, data):
         self.started.append(data)
         path = self.cwd / ".agora" / "sessions" / data.id
-        write_result(path, "## Inception Proposal\n\nPlan ready.\n\n## Human decision required\n\nApprove or modify.")
+        write_result(path, valid_inception_output())
         record = SimpleNamespace(
             id=data.id,
             status="completed",
@@ -77,7 +102,7 @@ class Workspace:
         self.launched.append(data)
         existing = next(item for item in self.sessions if item.id == data.session_id)
         path = Path(existing.path)
-        write_result(path, "Prepared session completed.")
+        write_result(path, valid_inception_output("Prepared session completed."))
         existing.status = "completed"
         existing.exit_code = 0
         return existing
@@ -86,7 +111,12 @@ class Workspace:
 def handoff(root: Path) -> Path:
     path = root / ".agora" / "ai-sdlc" / "handoffs" / "issue-14" / "INCEPTION_HANDOFF.md"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text("# handoff\n", encoding="utf-8")
+    path.write_text(
+        "# Inception handoff\n\n"
+        "## Objective\n\n"
+        "Implement deterministic canonical program interpreter\n",
+        encoding="utf-8",
+    )
     return path
 
 
@@ -178,7 +208,7 @@ def test_unrelated_broken_session_does_not_block_inception_lookup(tmp_path):
 
 def test_completed_inception_session_is_reused_without_relaunch(tmp_path):
     path = tmp_path / ".agora" / "sessions" / "ai-sdlc-inception-issue-14"
-    write_result(path, "Existing proposal.")
+    write_result(path, valid_inception_output("Existing proposal."))
     completed = SimpleNamespace(
         id="ai-sdlc-inception-issue-14",
         status="completed",
@@ -200,7 +230,39 @@ def test_completed_inception_session_is_reused_without_relaunch(tmp_path):
 
     assert workspace.started == []
     assert result.reused is True
-    assert result.output == "Existing proposal."
+    assert "Existing proposal." in result.output
+
+
+def test_completed_but_invalid_inception_is_not_reused_and_gets_new_attempt(tmp_path):
+    invalid_path = tmp_path / ".agora" / "sessions" / "ai-sdlc-inception-issue-14"
+    write_result(
+        invalid_path,
+        "## Inception Proposal\n\nCreate a Flask API client.\n\n"
+        "## Human decision required\n\nApprove or modify.",
+    )
+    invalid = SimpleNamespace(
+        id="ai-sdlc-inception-issue-14",
+        status="completed",
+        path=str(invalid_path),
+        retry_of=None,
+        exit_code=0,
+        created_at="2026-09-23T00:00:00Z",
+    )
+    workspace = Workspace(tmp_path, [invalid])
+
+    result = launch_inception_executor(
+        tmp_path,
+        runtime=runtime("opencode"),
+        handoff_path=handoff(tmp_path),
+        swarm_id="delivery",
+        work_id="issue-14",
+        workspace_factory=lambda cwd: workspace,
+    )
+
+    assert workspace.started[0].id == "ai-sdlc-inception-issue-14-retry-2"
+    assert getattr(workspace.started[0], "retry_of", None) is None
+    assert result.status == "completed"
+    assert result.reused is False
 
 
 def test_failed_inception_gets_a_new_governed_retry_session(tmp_path):
@@ -229,6 +291,42 @@ def test_failed_inception_gets_a_new_governed_retry_session(tmp_path):
     assert workspace.started[0].id == "ai-sdlc-inception-issue-14-retry-2"
     assert workspace.started[0].retry_of == "ai-sdlc-inception-issue-14"
     assert result.retry_of == "ai-sdlc-inception-issue-14"
+
+
+def test_newly_completed_irrelevant_output_is_recoverable_contract_failure(tmp_path):
+    class IrrelevantWorkspace(Workspace):
+        def start_session(self, data):
+            self.started.append(data)
+            path = self.cwd / ".agora" / "sessions" / data.id
+            write_result(
+                path,
+                "## Inception Proposal\n\nCreate a Flask API client.\n\n"
+                "## Human decision required\n\nApprove or modify.",
+            )
+            record = SimpleNamespace(
+                id=data.id,
+                status="completed",
+                path=str(path),
+                retry_of=getattr(data, "retry_of", None),
+                exit_code=0,
+                created_at="2026-09-23T00:00:00Z",
+            )
+            self.sessions.append(record)
+            return record
+
+    workspace = IrrelevantWorkspace(tmp_path)
+
+    with pytest.raises(ExecutorLaunchError, match="violates the Inception contract") as captured:
+        launch_inception_executor(
+            tmp_path,
+            runtime=runtime("opencode"),
+            handoff_path=handoff(tmp_path),
+            swarm_id="delivery",
+            work_id="issue-14",
+            workspace_factory=lambda cwd: workspace,
+        )
+
+    assert captured.value.recoverable is True
 
 
 def test_completed_session_without_output_does_not_create_false_human_review(tmp_path):

@@ -16,9 +16,15 @@ START_STEPS = (
     "start.intent-ready",
     "start.pathway",
     "start.handoff",
+    "start.executor-launch",
+    "start.executor-complete",
     "start.prepared",
 )
-_START_ALIASES = {"start.issue-reused": "start.issue-read"}
+_START_ALIASES = {
+    "start.issue-reused": "start.issue-read",
+    "start.executor-skipped-launch": "start.executor-launch",
+    "start.executor-skipped-complete": "start.executor-complete",
+}
 LIFECYCLE_STAGES = ("inception", "construction", "operations", "completed")
 
 

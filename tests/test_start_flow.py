@@ -128,7 +128,12 @@ class FakeWorkspace:
         return SimpleNamespace(id=data.id)
 
     def list_intents(self):
-        return [] if self._intent is None else [self._intent]
+        raise AssertionError("Start must not scan unrelated Intents")
+
+    def get_intent(self, intent_id):
+        if self._intent is None or self._intent.id != intent_id:
+            raise FileNotFoundError(intent_id)
+        return self._intent
 
     def create_intent(self, data):
         self.last_intent_input = data
@@ -218,6 +223,44 @@ def test_prepare_start_reads_issue_through_governed_tool_and_creates_draft_inten
     assert "Suggested Bolts" in handoff
     assert "Do not enter Construction." in handoff
     assert "Do not fabricate or infer human approval." in handoff
+
+
+def test_prepare_start_ignores_unrelated_malformed_intent(tmp_path):
+    workspace = FakeWorkspace(tmp_path)
+    broken = tmp_path / ".agora" / "intents" / "issue-28" / "INTENT.md"
+    broken.parent.mkdir(parents=True)
+    broken.write_text("# Intent\n", encoding="utf-8")
+
+    result = _prepare_start(
+        tmp_path,
+        issue=11,
+        project="Modern-Ash/agorix",
+        workspace_factory=lambda cwd: workspace,
+        runtime_discovery=lambda root: (runtime(),),
+    )
+
+    assert result.intent_id == "issue-11"
+    assert workspace._intent.id == "issue-11"
+
+
+def test_prepare_start_reports_exact_target_intent_when_it_is_malformed(tmp_path):
+    class BrokenTargetWorkspace(FakeWorkspace):
+        def get_intent(self, intent_id):
+            raise ValueError("Markdown document must start with YAML front matter")
+
+    workspace = BrokenTargetWorkspace(tmp_path)
+    target = tmp_path / ".agora" / "intents" / "issue-11" / "INTENT.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("# Intent\n", encoding="utf-8")
+
+    with pytest.raises(StartFlowError, match=r"\.agora/intents/issue-11/INTENT\.md"):
+        _prepare_start(
+            tmp_path,
+            issue=11,
+            project="Modern-Ash/agorix",
+            workspace_factory=lambda cwd: workspace,
+            runtime_discovery=lambda root: (runtime(),),
+        )
 
 
 def test_prepare_start_repairs_legacy_product_owner_issue_read(tmp_path):

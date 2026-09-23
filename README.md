@@ -62,6 +62,20 @@ The Context Graph stays deterministic: Laya can prune candidates but cannot intr
 artifacts. Low-confidence decisions fail open and remain on the normal generative/human escalation
 path. See [Local Decision Plane with Laya](docs/decision-plane-laya.md).
 
+## Continuous delivery wizard
+
+The normal user experience is a single continuous wizard:
+
+```bash
+aisdlc continue
+```
+
+Agora shows the current delivery step, the facts it is using, open gaps, evidence, the proposed next
+action and exactly what will happen after confirmation. Material ambiguities are asked inline and the
+answers are persisted as explicit Work context, so agents do not ask the same question again. The
+happy path uses `Enter` to confirm, `A` to adjust, `D` for full governance/details and `X` to stop.
+No prompt text or second command is required for the normal workflow.
+
 ## Detect local AI runtimes
 
 AI-SDLC can inspect the active `PATH` without reading credential files:

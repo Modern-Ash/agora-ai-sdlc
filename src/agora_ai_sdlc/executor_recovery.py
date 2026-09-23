@@ -264,16 +264,16 @@ def select_executor_model(
         output_fn(provider_title)
         for index, group in enumerate(groups, start=1):
             selected = ""
-            if current is not None:
-                if (
-                    group.agent != "opencode" and current.agent == group.agent
-                ) or (
+            if current is not None and (
+                (group.agent != "opencode" and current.agent == group.agent)
+                or (
                     group.agent == "opencode"
                     and current.agent == "opencode"
                     and current.model is not None
                     and _provider_id(current.model) == group.id
-                ):
-                    selected = " (actual)" if lang == "es" else " (current)"
+                )
+            ):
+                selected = " (actual)" if lang == "es" else " (current)"
             output_fn(f"  {index}) {group.label}{selected}")
         output_fn(f"  0) {cancel}")
 

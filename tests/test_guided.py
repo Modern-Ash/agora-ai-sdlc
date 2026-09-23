@@ -133,7 +133,6 @@ def test_guided_projection_can_be_empty(monkeypatch, tmp_path):
     assert "No governed action currently needs attention." in guided.render(None)
 
 
-
 def test_construction_command_bundle_launches_executor_instead_of_rollback():
     decision = guided.GuidedDecision(
         swarm="issue-26-demo",
@@ -155,8 +154,5 @@ def test_construction_command_bundle_launches_executor_instead_of_rollback():
     commands = guided.command_plan(decision)
     command_text = "\n".join(command for command, _ in commands)
 
-    assert (
-        "aisdlc continue --swarm issue-26-demo --work issue-26 --run"
-        in command_text
-    )
+    assert "aisdlc continue --swarm issue-26-demo --work issue-26 --run" in command_text
     assert "--to inception" not in command_text

@@ -67,7 +67,10 @@ def _requirements_document(issue: IssueFacts) -> str:
             "",
             "## Requirements",
             "",
-            *_bullets(issue.requirements, "No separate requirements section; acceptance criteria remain authoritative."),
+            *_bullets(
+                issue.requirements,
+                "No separate requirements section; acceptance criteria remain authoritative.",
+            ),
             "",
             "## Acceptance criteria",
             "",

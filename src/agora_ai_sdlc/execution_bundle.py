@@ -32,6 +32,20 @@ STOP_WORDS = {
     "this",
     "with",
 }
+FRAMEWORK_PATH_PREFIXES = (
+    ".agora/",
+    ".agora-corrupted/",
+    ".agents/skills/agora-",
+    ".claude/commands/agora.",
+    "ai-sdlc/",
+)
+
+
+def _is_framework_path(path: str) -> bool:
+    normalized = path.replace("\\", "/").lstrip("./")
+    return any(normalized.startswith(prefix) for prefix in FRAMEWORK_PATH_PREFIXES)
+
+
 RISK_PATTERNS = (
     ("ci-configuration", re.compile(r"^(?:\.github/workflows/|\.gitlab-ci\.yml$)")),
     (
@@ -114,7 +128,9 @@ def _status_paths(root: Path) -> tuple[str, ...]:
         value = line[3:]
         if " -> " in value:
             value = value.split(" -> ", 1)[1]
-        values.append(value.strip())
+        value = value.strip()
+        if not _is_framework_path(value):
+            values.append(value)
     return tuple(dict.fromkeys(values))
 
 
@@ -127,7 +143,7 @@ def _changed_paths(root: Path, base_branch: str | None) -> tuple[str, ...]:
         if code != 0:
             continue
         lines = _git_lines(root, "diff", "--name-only", "--diff-filter=ACMRTUXB", f"{candidate}...HEAD")
-        return tuple(dict.fromkeys(lines))
+        return tuple(dict.fromkeys(path for path in lines if not _is_framework_path(path)))
     return ()
 
 
@@ -175,7 +191,7 @@ def _keywords(objective: str | None, criteria: tuple[str, ...]) -> tuple[str, ..
 
 
 def _tracked_paths(root: Path) -> tuple[str, ...]:
-    return _git_lines(root, "ls-files")
+    return tuple(path for path in _git_lines(root, "ls-files") if not _is_framework_path(path))
 
 
 def _grep_paths(root: Path, keywords: tuple[str, ...]) -> tuple[str, ...]:
@@ -185,7 +201,9 @@ def _grep_paths(root: Path, keywords: tuple[str, ...]) -> tuple[str, ...]:
     code, stdout, _ = _git(root, "grep", "-l", "-I", "-E", expression, "--")
     if code not in {0, 1} or not stdout:
         return ()
-    return tuple(line for line in stdout.splitlines() if line.strip())
+    return tuple(
+        line for line in stdout.splitlines() if line.strip() and not _is_framework_path(line.strip())
+    )
 
 
 def _related_paths(

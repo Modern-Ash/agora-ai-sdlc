@@ -6,12 +6,13 @@ customizations fail closed instead of being overwritten.
 
 from __future__ import annotations
 
+import json
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
-from agora.markdown import MarkdownDocument, read_markdown, render_markdown
+from agora.markdown import MarkdownDocument, parse_markdown, read_markdown, render_markdown
 from agora.methods import load_method_contract
 from agora.model import (
     AddActorInput,
@@ -153,6 +154,46 @@ def _split_front_matter(text: str) -> tuple[dict, str] | None:
     except yaml.YAMLError:
         return None
     return parsed if isinstance(parsed, dict) else {}, body
+
+
+def _repair_core_front_matter(root: Path, actions: list[str]) -> None:
+    """Canonicalize semantically valid Agora front matter that external formatters wrapped."""
+
+    state = root / ".agora"
+    if not state.is_dir():
+        return
+    repaired = 0
+    for path in sorted(state.rglob("*.md")):
+        if not path.is_file() or path.is_symlink():
+            continue
+        try:
+            read_markdown(path)
+            continue
+        except (OSError, ValueError):
+            pass
+
+        try:
+            original = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        parts = _split_front_matter(original)
+        if parts is None:
+            continue
+        attributes, body = parts
+        schema = attributes.get("schema")
+        if not isinstance(schema, str) or not schema.startswith(("agora/", "agora-ai-sdlc/")):
+            continue
+        try:
+            json.dumps(attributes)
+            canonical = render_markdown(MarkdownDocument(attributes=attributes, body=body))
+            parse_markdown(canonical)
+        except (TypeError, ValueError):
+            continue
+        path.write_text(canonical, encoding="utf-8")
+        repaired += 1
+
+    if repaired:
+        actions.append(f"state.front-matter-repaired:{repaired}")
 
 
 def _formatting_only_equivalent(installed: Path, packaged: Path) -> bool:
@@ -389,6 +430,7 @@ def ensure_start_ready(
         workspace.initialize(InitInput(**init_kwargs))
         actions.append("project.initialized")
 
+    _repair_core_front_matter(root, actions)
     _ensure_project_selection(root, actions)
     _ensure_method(workspace, root, actions)
     _ensure_skill(root, actions)

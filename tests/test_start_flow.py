@@ -409,7 +409,7 @@ def test_explicit_issue_invokes_deterministic_materializer_before_human_review(t
                 "artifact.registered:requirements",
                 "artifact.registered:unit-of-work",
                 "criterion.elaborated:source-issue",
-            )
+            ),
         )
 
     clarified = {}

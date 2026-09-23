@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import hashlib
-from types import SimpleNamespace
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -200,36 +199,39 @@ def materialize_deterministic_inception(
         ):
             actions.append("artifact.generated:unit-of-work")
 
-    _ensure_artifact(
-        workspace,
-        root=root,
-        swarm_id=swarm_id,
-        work_id=work_id,
-        actor_id=actor_id,
-        kind="intent",
-        path=intent,
-        actions=actions,
-    )
-    _ensure_artifact(
-        workspace,
-        root=root,
-        swarm_id=swarm_id,
-        work_id=work_id,
-        actor_id=actor_id,
-        kind="requirements",
-        path=requirements,
-        actions=actions,
-    )
-    _ensure_artifact(
-        workspace,
-        root=root,
-        swarm_id=swarm_id,
-        work_id=work_id,
-        actor_id=actor_id,
-        kind="unit-of-work",
-        path=unit_of_work,
-        actions=actions,
-    )
+    if "intent" not in existing_by_kind:
+        _ensure_artifact(
+            workspace,
+            root=root,
+            swarm_id=swarm_id,
+            work_id=work_id,
+            actor_id=actor_id,
+            kind="intent",
+            path=intent,
+            actions=actions,
+        )
+    if "requirements" not in existing_by_kind:
+        _ensure_artifact(
+            workspace,
+            root=root,
+            swarm_id=swarm_id,
+            work_id=work_id,
+            actor_id=actor_id,
+            kind="requirements",
+            path=requirements,
+            actions=actions,
+        )
+    if "unit-of-work" not in existing_by_kind:
+        _ensure_artifact(
+            workspace,
+            root=root,
+            swarm_id=swarm_id,
+            work_id=work_id,
+            actor_id=actor_id,
+            kind="unit-of-work",
+            path=unit_of_work,
+            actions=actions,
+        )
 
     work = workspace.show_work(swarm_id, work_id)
     if "source-issue" not in work.acceptance_criteria:
@@ -251,15 +253,17 @@ def materialize_deterministic_inception(
 
     final_records = workspace.list_work_artifacts(swarm_id, work_id)
     final_by_kind = {record.kind: record for record in final_records}
+    missing = [kind for kind in ("intent", "requirements", "unit-of-work") if kind not in final_by_kind]
+    if missing:
+        raise InceptionMaterializationError(
+            "deterministic Inception materialization did not register required artifacts: "
+            + ", ".join(missing)
+        )
 
     return InceptionMaterializationResult(
         actor_id=actor_id,
-        intent_uri=final_by_kind.get("intent", SimpleNamespace(uri=_repo_uri(root, intent))).uri,
-        requirements_uri=final_by_kind.get(
-            "requirements", SimpleNamespace(uri=_repo_uri(root, requirements))
-        ).uri,
-        unit_of_work_uri=final_by_kind.get(
-            "unit-of-work", SimpleNamespace(uri=_repo_uri(root, unit_of_work))
-        ).uri,
+        intent_uri=final_by_kind["intent"].uri,
+        requirements_uri=final_by_kind["requirements"].uri,
+        unit_of_work_uri=final_by_kind["unit-of-work"].uri,
         actions=tuple(actions),
     )

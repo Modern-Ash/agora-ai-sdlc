@@ -42,14 +42,10 @@ def _select_runtime(
     for index, choice in enumerate(choices, start=1):
         selected = (
             f" ({t('session.current', lang=lang)})"
-            if current is not None
-            and choice.agent == current.agent
-            and choice.model == current.model
+            if current is not None and choice.agent == current.agent and choice.model == current.model
             else ""
         )
-        output_fn(
-            f"  {index}. {choice.label} ✓ {t('session.responsive', lang=lang)}{selected}"
-        )
+        output_fn(f"  {index}. {choice.label} ✓ {t('session.responsive', lang=lang)}{selected}")
     output_fn(f"  X. {t('session.cancel', lang=lang)}")
 
     while True:

@@ -173,7 +173,26 @@ def _result(record, *, reused: bool) -> InceptionExecutionResult:
     )
 
 
-def _matching_sessions(workspace: AgoraWorkspace, base_id: str) -> list:
+def _matching_sessions(workspace: AgoraWorkspace, root: Path, base_id: str) -> list:
+    """Load only sessions owned by this Inception attempt when Core supports targeted lookup."""
+
+    getter = getattr(workspace, "show_session", None)
+    if callable(getter):
+        session_root = root / ".agora" / "sessions"
+        ids = [
+            path.parent.name
+            for path in sorted(session_root.glob(f"{base_id}*/SESSION.md"))
+            if path.parent.name == base_id or path.parent.name.startswith(base_id + "-retry-")
+        ]
+        matches = []
+        for session_id in ids:
+            try:
+                matches.append(getter(session_id))
+            except (OSError, ValueError) as error:
+                path = session_root / session_id / "SESSION.md"
+                raise ExecutorLaunchError(f"Target Inception session is invalid at {path}: {error}") from error
+        return sorted(matches, key=lambda item: (getattr(item, "created_at", ""), item.id))
+
     matches = [
         session
         for session in workspace.list_sessions()
@@ -207,7 +226,7 @@ def launch_inception_executor(
     workspace = workspace_factory(cwd=root)
     executor_id = f"ai-{runtime.id}"
     base_id = f"ai-sdlc-inception-{work_id}"
-    sessions = _matching_sessions(workspace, base_id)
+    sessions = _matching_sessions(workspace, root, base_id)
     latest = sessions[-1] if sessions else None
 
     if latest is not None and latest.status == "completed":
@@ -250,7 +269,7 @@ def launch_inception_executor(
     try:
         completed = workspace.start_session(StartSessionInput(**kwargs))
     except (OSError, RuntimeError, ValueError) as error:
-        latest_after = _matching_sessions(workspace, base_id)
+        latest_after = _matching_sessions(workspace, root, base_id)
         durable = latest_after[-1] if latest_after else None
         suffix = f" Durable diagnostics: {Path(durable.path) / 'SUMMARY.md'}." if durable is not None else ""
         raise ExecutorLaunchError(f"Inception executor {runtime.name} failed: {error}.{suffix}") from error

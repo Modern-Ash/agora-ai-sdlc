@@ -31,6 +31,7 @@ def _repo(root: Path) -> None:
     test = root / "tests" / "test_interpreter.py"
     test.parent.mkdir(parents=True)
     test.write_text("def test_interpreter(): pass\n", encoding="utf-8")
+    (root / "src" / "unrelated.py").write_text("payment invoice customer ledger\n", encoding="utf-8")
     (root / "pyproject.toml").write_text("[project]\nname='demo'\n", encoding="utf-8")
     _git(root, "add", ".")
     _git(root, "commit", "-m", "base")
@@ -142,10 +143,6 @@ def test_execution_bundle_no_write_is_read_only_for_bundle_paths(monkeypatch, tm
 def test_related_files_use_bounded_issue_terms_not_full_repo_replay(monkeypatch, tmp_path: Path):
     _repo(tmp_path)
     _inception(tmp_path)
-    unrelated = tmp_path / "src" / "unrelated.py"
-    unrelated.write_text("payment invoice customer ledger\n", encoding="utf-8")
-    _git(tmp_path, "add", "src/unrelated.py")
-    _git(tmp_path, "commit", "-m", "unrelated")
     monkeypatch.setattr(execution_bundle, "inspect_iteration", lambda *args, **kwargs: _status())
 
     bundle = build_execution_bundle(tmp_path, work="issue-14", persist=False)

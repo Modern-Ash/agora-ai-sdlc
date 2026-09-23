@@ -44,9 +44,7 @@ def _write_generated(path: Path, content: str) -> bool:
         if current == payload:
             return False
         if not current.startswith(GENERATED_MARKER):
-            raise InceptionMaterializationError(
-                f"refusing to overwrite non-generated Inception artifact: {path}"
-            )
+            raise InceptionMaterializationError(f"refusing to overwrite non-generated Inception artifact: {path}")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(payload, encoding="utf-8")
     return True
@@ -239,9 +237,7 @@ def materialize_deterministic_inception(
 
     work = workspace.show_work(swarm_id, work_id)
     if "source-issue" not in work.acceptance_criteria:
-        raise InceptionMaterializationError(
-            f"Work {work_id!r} has no source-issue acceptance criterion to elaborate"
-        )
+        raise InceptionMaterializationError(f"Work {work_id!r} has no source-issue acceptance criterion to elaborate")
     stages = work.criterion_statuses.get("source-issue", [])
     if "elaborated" not in stages:
         workspace.satisfy_criterion(
@@ -260,8 +256,7 @@ def materialize_deterministic_inception(
     missing = [kind for kind in ("intent", "requirements", "unit-of-work") if kind not in final_by_kind]
     if missing:
         raise InceptionMaterializationError(
-            "deterministic Inception materialization did not register required artifacts: "
-            + ", ".join(missing)
+            "deterministic Inception materialization did not register required artifacts: " + ", ".join(missing)
         )
 
     return InceptionMaterializationResult(

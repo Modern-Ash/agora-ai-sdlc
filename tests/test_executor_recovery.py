@@ -97,7 +97,6 @@ def test_prompt_zero_cancels_recovery(tmp_path: Path):
     )
 
 
-
 def test_shared_recovery_loop_retries_any_llm_backed_operation(monkeypatch, tmp_path: Path):
     calls = []
 

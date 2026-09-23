@@ -34,6 +34,8 @@ simplify the next interaction. It presents one recommended next action, Enter ac
 a local/free executor is preselected automatically when one is already available. Paid/external
 providers are never silently selected.
 
+When the recommendation is preparatory AI work, Enter now runs one governed executor session, stops before any approval/transition boundary, then immediately re-reads Core and recalculates the next action. The user no longer has to copy a handoff into another terminal for the normal happy path.
+
 The default checkpoint is `typed-decisions`. Override it without changing Agora configuration:
 
 ```bash

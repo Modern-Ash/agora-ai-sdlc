@@ -12,6 +12,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from agora_ai_sdlc.guided import GuidedDecision
+from agora_ai_sdlc.i18n import t
 
 STEP_ORDER = ("understand", "clarify", "plan", "build", "verify", "review", "done")
 STEP_LABELS = {
@@ -201,7 +202,7 @@ def build_wizard_view(root: Path, decision: GuidedDecision) -> WizardView:
     )
 
 
-def render_wizard(view: WizardView) -> str:
+def render_wizard(view: WizardView, *, lang: str = "en") -> str:
     progress = []
     for step in STEP_ORDER:
         if step in view.completed_steps:
@@ -210,20 +211,22 @@ def render_wizard(view: WizardView) -> str:
             marker = "▶"
         else:
             marker = "·"
-        progress.append(f"{marker} {STEP_LABELS[step]}")
+        label = t(f"wizard.step.{step}", lang=lang)
+        progress.append(f"{marker} {label}")
+    current_label = t(f"wizard.step.{view.current_step}", lang=lang)
     lines = [
-        "Delivery wizard",
+        t("wizard.title", lang=lang),
         "  " + "  →  ".join(progress),
         "",
-        f"Current step: {STEP_LABELS[view.current_step]}",
+        f"{t('wizard.current_step', lang=lang)}: {current_label}",
         "",
-        "What Agora knows",
+        t("wizard.knows", lang=lang),
         *[f"  • {item}" for item in view.facts],
     ]
     if view.gaps:
-        lines.extend(["", "Open gaps", *[f"  ! {item}" for item in view.gaps]])
+        lines.extend(["", t("wizard.open_gaps", lang=lang), *[f"  ! {item}" for item in view.gaps]])
     if view.evidence:
-        lines.extend(["", "Evidence", *[f"  ✓ {item}" for item in view.evidence]])
+        lines.extend(["", t("wizard.evidence", lang=lang), *[f"  ✓ {item}" for item in view.evidence]])
     if view.human_decisions:
-        lines.extend(["", "Human boundary", *[f"  • {item}" for item in view.human_decisions]])
+        lines.extend(["", t("wizard.human_boundary", lang=lang), *[f"  • {item}" for item in view.human_decisions]])
     return "\n".join(lines)

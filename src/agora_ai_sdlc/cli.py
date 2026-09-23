@@ -84,6 +84,7 @@ def main(argv: list[str] | None = None) -> int:
     start.add_argument("--actor", default="product-owner", help="Agora actor used for the governed issue read")
     start.add_argument("--root", default=".", help="Project root")
     start.add_argument("--json", action="store_true", help="Print machine-readable start handoff")
+    start.add_argument("--details", action="store_true", help="Show durable paths and governed read identifiers")
     start.add_argument("--lang", choices=SUPPORTED_LANGUAGES, help="Presentation language")
     start.add_argument("--ui-file", help="Write human progress to a new file, separate from agent output")
     guided = sub.add_parser("continue", help="Show the next governed decision in human-friendly AI-SDLC language")
@@ -313,9 +314,9 @@ def main(argv: list[str] | None = None) -> int:
                 if args.json:
                     print(json.dumps(result.snapshot(), sort_keys=True))
                 elif args.ui_file:
-                    channel.write(render_start(result, lang=resolve_language(args.lang)))
+                    channel.write(render_start(result, lang=resolve_language(args.lang), details=args.details))
                 else:
-                    print(render_start(result, lang=resolve_language(args.lang)))
+                    print(render_start(result, lang=resolve_language(args.lang), details=args.details))
         except (OSError, StartFlowError, ValueError, PermissionError) as error:
             print(safe_text(str(error), max_chars=1024), file=sys.stderr)
             return 2

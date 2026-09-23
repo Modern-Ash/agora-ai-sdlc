@@ -125,6 +125,60 @@ def test_prompt_selects_llm_first_and_model_second(tmp_path: Path):
     assert "gpt-5.5" not in rendered
 
 
+def test_prompt_can_pull_and_select_new_ollama_model(tmp_path: Path):
+    output = io.StringIO()
+    pulled = []
+
+    def puller(**kwargs):
+        pulled.append(kwargs["model"])
+        return "ollama/qwen3:8b"
+
+    choice = prompt_executor_recovery(
+        tmp_path,
+        error="model not found",
+        input_stream=io.StringIO("1\n4\nqwen3:8b\n"),
+        output_stream=output,
+        lang="es",
+        discovery=discoveries,
+        model_lister=models,
+        ollama_model_lister=ollama_models,
+        ollama_model_puller=puller,
+    )
+
+    assert pulled == ["qwen3:8b"]
+    assert choice == ExecutorRecoveryChoice(
+        agent="opencode",
+        model="ollama/qwen3:8b",
+        label="Ollama (local) · ollama/qwen3:8b [local]",
+    )
+    rendered = output.getvalue()
+    assert "Descargar otro modelo con ollama pull" in rendered
+    assert "Descargando qwen3:8b con ollama pull" in rendered
+
+
+def test_failed_ollama_pull_stays_in_model_selector(tmp_path: Path):
+    output = io.StringIO()
+
+    def puller(**kwargs):
+        raise RuntimeError("Ollama pull failed")
+
+    choice = prompt_executor_recovery(
+        tmp_path,
+        error="model not found",
+        input_stream=io.StringIO("1\n4\nmissing:latest\n0\n0\n"),
+        output_stream=output,
+        lang="es",
+        discovery=discoveries,
+        model_lister=models,
+        ollama_model_lister=ollama_models,
+        ollama_model_puller=puller,
+    )
+
+    assert choice is None
+    rendered = output.getvalue()
+    assert "No se pudo descargar el modelo: Ollama pull failed" in rendered
+
+
 def test_prompt_zero_cancels_at_provider_step(tmp_path: Path):
     assert (
         prompt_executor_recovery(

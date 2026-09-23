@@ -22,6 +22,7 @@ from agora.sdlc import SdlcService
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.depth_profiles import asset_root
+from agora_ai_sdlc.deterministic_clarification import record_zero_question_clarification
 from agora_ai_sdlc.deterministic_inception import build_deterministic_inception
 from agora_ai_sdlc.executor_launch import (
     ExecutorLaunchError,
@@ -397,6 +398,7 @@ def prepare_start(
     isolation: Callable[[Path, int], tuple[Path, str | None]] = isolate_dirty_work,
     executor_launcher: Callable[..., InceptionExecutionResult] = launch_inception_executor,
     inception_materializer: Callable[..., object] = materialize_deterministic_inception,
+    deterministic_clarifier: Callable[..., object] = record_zero_question_clarification,
     launch_executor: bool = True,
     progress: Callable[[str], None] | None = None,
 ) -> StartFlowResult:
@@ -545,6 +547,7 @@ def prepare_start(
     )
 
     materialization_actions: tuple[str, ...] = ()
+    clarification_actions: tuple[str, ...] = ()
     if launch_executor and not deterministic.requires_llm:
         materialized = inception_materializer(
             root,
@@ -556,6 +559,14 @@ def prepare_start(
             pathway=pathway,
         )
         materialization_actions = tuple(getattr(materialized, "actions", ()) or ())
+        if not deterministic.semantic_gaps:
+            clarification = deterministic_clarifier(
+                workspace=workspace,
+                swarm_id=swarm,
+                work_id=work_record.id,
+                actor_id=str(getattr(materialized, "actor_id", "") or ""),
+            )
+            clarification_actions = tuple(getattr(clarification, "actions", ()) or ())
 
     execution: InceptionExecutionResult | None = None
     inception_output: str | None = None
@@ -619,6 +630,7 @@ def prepare_start(
             ([isolation_action] if isolation_action is not None else [])
             + list(prepared.actions)
             + list(materialization_actions)
+            + list(clarification_actions)
         ),
         executor_session_id=execution.session_id if execution is not None else None,
         executor_result_path=execution.result_path if execution is not None else None,

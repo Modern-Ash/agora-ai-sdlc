@@ -31,6 +31,7 @@ from agora_ai_sdlc.executor_launch import (
 )
 from agora_ai_sdlc.i18n import t
 from agora_ai_sdlc.inception_handoff import write_inception_handoff
+from agora_ai_sdlc.inception_materialization import materialize_deterministic_inception
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
 from agora_ai_sdlc.start_preflight import (
     StartPreparationResult,
@@ -395,6 +396,7 @@ def prepare_start(
     preflight: Callable[..., StartPreparationResult] = ensure_start_ready,
     isolation: Callable[[Path, int], tuple[Path, str | None]] = isolate_dirty_work,
     executor_launcher: Callable[..., InceptionExecutionResult] = launch_inception_executor,
+    inception_materializer: Callable[..., object] = materialize_deterministic_inception,
     launch_executor: bool = True,
     progress: Callable[[str], None] | None = None,
 ) -> StartFlowResult:
@@ -542,6 +544,19 @@ def prepare_start(
         semantic_gaps=deterministic.semantic_gaps,
     )
 
+    materialization_actions: tuple[str, ...] = ()
+    if launch_executor and not deterministic.requires_llm:
+        materialized = inception_materializer(
+            root,
+            workspace=workspace,
+            swarm_id=swarm,
+            work_id=work_record.id,
+            intent_path=intent.path,
+            issue=deterministic.issue,
+            pathway=pathway,
+        )
+        materialization_actions = tuple(getattr(materialized, "actions", ()) or ())
+
     execution: InceptionExecutionResult | None = None
     inception_output: str | None = None
     inception_mode = "prepared"
@@ -600,7 +615,11 @@ def prepare_start(
         skill_path=handoff.skill,
         workspace_root=str(root),
         workspace_isolated=isolation_action is not None,
-        preflight_actions=tuple(([isolation_action] if isolation_action is not None else []) + list(prepared.actions)),
+        preflight_actions=tuple(
+            ([isolation_action] if isolation_action is not None else [])
+            + list(prepared.actions)
+            + list(materialization_actions)
+        ),
         executor_session_id=execution.session_id if execution is not None else None,
         executor_result_path=execution.result_path if execution is not None else None,
         executor_summary_path=execution.summary_path if execution is not None else None,

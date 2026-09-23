@@ -276,12 +276,18 @@ class TTYStringIO(StringIO):
 def test_executor_spinner_is_tty_only_and_stops_on_next_event():
     stream = TTYStringIO()
     with HumanChannel(stream=stream, lang="es") as channel:
+        channel.set_executor_context(
+            issue=14,
+            agent="opencode",
+            model="opencode/big-pickle",
+            attempt=2,
+        )
         channel.event("start.executor-launch")
         for _ in range(50):
-            if "Executor en ejecución · esperando resultado" in stream.getvalue():
+            if "Inception · issue #14 · intento 2 · OpenCode · opencode/big-pickle · esperando resultado" in stream.getvalue():
                 break
             time.sleep(0.01)
-        assert "Executor en ejecución · esperando resultado" in stream.getvalue()
+        assert "Inception · issue #14 · intento 2 · OpenCode · opencode/big-pickle · esperando resultado" in stream.getvalue()
         assert channel._spinner_thread is not None
 
         channel.event("start.executor-complete")
@@ -291,13 +297,40 @@ def test_executor_spinner_is_tty_only_and_stops_on_next_event():
         assert "\x1b[2K" in stream.getvalue()
 
 
+def test_executor_spinner_truncates_to_terminal_width(monkeypatch):
+    stream = TTYStringIO()
+    monkeypatch.setattr(
+        "agora_ai_sdlc.observation_ui.shutil.get_terminal_size",
+        lambda fallback: __import__("os").terminal_size((60, 24)),
+    )
+
+    with HumanChannel(stream=stream, lang="es") as channel:
+        channel.set_executor_context(
+            issue=14,
+            agent="opencode",
+            model="opencode/very-long-model-name-for-terminal-testing",
+            attempt=7,
+        )
+        channel.event("start.executor-launch")
+        for _ in range(50):
+            if "…" in stream.getvalue():
+                break
+            time.sleep(0.01)
+        channel.stop_spinner()
+
+    frames = [part for part in stream.getvalue().split("\x1b[2K") if part and "⠋" in part or "⠙" in part or "⠹" in part]
+    assert "…" in stream.getvalue()
+    assert all("\n" not in frame for frame in frames)
+
+
 def test_executor_spinner_is_disabled_for_non_tty_streams():
     stream = StringIO()
     with HumanChannel(stream=stream, lang="es") as channel:
+        channel.set_executor_context(issue=14, agent="opencode", model="opencode/big-pickle", attempt=1)
         channel.event("start.executor-launch")
         assert channel._spinner_thread is None
 
-    assert "Executor en ejecución · esperando resultado" not in stream.getvalue()
+    assert "esperando resultado" not in stream.getvalue()
 
 
 def test_private_ui_file_is_out_of_band_and_exclusive(tmp_path, capsys):

@@ -21,6 +21,7 @@ from agora.model import (
     InitInput,
     InstallMethodInput,
     InstallToolAdapterInput,
+    RefreshPackLockInput,
 )
 from agora.workspace import AgoraWorkspace
 
@@ -156,13 +157,18 @@ def _split_front_matter(text: str) -> tuple[dict, str] | None:
     return parsed if isinstance(parsed, dict) else {}, body
 
 
-def _repair_core_front_matter(root: Path, actions: list[str]) -> None:
-    """Canonicalize semantically valid Agora front matter that external formatters wrapped."""
+def _repair_core_front_matter(root: Path, actions: list[str]) -> bool:
+    """Canonicalize semantically valid Agora front matter that external formatters wrapped.
+
+    Returns whether a pack tree or its composition lock changed, so the caller can
+    refresh the deterministic pack inventory after a semantics-preserving repair.
+    """
 
     state = root / ".agora"
     if not state.is_dir():
-        return
+        return False
     repaired = 0
+    pack_state_changed = False
     for path in sorted(state.rglob("*.md")):
         if not path.is_file() or path.is_symlink():
             continue
@@ -191,9 +197,13 @@ def _repair_core_front_matter(root: Path, actions: list[str]) -> None:
             continue
         path.write_text(canonical, encoding="utf-8")
         repaired += 1
+        relative = path.relative_to(state)
+        if relative == Path("PACKS.lock.md") or relative.parts[:1] in {("methods",), ("tools",)}:
+            pack_state_changed = True
 
     if repaired:
         actions.append(f"state.front-matter-repaired:{repaired}")
+    return pack_state_changed
 
 
 def _formatting_only_equivalent(installed: Path, packaged: Path) -> bool:
@@ -430,9 +440,12 @@ def ensure_start_ready(
         workspace.initialize(InitInput(**init_kwargs))
         actions.append("project.initialized")
 
-    _repair_core_front_matter(root, actions)
+    pack_state_repaired = _repair_core_front_matter(root, actions)
     _ensure_project_selection(root, actions)
     _ensure_method(workspace, root, actions)
+    if pack_state_repaired:
+        workspace.refresh_pack_lock(RefreshPackLockInput(scope="project"))
+        actions.append("pack-lock.refreshed")
     _ensure_skill(root, actions)
 
     adapter = root / ".agora" / "tools" / "github-issues" / "TOOL.md"

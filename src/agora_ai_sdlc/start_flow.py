@@ -172,7 +172,11 @@ def _select_runtime(
         return configured[0]
     if available:
         return available[0]
-    raise StartFlowError("No responsive AI CLI runtime was detected")
+    raise StartFlowError(
+        "No responsive repository-capable AI executor was detected. "
+        "Install or configure OpenCode, Codex, or Claude Code. "
+        "Ollama alone is a model provider, not the repository executor."
+    )
 
 
 _LEGACY_PRODUCT_OWNER_TOOL_CAPABILITIES = (
@@ -572,8 +576,10 @@ def render_start(result: StartFlowResult, *, lang: str = "en", details: bool = F
         lines.append(t(key, lang=lang, count=count))
 
     if result.executor_session_id is not None:
-        executor_state = t("start.executor_reused", lang=lang) if result.executor_reused else t(
-            "start.executor_completed", lang=lang
+        executor_state = (
+            t("start.executor_reused", lang=lang)
+            if result.executor_reused
+            else t("start.executor_completed", lang=lang)
         )
         lines.append(f"✓ {result.runtime_name}: {executor_state}")
         lines.extend(

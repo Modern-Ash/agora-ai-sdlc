@@ -328,8 +328,17 @@ def main(argv: list[str] | None = None) -> int:
                 lang=language,
             ) as channel:
                 options = {"progress": channel.event} if channel.active else {}
+                attempt = 0
 
                 def operation(agent: str | None, model: str | None):
+                    nonlocal attempt
+                    attempt += 1
+                    channel.set_executor_context(
+                        issue=args.issue,
+                        agent=agent,
+                        model=model,
+                        attempt=attempt,
+                    )
                     try:
                         return prepare_start(
                             Path(args.root),

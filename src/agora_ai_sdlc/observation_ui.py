@@ -11,6 +11,7 @@ import json
 import math
 import os
 import re
+import shutil
 import stat
 import threading
 import time
@@ -100,7 +101,10 @@ _TEXT = {
         "start.pathway": "Adaptive delivery pathway selected",
         "start.handoff": "Preparing portable Inception handoff",
         "start.executor-launch": "Launching the selected executor in the governed Work workspace",
-        "start.executor-waiting": "Executor running · waiting for result",
+        "start.executor-waiting": "waiting for result",
+        "start.executor-auto": "automatic model",
+        "start.executor-configured": "configured model",
+        "start.executor-attempt": "attempt",
         "start.executor-skipped-launch": "Executor launch skipped by explicit prepare-only mode",
         "start.executor-complete": "Executor completed Inception and returned a reviewable proposal",
         "start.executor-skipped-complete": "Executor completion skipped by explicit prepare-only mode",
@@ -146,7 +150,10 @@ _TEXT = {
         "start.pathway": "Pathway adaptativo de entrega seleccionado",
         "start.handoff": "Preparando el handoff portable de Inception",
         "start.executor-launch": "Iniciando el executor seleccionado en el workspace gobernado del Work",
-        "start.executor-waiting": "Executor en ejecución · esperando resultado",
+        "start.executor-waiting": "esperando resultado",
+        "start.executor-auto": "modelo automático",
+        "start.executor-configured": "modelo configurado",
+        "start.executor-attempt": "intento",
         "start.executor-skipped-launch": "Inicio del executor omitido por modo prepare-only explícito",
         "start.executor-complete": "El executor completó Inception y devolvió una propuesta revisable",
         "start.executor-skipped-complete": "Finalización del executor omitida por modo prepare-only explícito",
@@ -259,6 +266,11 @@ class HumanChannel(AbstractContextManager):
         self._spinner_stop = threading.Event()
         self._spinner_thread: threading.Thread | None = None
         self._spinner_visible = False
+        self._spinner_issue: int | None = None
+        self._spinner_agent: str | None = None
+        self._spinner_model: str | None = None
+        self._spinner_attempt: int | None = None
+        self._spinner_phase = "Inception"
         self._spinner_enabled = bool(
             path is None and stream is not None and callable(getattr(stream, "isatty", None)) and stream.isatty()
         )
@@ -300,17 +312,73 @@ class HumanChannel(AbstractContextManager):
                 # An unavailable display must not change an already performed Core operation.
                 self.failed = True
 
+    def set_executor_context(
+        self,
+        *,
+        issue: int | None,
+        agent: str | None,
+        model: str | None,
+        attempt: int | None,
+        phase: str = "Inception",
+    ) -> None:
+        self._spinner_issue = issue
+        self._spinner_agent = agent
+        self._spinner_model = model
+        self._spinner_attempt = attempt
+        self._spinner_phase = phase
+
+    def _executor_label(self) -> str:
+        labels = {
+            "opencode": "OpenCode",
+            "codex": "Codex",
+            "claude": "Claude Code",
+            "ollama": "Ollama",
+        }
+        return labels.get(self._spinner_agent or "", self._spinner_agent or "AI")
+
+    def _model_label(self) -> str:
+        if self._spinner_model:
+            return self._spinner_model
+        if self._spinner_agent == "opencode":
+            return text("start.executor-auto", self.lang)
+        return text("start.executor-configured", self.lang)
+
+    def _spinner_detail(self) -> str:
+        parts = [self._spinner_phase]
+        if self._spinner_issue is not None:
+            parts.append(f"issue #{self._spinner_issue}")
+        if self._spinner_attempt is not None:
+            parts.append(f"{text('start.executor-attempt', self.lang)} {self._spinner_attempt}")
+        parts.extend([self._executor_label(), self._model_label(), text("start.executor-waiting", self.lang)])
+        return " · ".join(parts)
+
+    def _terminal_columns(self) -> int:
+        if self.stream is not None:
+            try:
+                return os.get_terminal_size(self.stream.fileno()).columns
+            except (AttributeError, OSError, ValueError):
+                pass
+        return shutil.get_terminal_size(fallback=(120, 24)).columns
+
+    def _fit_spinner_line(self, line: str) -> str:
+        width = max(20, self._terminal_columns() - 1)
+        if len(line) <= width:
+            return line
+        return line[: max(1, width - 1)].rstrip() + "…"
+
     def _spinner_loop(self) -> None:
         frames = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
         index = 0
         try:
             while not self._spinner_stop.is_set() and self.active:
                 elapsed = time.monotonic() - self.started
-                line = f"\r[{elapsed:.1f}s] {frames[index % len(frames)]} {text('start.executor-waiting', self.lang)}"
+                line = self._fit_spinner_line(
+                    f"[{elapsed:.1f}s] {frames[index % len(frames)]} {self._spinner_detail()}"
+                )
                 with self._io_lock:
                     if not self.active or self.stream is None:
                         break
-                    self.stream.write(line)
+                    self.stream.write("\r\x1b[2K" + line)
                     self.stream.flush()
                     self._spinner_visible = True
                 index += 1

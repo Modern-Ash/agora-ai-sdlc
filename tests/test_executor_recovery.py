@@ -1,10 +1,13 @@
 import io
 from pathlib import Path
 
+from agora_ai_sdlc import executor_recovery
 from agora_ai_sdlc.executor_recovery import (
     ExecutorRecoveryChoice,
+    RecoveryFailureContext,
     prompt_executor_recovery,
     recovery_choices,
+    run_with_recovery,
 )
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 
@@ -92,3 +95,48 @@ def test_prompt_zero_cancels_recovery(tmp_path: Path):
         )
         is None
     )
+
+
+
+def test_shared_recovery_loop_retries_any_llm_backed_operation(monkeypatch, tmp_path: Path):
+    calls = []
+
+    class ProviderFailure(RuntimeError):
+        pass
+
+    def operation(agent, model):
+        calls.append((agent, model))
+        if len(calls) == 1:
+            raise ProviderFailure("quota exceeded")
+        return "completed"
+
+    monkeypatch.setattr(
+        executor_recovery,
+        "prompt_executor_recovery",
+        lambda *args, **kwargs: ExecutorRecoveryChoice(
+            agent="opencode",
+            model="ollama/claude",
+            label="OpenCode · ollama/claude [local]",
+        ),
+    )
+
+    result = run_with_recovery(
+        operation,
+        initial_agent="opencode",
+        initial_model="openai/gpt-5.5",
+        interactive=True,
+        input_stream=io.StringIO(),
+        output_stream=io.StringIO(),
+        lang="es",
+        failure_context=lambda error: RecoveryFailureContext(
+            workspace_root=tmp_path,
+            message=str(error),
+            recoverable=isinstance(error, ProviderFailure),
+        ),
+    )
+
+    assert result == "completed"
+    assert calls == [
+        ("opencode", "openai/gpt-5.5"),
+        ("opencode", "ollama/claude"),
+    ]

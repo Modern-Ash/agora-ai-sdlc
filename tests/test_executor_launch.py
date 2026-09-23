@@ -336,8 +336,7 @@ def test_prior_timeout_keeps_extended_timeout_after_invalid_completed_attempt(tm
     invalid_path = tmp_path / ".agora" / "sessions" / "ai-sdlc-inception-issue-14-retry-2"
     write_result(
         invalid_path,
-        "## Inception Proposal\n\nCreate a Flask API client.\n\n"
-        "## Human decision required\n\nApprove or modify.",
+        "## Inception Proposal\n\nCreate a Flask API client.\n\n## Human decision required\n\nApprove or modify.",
     )
     invalid = SimpleNamespace(
         id="ai-sdlc-inception-issue-14-retry-2",

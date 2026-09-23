@@ -330,17 +330,20 @@ def main(argv: list[str] | None = None) -> int:
                 options = {"progress": channel.event} if channel.active else {}
 
                 def operation(agent: str | None, model: str | None):
-                    return prepare_start(
-                        Path(args.root),
-                        issue=args.issue,
-                        project=args.project,
-                        agent=agent,
-                        model=model,
-                        swarm=args.swarm,
-                        actor=args.actor,
-                        launch_executor=not args.prepare_only,
-                        **options,
-                    )
+                    try:
+                        return prepare_start(
+                            Path(args.root),
+                            issue=args.issue,
+                            project=args.project,
+                            agent=agent,
+                            model=model,
+                            swarm=args.swarm,
+                            actor=args.actor,
+                            launch_executor=not args.prepare_only,
+                            **options,
+                        )
+                    finally:
+                        channel.stop_spinner()
 
                 def failure_context(error: BaseException):
                     if not isinstance(error, StartExecutorError):

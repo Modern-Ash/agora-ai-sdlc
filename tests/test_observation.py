@@ -1,4 +1,5 @@
 import json
+import time
 from copy import deepcopy
 from io import StringIO
 from types import SimpleNamespace as NS
@@ -265,6 +266,38 @@ def test_secret_and_terminal_safety(dirty):
     assert "child@example.test" not in clean
     assert "12345678901234567890" not in clean
     assert "\x1b" not in clean
+
+
+class TTYStringIO(StringIO):
+    def isatty(self):
+        return True
+
+
+def test_executor_spinner_is_tty_only_and_stops_on_next_event():
+    stream = TTYStringIO()
+    with HumanChannel(stream=stream, lang="es") as channel:
+        channel.event("start.executor-launch")
+        for _ in range(50):
+            if "Executor en ejecución · esperando resultado" in stream.getvalue():
+                break
+            time.sleep(0.01)
+        assert "Executor en ejecución · esperando resultado" in stream.getvalue()
+        assert channel._spinner_thread is not None
+
+        channel.event("start.executor-complete")
+
+        assert channel._spinner_thread is None
+        assert "El executor completó Inception" in stream.getvalue()
+        assert "\x1b[2K" in stream.getvalue()
+
+
+def test_executor_spinner_is_disabled_for_non_tty_streams():
+    stream = StringIO()
+    with HumanChannel(stream=stream, lang="es") as channel:
+        channel.event("start.executor-launch")
+        assert channel._spinner_thread is None
+
+    assert "Executor en ejecución · esperando resultado" not in stream.getvalue()
 
 
 def test_private_ui_file_is_out_of_band_and_exclusive(tmp_path, capsys):

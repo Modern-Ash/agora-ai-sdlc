@@ -303,10 +303,11 @@ def launch_inception_executor(
         suffix = ""
         if durable is not None:
             durable_path = Path(durable.path)
-            suffix = f" Durable diagnostics: {durable_path / 'SUMMARY.md'}."
             provider_error = _session_stderr(durable_path)
             if provider_error:
-                suffix += f" Provider error: {provider_error}"
+                provider_line = provider_error.splitlines()[-1]
+                suffix += f" Provider error: {provider_line}."
+            suffix += f" Durable diagnostics: {durable_path / 'SUMMARY.md'}."
         raise ExecutorLaunchError(f"Inception executor {runtime.name} failed: {error}.{suffix}") from error
 
     if completed.status != "completed":

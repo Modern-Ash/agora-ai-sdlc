@@ -201,9 +201,7 @@ def _grep_paths(root: Path, keywords: tuple[str, ...]) -> tuple[str, ...]:
     code, stdout, _ = _git(root, "grep", "-l", "-I", "-E", expression, "--")
     if code not in {0, 1} or not stdout:
         return ()
-    return tuple(
-        line for line in stdout.splitlines() if line.strip() and not _is_framework_path(line.strip())
-    )
+    return tuple(line for line in stdout.splitlines() if line.strip() and not _is_framework_path(line.strip()))
 
 
 def _related_paths(

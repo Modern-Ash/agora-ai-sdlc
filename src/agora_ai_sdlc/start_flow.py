@@ -42,6 +42,23 @@ class StartFlowError(ValueError):
     """Raised when the governed start flow cannot be prepared safely."""
 
 
+class StartExecutorError(StartFlowError):
+    """Executor failure that may support an interactive runtime/model recovery."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        runtime_id: str,
+        workspace_root: str,
+        recoverable: bool,
+    ) -> None:
+        super().__init__(message)
+        self.runtime_id = runtime_id
+        self.workspace_root = workspace_root
+        self.recoverable = recoverable
+
+
 @dataclass(frozen=True)
 class StartFlowResult:
     project: str
@@ -365,6 +382,7 @@ def prepare_start(
     issue: int,
     project: str | None = None,
     agent: str | None = None,
+    model: str | None = None,
     swarm: str = "delivery",
     actor: str = "product-owner",
     workspace_factory: Callable[..., AgoraWorkspace] = AgoraWorkspace,
@@ -389,6 +407,8 @@ def prepare_start(
     notify("start.workspace-ready")
     project = project or infer_project(root)
     runtime = _select_runtime(root, agent, discovery=runtime_discovery)
+    if model and runtime.id != "opencode":
+        raise StartFlowError("Explicit --model selection is currently supported only with --agent opencode")
     notify("start.runtime-ready")
     prepared = preflight(
         root,
@@ -515,10 +535,16 @@ def prepare_start(
                 swarm_id=swarm,
                 work_id=work_record.id,
                 responsible_actor=actor,
+                model=model,
                 workspace_factory=workspace_factory,
             )
         except ExecutorLaunchError as error:
-            raise StartFlowError(str(error)) from error
+            raise StartExecutorError(
+                str(error),
+                runtime_id=runtime.id,
+                workspace_root=str(root),
+                recoverable=error.recoverable,
+            ) from error
         notify("start.executor-complete")
         status = "human-review-required"
     else:

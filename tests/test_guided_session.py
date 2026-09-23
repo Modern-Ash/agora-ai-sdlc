@@ -69,9 +69,10 @@ def test_prepare_prompts_for_runtime_and_keeps_selection(monkeypatch):
 
     assert result.reason == "exit"
     assert result.selected_runtime == "claude"
-    assert "Selected assistant: Claude Code" in outputs
-    assert "Prepare with Claude Code" in outputs
-    assert any("Active assistant: Claude Code" in line for line in outputs)
+    assert result.selected_model is None
+    assert "Selected assistant: Claude Code · configured model" in outputs
+    assert "Prepare with Claude Code · configured model" in outputs
+    assert any("Active assistant: Claude Code · configured model" in line for line in outputs)
 
 
 def test_change_agent_replaces_session_runtime(monkeypatch):
@@ -80,7 +81,7 @@ def test_change_agent_replaces_session_runtime(monkeypatch):
     monkeypatch.setattr("agora_ai_sdlc.guided_session.inspect_next", lambda *args, **kwargs: decision())
     monkeypatch.setattr(
         "agora_ai_sdlc.guided_session.discover_runtimes",
-        lambda root: (runtime("codex", "Codex"), runtime("ollama", "Ollama")),
+        lambda root: (runtime("codex", "Codex"), runtime("claude", "Claude Code")),
     )
 
     result = run_interactive(
@@ -89,9 +90,38 @@ def test_change_agent_replaces_session_runtime(monkeypatch):
         output_fn=outputs.append,
     )
 
-    assert result.selected_runtime == "ollama"
-    assert outputs.count("Selected assistant: Codex") == 1
-    assert outputs.count("Selected assistant: Ollama") == 1
+    assert result.selected_runtime == "claude"
+    assert outputs.count("Selected assistant: Codex · configured model") == 1
+    assert outputs.count("Selected assistant: Claude Code · configured model") == 1
+
+
+def test_opencode_selection_lists_models_from_local_and_hosted_providers(monkeypatch):
+    outputs = []
+    answers = iter(["p", "1", "b", "x"])
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.inspect_next", lambda *args, **kwargs: decision())
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_session.discover_runtimes",
+        lambda root: (runtime("opencode", "OpenCode"),),
+    )
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_session.list_available_models",
+        lambda **kwargs: (
+            "openai/gpt-5.5",
+            "opencode/nemotron-3-ultra-free",
+            "ollama/claude",
+        ),
+    )
+
+    result = run_interactive(
+        Path("."),
+        input_fn=lambda prompt: next(answers),
+        output_fn=outputs.append,
+    )
+
+    assert result.selected_runtime == "opencode"
+    assert result.selected_model == "ollama/claude"
+    assert any("OpenCode · ollama/claude [local]" in line for line in outputs)
+    assert any("OpenCode · openai/gpt-5.5 [external]" in line for line in outputs)
 
 
 def test_review_and_details_are_selectable(monkeypatch):

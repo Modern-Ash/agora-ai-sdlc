@@ -6,19 +6,18 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice, recovery_choices
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next, render
 from agora_ai_sdlc.i18n import t
-from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
+from agora_ai_sdlc.opencode_runner import list_available_models
+from agora_ai_sdlc.runtime_discovery import discover_runtimes
 
 
 @dataclass(frozen=True)
 class GuidedSessionResult:
     reason: str
     selected_runtime: str | None = None
-
-
-def _responsive_runtimes(root: Path) -> tuple[RuntimeDiscovery, ...]:
-    return tuple(item for item in discover_runtimes(root) if item.installed and item.responsive)
+    selected_model: str | None = None
 
 
 def _select_runtime(
@@ -26,19 +25,27 @@ def _select_runtime(
     *,
     input_fn: Callable[[str], str],
     output_fn: Callable[[str], None],
-    current: RuntimeDiscovery | None = None,
+    current: ExecutorRecoveryChoice | None = None,
     lang: str = "en",
-) -> RuntimeDiscovery | None:
-    runtimes = _responsive_runtimes(root)
-    if not runtimes:
+) -> ExecutorRecoveryChoice | None:
+    choices = recovery_choices(
+        root,
+        discovery=discover_runtimes,
+        model_lister=list_available_models,
+    )
+    if not choices:
         output_fn(t("session.no_runtime", lang=lang))
         return None
 
     output_fn("")
     output_fn(t("session.available", lang=lang))
-    for index, runtime in enumerate(runtimes, start=1):
-        selected = f" ({t('session.current', lang=lang)})" if current is not None and runtime.id == current.id else ""
-        output_fn(f"  {index}. {runtime.name:<12} ✓ {t('session.responsive', lang=lang)}{selected}")
+    for index, choice in enumerate(choices, start=1):
+        selected = (
+            f" ({t('session.current', lang=lang)})"
+            if current is not None and choice.agent == current.agent and choice.model == current.model
+            else ""
+        )
+        output_fn(f"  {index}. {choice.label} ✓ {t('session.responsive', lang=lang)}{selected}")
     output_fn(f"  X. {t('session.cancel', lang=lang)}")
 
     while True:
@@ -50,10 +57,10 @@ def _select_runtime(
         except ValueError:
             output_fn(t("session.choose_number_x", lang=lang))
             continue
-        if 1 <= index <= len(runtimes):
-            runtime = runtimes[index - 1]
-            output_fn(t("session.selected", lang=lang, runtime=runtime.name))
-            return runtime
+        if 1 <= index <= len(choices):
+            choice = choices[index - 1]
+            output_fn(t("session.selected", lang=lang, runtime=choice.label))
+            return choice
         output_fn(t("session.choose_listed", lang=lang))
 
 
@@ -77,13 +84,13 @@ def _render_review(decision: GuidedDecision, output_fn: Callable[[str], None], *
 
 def _render_prepare_handoff(
     decision: GuidedDecision,
-    runtime: RuntimeDiscovery,
+    runtime: ExecutorRecoveryChoice,
     output_fn: Callable[[str], None],
     *,
     lang: str = "en",
 ) -> None:
     output_fn("")
-    output_fn(t("session.prepare_with", lang=lang, runtime=runtime.name))
+    output_fn(t("session.prepare_with", lang=lang, runtime=runtime.label))
     output_fn("  " + t("session.prepare_desc", lang=lang))
     output_fn("  " + t("session.return_before_approval", lang=lang))
     if decision.missing_artifacts:
@@ -105,25 +112,33 @@ def run_interactive(
 ) -> GuidedSessionResult:
     """Run a human-driven guided loop. Core remains authoritative and no approval is automated."""
 
-    selected_runtime: RuntimeDiscovery | None = None
+    selected_runtime: ExecutorRecoveryChoice | None = None
 
     while True:
         decision = inspect_next(root, swarm=swarm, work=work, lang=lang)
         output_fn(render(decision, show_actions=False, lang=lang))
 
         if decision is None:
-            return GuidedSessionResult("clear", selected_runtime.id if selected_runtime else None)
+            return GuidedSessionResult(
+                "clear",
+                selected_runtime.agent if selected_runtime else None,
+                selected_runtime.model if selected_runtime else None,
+            )
 
         output_fn("")
         if selected_runtime is not None:
-            output_fn(t("session.active", lang=lang, runtime=selected_runtime.name))
+            output_fn(t("session.active", lang=lang, runtime=selected_runtime.label))
         output_fn(t("session.menu", lang=lang))
         output_fn(t("session.menu2", lang=lang))
 
         answer = input_fn(t("session.select", lang=lang)).strip().casefold()
 
         if answer in {"x", "q", "exit"}:
-            return GuidedSessionResult("exit", selected_runtime.id if selected_runtime else None)
+            return GuidedSessionResult(
+                "exit",
+                selected_runtime.agent if selected_runtime else None,
+                selected_runtime.model if selected_runtime else None,
+            )
 
         if answer in {"d", "details"}:
             output_fn("")
@@ -159,7 +174,11 @@ def run_interactive(
             output_fn(t("session.followup", lang=lang))
             follow_up = input_fn(t("session.select", lang=lang)).strip().casefold()
             if follow_up in {"x", "q", "exit"}:
-                return GuidedSessionResult("exit", selected_runtime.id)
+                return GuidedSessionResult(
+                    "exit",
+                    selected_runtime.agent,
+                    selected_runtime.model,
+                )
             if follow_up in {"c", "change"}:
                 selected_runtime = _select_runtime(
                     root,

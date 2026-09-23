@@ -12,6 +12,7 @@ from agora.markdown import read_markdown
 from agora.model import LaunchSessionInput, StartSessionInput
 from agora.workspace import AgoraWorkspace
 
+from agora_ai_sdlc.llm_failures import recoverable_llm_failure
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 
 SCHEMA = "agora-ai-sdlc/executor-adapters/v1"
@@ -22,6 +23,10 @@ MAX_PROVIDER_DIAGNOSTIC_CHARS = 1600
 
 class ExecutorLaunchError(ValueError):
     """Stable launch failure surfaced by the Start happy path."""
+
+    def __init__(self, message: str, *, recoverable: bool = False) -> None:
+        super().__init__(message)
+        self.recoverable = recoverable
 
 
 @dataclass(frozen=True)
@@ -114,7 +119,13 @@ def _inception_prompt(root: Path, handoff_path: Path) -> str:
     )
 
 
-def build_executor_runner(runtime: RuntimeDiscovery, root: Path, handoff_path: Path) -> str:
+def build_executor_runner(
+    runtime: RuntimeDiscovery,
+    root: Path,
+    handoff_path: Path,
+    *,
+    model: str | None = None,
+) -> str:
     adapter = _adapter(runtime.id)
     executable = runtime.executable or runtime.command
     prompt = _inception_prompt(root, handoff_path)
@@ -122,6 +133,7 @@ def build_executor_runner(runtime: RuntimeDiscovery, root: Path, handoff_path: P
         "executable": executable,
         "python": sys.executable,
         "root": str(root.resolve()),
+        "model": model or "",
         "prompt": prompt,
     }
     try:
@@ -130,6 +142,14 @@ def build_executor_runner(runtime: RuntimeDiscovery, root: Path, handoff_path: P
         raise ExecutorLaunchError(
             f"Executor adapter {runtime.id!r} references unknown placeholder {error.args[0]!r}"
         ) from error
+    if runtime.id == "opencode" and not model:
+        try:
+            model_index = argv.index("--model")
+        except ValueError:
+            pass
+        else:
+            if model_index + 1 < len(argv) and argv[model_index + 1] == "":
+                del argv[model_index : model_index + 2]
     expected_executable = sys.executable if runtime.id == "opencode" else executable
     if not argv or Path(argv[0]).name != Path(expected_executable).name:
         raise ExecutorLaunchError(f"Executor adapter {runtime.id!r} produced an invalid launch command")
@@ -250,12 +270,13 @@ def launch_inception_executor(
     swarm_id: str,
     work_id: str,
     responsible_actor: str = "product-owner",
+    model: str | None = None,
     workspace_factory=AgoraWorkspace,
 ) -> InceptionExecutionResult:
     """Launch one governed Inception session and reuse completed work idempotently."""
 
     root = root.resolve()
-    runner = build_executor_runner(runtime, root, handoff_path)
+    runner = build_executor_runner(runtime, root, handoff_path, model=model)
     workspace = workspace_factory(cwd=root)
     executor_id = f"ai-{runtime.id}"
     base_id = f"ai-sdlc-inception-{work_id}"
@@ -315,7 +336,11 @@ def launch_inception_executor(
                 suffix += f" Provider error: {_compact_diagnostic(provider_error)}."
             if "Durable diagnostics:" not in error_text:
                 suffix += f" Durable diagnostics: {durable_path / 'SUMMARY.md'}."
-        raise ExecutorLaunchError(f"Inception executor {runtime.name} failed: {error_text}.{suffix}") from error
+        message = f"Inception executor {runtime.name} failed: {error_text}.{suffix}"
+        raise ExecutorLaunchError(
+            message,
+            recoverable=recoverable_llm_failure(message),
+        ) from error
 
     if completed.status != "completed":
         raise ExecutorLaunchError(

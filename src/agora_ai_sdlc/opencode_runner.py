@@ -10,6 +10,8 @@ import threading
 from pathlib import Path
 from typing import TextIO
 
+from agora_ai_sdlc.llm_failures import recoverable_llm_failure
+
 MODEL_DISCOVERY_TIMEOUT_SECONDS = 15
 PREFERRED_FREE_MODELS = (
     "opencode/nemotron-3-ultra-free",
@@ -17,27 +19,10 @@ PREFERRED_FREE_MODELS = (
     "opencode/mimo-v2.5-free",
 )
 LOCAL_FREE_PREFIXES = ("ollama/", "lmstudio/")
-TERMINAL_PROVIDER_ERRORS = (
-    "usage limit has been reached",
-    "usage limit reached",
-    "monthly usage limit",
-    "free usage exceeded",
-    "quota exceeded",
-    "quota has been reached",
-    "invalid api key",
-    "api key is missing",
-    "authentication failed",
-    "unauthorized",
-    "forbidden",
-    "provider not found",
-    "model not found",
-    "provider is not configured",
-)
 
 
 def terminal_provider_error(line: str) -> bool:
-    normalized = line.casefold()
-    return any(marker in normalized for marker in TERMINAL_PROVIDER_ERRORS)
+    return recoverable_llm_failure(line)
 
 
 def _normalize_diagnostic(text: str) -> str:
@@ -66,7 +51,7 @@ def _free_model_rank(model: str) -> tuple[int, int | str]:
     return (3, normalized)
 
 
-def discover_free_model(*, executable: str, root: Path) -> str:
+def list_available_models(*, executable: str, root: Path) -> tuple[str, ...]:
     try:
         result = subprocess.run(
             [executable, "models"],
@@ -83,7 +68,11 @@ def discover_free_model(*, executable: str, root: Path) -> str:
         detail = _normalize_diagnostic(result.stderr or result.stdout)
         raise RuntimeError(f"Cannot list OpenCode models: {detail or 'unknown error'}")
 
-    models = _available_models(result.stdout)
+    return tuple(_available_models(result.stdout))
+
+
+def discover_free_model(*, executable: str, root: Path) -> str:
+    models = list_available_models(executable=executable, root=root)
     free_models = [
         model for model in models if "free" in model.casefold() or model.casefold().startswith(LOCAL_FREE_PREFIXES)
     ]

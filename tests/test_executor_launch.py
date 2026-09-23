@@ -107,6 +107,17 @@ def test_opencode_runner_is_non_interactive_and_binds_handoff_and_root(tmp_path)
     assert "Do not implement product code" in runner
 
 
+def test_opencode_runner_accepts_explicit_model_override(tmp_path):
+    runner = build_executor_runner(
+        runtime("opencode"),
+        tmp_path,
+        handoff(tmp_path),
+        model="ollama/claude",
+    )
+
+    assert "--model ollama/claude" in runner
+
+
 def test_provider_only_runtime_fails_with_actionable_guidance(tmp_path):
     with pytest.raises(ExecutorLaunchError, match="not a repository executor"):
         build_executor_runner(runtime("ollama"), tmp_path, handoff(tmp_path))
@@ -295,4 +306,5 @@ def test_failed_executor_surfaces_provider_stderr(tmp_path):
             workspace_factory=lambda cwd: workspace,
         )
 
+    assert captured.value.recoverable is True
     assert "Provider error: }" not in str(captured.value)

@@ -367,6 +367,42 @@ def test_prepare_start_repairs_legacy_product_owner_issue_read(tmp_path):
     assert '"issue.read"' in role.read_text(encoding="utf-8")
 
 
+def test_prepare_start_forwards_explicit_opencode_model(tmp_path):
+    workspace = FakeWorkspace(tmp_path)
+    observed = {}
+
+    def executor(root, **kwargs):
+        observed.update(kwargs)
+        return _execution(root, **kwargs)
+
+    result = _prepare_start(
+        tmp_path,
+        issue=11,
+        project="Modern-Ash/agorix",
+        agent="opencode",
+        model="ollama/claude",
+        workspace_factory=lambda cwd: workspace,
+        runtime_discovery=lambda root: (runtime("opencode"),),
+        executor_launcher=executor,
+    )
+
+    assert result.runtime_id == "opencode"
+    assert observed["model"] == "ollama/claude"
+
+
+def test_prepare_start_rejects_explicit_model_for_non_opencode_runtime(tmp_path):
+    with pytest.raises(StartFlowError, match="supported only with --agent opencode"):
+        _prepare_start(
+            tmp_path,
+            issue=11,
+            project="Modern-Ash/agorix",
+            agent="codex",
+            model="gpt-5.5",
+            workspace_factory=FakeWorkspace,
+            runtime_discovery=lambda root: (runtime("codex"),),
+        )
+
+
 def test_prepare_start_rejects_provider_only_runtime_as_executor(tmp_path):
     with pytest.raises(StartFlowError, match="not a repository executor"):
         _prepare_start(

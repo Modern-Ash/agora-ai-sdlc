@@ -175,9 +175,7 @@ def inspect_repository(root: Path, *, max_files: int = 5000) -> RepositoryFacts:
     stop = False
     for current, directories, filenames in os.walk(root):
         directories[:] = [
-            directory
-            for directory in directories
-            if directory not in SKIP_DIRS and not directory.startswith(".")
+            directory for directory in directories if directory not in SKIP_DIRS and not directory.startswith(".")
         ]
         current_path = Path(current)
         for filename in filenames:
@@ -216,9 +214,7 @@ def _trace(criteria: tuple[str, ...]) -> list[str]:
         return ["- No explicit criterion was available for deterministic traceability."]
     lines = []
     for index, criterion in enumerate(criteria, start=1):
-        lines.append(
-            f"- AC-{index:03d}: {criterion} -> plan step implement-{index:02d} -> bolt verify-{index:02d}"
-        )
+        lines.append(f"- AC-{index:03d}: {criterion} -> plan step implement-{index:02d} -> bolt verify-{index:02d}")
     return lines
 
 

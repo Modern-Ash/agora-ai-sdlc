@@ -16,9 +16,7 @@ from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 def runtime(runtime_id: str = "opencode") -> RuntimeDiscovery:
     return RuntimeDiscovery(
         id=runtime_id,
-        name={"opencode": "OpenCode", "codex": "Codex", "claude": "Claude Code", "ollama": "Ollama"}[
-            runtime_id
-        ],
+        name={"opencode": "OpenCode", "codex": "Codex", "claude": "Claude Code", "ollama": "Ollama"}[runtime_id],
         command=runtime_id,
         installed=True,
         executable=f"/usr/bin/{runtime_id}",

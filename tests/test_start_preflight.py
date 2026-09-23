@@ -202,8 +202,6 @@ def test_start_preflight_restores_missing_guided_skill_resource(tmp_path, monkey
     assert missing.is_file()
 
 
-
-
 def test_start_preflight_repairs_body_only_github_issue_operation(tmp_path, monkeypatch):
     monkeypatch.setenv("AGORA_HOME", str(tmp_path / "home"))
     project = tmp_path / "project"

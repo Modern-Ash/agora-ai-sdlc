@@ -14,7 +14,7 @@ def test_explicit_language_wins_over_environment(monkeypatch):
 
 
 def test_spanish_changes_presentation_only():
-    assert t("start.title", lang="es") == "Agora AI-SDLC | Inicio"
+    assert t("start.title", lang="es") == "Agora Flow | Inicio"
     assert t("start.status", lang="es") == "Estado"
     # Contract values are deliberately not translated by the i18n layer.
     assert "human-review-required" not in {t("start.status", lang="es")}

@@ -13,6 +13,7 @@ from agora_ai_sdlc.start_flow import (
     prepare_start,
     render_start,
 )
+from agora_ai_sdlc.start_preflight import StartPreparationResult
 
 
 def _git(root: Path, *args: str) -> str:
@@ -45,6 +46,18 @@ def runtime(runtime_id="codex", *, responsive=True, configured=True):
         version="1.0",
         configured=configured,
     )
+
+
+def _prepare_start(root: Path, **kwargs):
+    kwargs.setdefault("isolation", lambda candidate, issue: (candidate.resolve(), None))
+    kwargs.setdefault(
+        "preflight",
+        lambda candidate, runtime, **options: StartPreparationResult(
+            root=candidate.resolve(),
+            actions=(),
+        ),
+    )
+    return prepare_start(root, **kwargs)
 
 
 class FakeWorkspace:
@@ -139,7 +152,7 @@ def test_infer_project_from_https_origin(monkeypatch, tmp_path):
 def test_prepare_start_reads_issue_through_governed_tool_and_creates_draft_intent(tmp_path):
     workspace = FakeWorkspace(tmp_path)
 
-    result = prepare_start(
+    result = _prepare_start(
         tmp_path,
         issue=11,
         project="Modern-Ash/agorix",
@@ -177,17 +190,22 @@ def test_prepare_start_reads_issue_through_governed_tool_and_creates_draft_inten
     assert "## Parent" not in workspace.last_intent_input.outcome
 
     output = render_start(result)
-    assert "Candidate Intent: issue-11 (draft)" in output
-    assert "Propose the Level 1 Plan" in output
-    assert "Propose cohesive Units and suggested Bolts" in output
-    assert "No Intent acceptance" in output
-    assert "Portable Inception handoff" in output
+    assert "Agora Flow | Start" in output
+    assert "Issue #11" in output
+    assert "INCEPTION READY" in output
+    assert "Construction is not authorized yet" in output
+    assert "Human review boundary" in output
     assert "No ad hoc methodology prompt is required." in output
+    assert "Portable Inception handoff" not in output
     assert "human-review-required" in output
 
+    detailed = render_start(result, details=True)
+    assert "Portable Inception handoff" in detailed
+    assert result.handoff_path in detailed
+
     spanish = render_start(result, lang="es")
-    assert "Agora AI-SDLC | Inicio" in spanish
-    assert "Intent candidato: issue-11 (borrador)" in spanish
+    assert "Agora Flow | Inicio" in spanish
+    assert "INCEPTION LISTA" in spanish
     assert "Estado: human-review-required" in spanish
 
     handoff = Path(result.handoff_path).read_text(encoding="utf-8")
@@ -214,7 +232,7 @@ def test_prepare_start_repairs_legacy_product_owner_issue_read(tmp_path):
         encoding="utf-8",
     )
 
-    result = prepare_start(
+    result = _prepare_start(
         tmp_path,
         issue=11,
         project="Modern-Ash/agorix",
@@ -232,7 +250,7 @@ def test_prepare_start_repairs_legacy_product_owner_issue_read(tmp_path):
 
 def test_prepare_start_rejects_unavailable_requested_runtime(tmp_path):
     with pytest.raises(StartFlowError, match="not installed and responsive"):
-        prepare_start(
+        _prepare_start(
             tmp_path,
             issue=11,
             project="Modern-Ash/agorix",
@@ -261,7 +279,7 @@ def test_prepare_start_reuses_existing_durable_issue_read_and_intent(tmp_path):
         status="draft",
     )
 
-    result = prepare_start(
+    result = _prepare_start(
         tmp_path,
         issue=11,
         project="Modern-Ash/agorix",
@@ -289,7 +307,7 @@ def test_documentation_issue_selects_documentation_pathway(tmp_path):
         return SimpleNamespace(result=SimpleNamespace(status="completed", stdout=json.dumps(payload), stderr=""))
 
     workspace.show_tool_run = show_tool_run
-    result = prepare_start(
+    result = _prepare_start(
         tmp_path,
         issue=9,
         project="Modern-Ash/agorix",
@@ -311,7 +329,7 @@ def test_new_issue_branch_is_based_on_main_not_previous_issue_branch(tmp_path):
     workspace = FakeWorkspace(tmp_path)
     workspace._has_run = True
 
-    result = prepare_start(
+    result = _prepare_start(
         tmp_path,
         issue=13,
         project="Modern-Ash/agorix",
@@ -337,7 +355,7 @@ def test_new_issue_refuses_to_leave_dirty_previous_issue_branch(tmp_path):
     workspace = FakeWorkspace(tmp_path)
 
     with pytest.raises(StartFlowError, match="commit or stash local changes first"):
-        prepare_start(
+        _prepare_start(
             tmp_path,
             issue=13,
             project="Modern-Ash/agorix",
@@ -365,7 +383,7 @@ def test_linked_git_worktree_binds_governed_work_branch(tmp_path):
     workspace = FakeWorkspace(worktree)
     workspace._has_run = True
 
-    result = prepare_start(
+    result = _prepare_start(
         worktree,
         issue=14,
         project="Modern-Ash/agorix",

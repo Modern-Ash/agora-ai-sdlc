@@ -1,4 +1,5 @@
 import json
+import subprocess
 
 import pytest
 import yaml
@@ -339,3 +340,26 @@ def test_quality_reviewer_actor_is_optional_and_not_required_assignment(tmp_path
     assert "quality-reviewer" in actors
     assert "quality-reviewer" not in swarm.required_roles
     assert "developer" in swarm.required_roles
+
+
+def test_preview_treats_linked_git_worktree_as_existing_repository(tmp_path):
+    primary = tmp_path / "primary"
+    primary.mkdir()
+    subprocess.run(["git", "init", "-b", "main"], cwd=primary, check=True, capture_output=True)
+    subprocess.run(["git", "config", "user.email", "agora@example.test"], cwd=primary, check=True)
+    subprocess.run(["git", "config", "user.name", "Agora Test"], cwd=primary, check=True)
+    (primary / "README.md").write_text("# demo\n", encoding="utf-8")
+    subprocess.run(["git", "add", "README.md"], cwd=primary, check=True)
+    subprocess.run(["git", "commit", "-m", "initial"], cwd=primary, check=True, capture_output=True)
+    subprocess.run(["git", "switch", "-c", "feature/primary"], cwd=primary, check=True, capture_output=True)
+
+    linked = tmp_path / "linked"
+    subprocess.run(["git", "worktree", "add", str(linked), "main"], cwd=primary, check=True, capture_output=True)
+
+    config = base_config()
+    config["project"]["mode"] = "existing"
+    config["pathway"] = "brownfield"
+    plan = preview(config, linked)
+
+    assert (linked / ".git").is_file()
+    assert plan["existing_repository"] is True

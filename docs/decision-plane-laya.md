@@ -1,6 +1,6 @@
 # Local Decision Plane with Laya
 
-Agora AI-SDLC can use [Laya](https://github.com/NandhaKishorM/laya) as an optional local System-1
+Agora AI-SDLC uses [Laya](https://github.com/NandhaKishorM/laya) as its local System-1
 decision engine. Laya is the only System-1 provider shipped by this integration and is Apache-2.0
 licensed. It is deliberately separate from the generative runtimes used by Construction and Review.
 
@@ -19,11 +19,20 @@ deterministic rule -> Laya advisory decision -> generative executor -> human aut
 Deterministic rules always win. Low-confidence Laya answers fail open and are escalated instead of
 silently removing context or authorizing an action.
 
-## Install
+## Normal workflow
+
+Laya is part of the normal AI-SDLC installation and is intentionally hidden behind the guided workflow.
+Users should not need a separate Laya command for routine delivery:
 
 ```bash
-pip install "agora-ai-sdlc[laya]"
+pip install agora-ai-sdlc
+aisdlc continue
 ```
+
+`continue` uses deterministic Core state first, then Laya for cheap local classification when that can
+simplify the next interaction. It presents one recommended next action, Enter accepts that default, and
+a local/free executor is preselected automatically when one is already available. Paid/external
+providers are never silently selected.
 
 The default checkpoint is `typed-decisions`. Override it without changing Agora configuration:
 

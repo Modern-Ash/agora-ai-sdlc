@@ -119,7 +119,7 @@ def advise_workflow(
     recommended = None
     # Token-saving default: automatically preselect only local/free executors.
     # Paid/configured providers still require the user's explicit runtime choice.
-    if tier in {None, "local", "standard"} and not escalation:
+    if source == "laya" and tier in {"local", "standard"} and not escalation:
         recommended = _free_runtime(root)
 
     if tier == "human" and not escalation:

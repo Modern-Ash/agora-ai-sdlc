@@ -341,8 +341,6 @@ def test_quality_reviewer_actor_is_optional_and_not_required_assignment(tmp_path
     assert "quality-reviewer" not in swarm.required_roles
     assert "developer" in swarm.required_roles
 
-
-
 def test_preview_treats_linked_git_worktree_as_existing_repository(tmp_path):
     primary = tmp_path / "primary"
     primary.mkdir()

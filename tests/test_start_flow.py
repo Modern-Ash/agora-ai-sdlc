@@ -347,3 +347,34 @@ def test_new_issue_refuses_to_leave_dirty_previous_issue_branch(tmp_path):
 
     assert workspace.created_work_inputs == []
     assert _git(tmp_path, "branch", "--show-current") == "feat/issue-12-program-model-schema"
+
+
+def test_linked_git_worktree_binds_governed_work_branch(tmp_path):
+    if "branch" not in getattr(CreateWorkInput, "__dataclass_fields__", {}):
+        pytest.skip("per-Work branch support requires Core 0.9+")
+
+    primary = tmp_path / "primary"
+    primary.mkdir()
+    _git_repo(primary)
+    _git(primary, "switch", "-c", "feature/other-work")
+    worktree = tmp_path / "demo"
+    _git(primary, "worktree", "add", str(worktree), "main")
+
+    assert (worktree / ".git").is_file()
+
+    workspace = FakeWorkspace(worktree)
+    workspace._has_run = True
+
+    result = prepare_start(
+        worktree,
+        issue=14,
+        project="Modern-Ash/agorix",
+        workspace_factory=lambda cwd: workspace,
+        runtime_discovery=lambda root: (runtime("claude"),),
+    )
+
+    created = workspace.created_work_inputs[0]
+    assert created.base_branch == "main"
+    assert created.branch == "ai-sdlc/issue-14"
+    assert created.create_branch is True
+    assert result.branch == "ai-sdlc/issue-14"

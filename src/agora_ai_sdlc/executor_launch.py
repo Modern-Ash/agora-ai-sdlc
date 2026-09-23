@@ -12,6 +12,7 @@ from agora.markdown import read_markdown
 from agora.model import LaunchSessionInput, StartSessionInput
 from agora.workspace import AgoraWorkspace
 
+from agora_ai_sdlc.llm_failures import recoverable_llm_failure
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 
 SCHEMA = "agora-ai-sdlc/executor-adapters/v1"
@@ -20,21 +21,6 @@ INCEPTION_TIMEOUT_SECONDS = 300
 MAX_PROVIDER_DIAGNOSTIC_CHARS = 1600
 
 
-RECOVERABLE_PROVIDER_MARKERS = (
-    "usage limit",
-    "quota",
-    "free usage exceeded",
-    "invalid api key",
-    "api key is missing",
-    "authentication failed",
-    "unauthorized",
-    "forbidden",
-    "provider not found",
-    "model not found",
-    "provider is not configured",
-    "free model selection failed",
-)
-
 
 class ExecutorLaunchError(ValueError):
     """Stable launch failure surfaced by the Start happy path."""
@@ -42,11 +28,6 @@ class ExecutorLaunchError(ValueError):
     def __init__(self, message: str, *, recoverable: bool = False) -> None:
         super().__init__(message)
         self.recoverable = recoverable
-
-
-def recoverable_provider_failure(text: str) -> bool:
-    normalized = text.casefold()
-    return any(marker in normalized for marker in RECOVERABLE_PROVIDER_MARKERS)
 
 
 @dataclass(frozen=True)
@@ -359,7 +340,7 @@ def launch_inception_executor(
         message = f"Inception executor {runtime.name} failed: {error_text}.{suffix}"
         raise ExecutorLaunchError(
             message,
-            recoverable=recoverable_provider_failure(message),
+            recoverable=recoverable_llm_failure(message),
         ) from error
 
     if completed.status != "completed":

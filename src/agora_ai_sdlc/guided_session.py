@@ -6,10 +6,9 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice, recovery_choices
+from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice, select_executor_model
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next, render
 from agora_ai_sdlc.i18n import t
-from agora_ai_sdlc.opencode_runner import list_available_models
 from agora_ai_sdlc.runtime_discovery import discover_runtimes
 
 
@@ -28,40 +27,19 @@ def _select_runtime(
     current: ExecutorRecoveryChoice | None = None,
     lang: str = "en",
 ) -> ExecutorRecoveryChoice | None:
-    choices = recovery_choices(
+    choice = select_executor_model(
         root,
+        input_fn=input_fn,
+        output_fn=output_fn,
+        current=current,
+        lang=lang,
         discovery=discover_runtimes,
-        model_lister=list_available_models,
     )
-    if not choices:
+    if choice is None:
         output_fn(t("session.no_runtime", lang=lang))
-        return None
-
-    output_fn("")
-    output_fn(t("session.available", lang=lang))
-    for index, choice in enumerate(choices, start=1):
-        selected = (
-            f" ({t('session.current', lang=lang)})"
-            if current is not None and choice.agent == current.agent and choice.model == current.model
-            else ""
-        )
-        output_fn(f"  {index}. {choice.label} ✓ {t('session.responsive', lang=lang)}{selected}")
-    output_fn(f"  X. {t('session.cancel', lang=lang)}")
-
-    while True:
-        answer = input_fn(t("session.select_assistant", lang=lang)).strip().casefold()
-        if answer in {"x", "q", "cancel"}:
-            return current
-        try:
-            index = int(answer)
-        except ValueError:
-            output_fn(t("session.choose_number_x", lang=lang))
-            continue
-        if 1 <= index <= len(choices):
-            choice = choices[index - 1]
-            output_fn(t("session.selected", lang=lang, runtime=choice.label))
-            return choice
-        output_fn(t("session.choose_listed", lang=lang))
+        return current
+    output_fn(t("session.selected", lang=lang, runtime=choice.label))
+    return choice
 
 
 def _render_review(decision: GuidedDecision, output_fn: Callable[[str], None], *, lang: str = "en") -> None:

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add an optional local Laya Decision Plane for confidence-gated execution advice and semantic Context Graph pruning, with token-reduction metrics and fail-open escalation.
 - Runtime selection now carries Agora Core's usage measurement basis (measured, provider-reported, unknown) per consumed dimension; missing values are unknown, never measured.
 - Add the AI-SDLC Studio projection provider (`agora_ai_sdlc.studio_projection`) for Agora Core >=0.9, mapping the flavor manifest and Core session provenance and reporting unsupported sections as explicit unavailable.
 - Add the Regulated Delivery Readiness package and a statement of work template to the professional-services documentation.

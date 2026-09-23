@@ -38,11 +38,11 @@ RISK_PATTERNS = (
         "dependency-or-build-change",
         re.compile(r"(?:^|/)(?:pom\.xml|build\.gradle(?:\.kts)?|package(?:-lock)?\.json|pyproject\.toml)$"),
     ),
-    ("database-migration", re.compile(r"(?:^|/)(?:migrations?|db/migration|liquibase|flyway)(?:/|$)", re.I)),
-    ("security-sensitive", re.compile(r"(?:auth|oauth|security|permission|credential|secret)", re.I)),
+    ("database-migration", re.compile(r"(?:^|/)(?:migrations?|db/migration|liquibase|flyway)(?:/|$)", re.IGNORECASE)),
+    ("security-sensitive", re.compile(r"(?:auth|oauth|security|permission|credential|secret)", re.IGNORECASE)),
     (
         "deployment-or-infrastructure",
-        re.compile(r"(?:^|/)(?:Dockerfile|docker-compose|terraform|infra|k8s|helm)(?:[./]|$)", re.I),
+        re.compile(r"(?:^|/)(?:Dockerfile|docker-compose|terraform|infra|k8s|helm)(?:[./]|$)", re.IGNORECASE),
     ),
 )
 
@@ -134,7 +134,7 @@ def _changed_paths(root: Path, base_branch: str | None) -> tuple[str, ...]:
 def _section(text: str, heading: str) -> str:
     pattern = re.compile(
         rf"(?ms)^##\s+{re.escape(heading)}\s*$\n+(.*?)(?=^##\s+|\Z)",
-        re.I,
+        re.IGNORECASE,
     )
     match = pattern.search(text)
     return match.group(1).strip() if match else ""

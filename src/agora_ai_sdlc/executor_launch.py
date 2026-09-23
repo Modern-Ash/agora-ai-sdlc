@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import shlex
+import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -119,6 +120,7 @@ def build_executor_runner(runtime: RuntimeDiscovery, root: Path, handoff_path: P
     prompt = _inception_prompt(root, handoff_path)
     values = {
         "executable": executable,
+        "python": sys.executable,
         "root": str(root.resolve()),
         "model": OPENCODE_FREE_MODEL if runtime.id == "opencode" else "",
         "prompt": prompt,

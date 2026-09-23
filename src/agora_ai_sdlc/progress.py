@@ -24,6 +24,8 @@ _START_ALIASES = {
     "start.issue-reused": "start.issue-read",
     "start.executor-skipped-launch": "start.executor-launch",
     "start.executor-skipped-complete": "start.executor-complete",
+    "start.deterministic-inception": "start.executor-launch",
+    "start.deterministic-complete": "start.executor-complete",
 }
 LIFECYCLE_STAGES = ("inception", "construction", "operations", "completed")
 

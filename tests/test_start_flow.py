@@ -242,6 +242,11 @@ def test_prepare_start_reads_issue_through_governed_tool_and_creates_draft_inten
     assert "Suggested Bolts" in handoff
     assert "Do not enter Construction." in handoff
     assert "Do not fabricate or infer human approval." in handoff
+    assert "Skill: `.agora/skills/agora-ai-sdlc-guided/SKILL.md`" in handoff
+    assert (
+        "Load only the Inception resource: `.agora/skills/agora-ai-sdlc-guided/references/inception.md`."
+    ) in handoff
+    assert "/agora-ai-sdlc/skills/" not in handoff
 
 
 def test_prepare_start_ignores_unrelated_malformed_intent(tmp_path):

@@ -5,8 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from agora_ai_sdlc.guided import skill_path
-
 
 @dataclass(frozen=True)
 class InceptionHandoff:
@@ -43,7 +41,9 @@ def write_inception_handoff(
     root = root.resolve()
     target = root / ".agora" / "ai-sdlc" / "handoffs" / intent_id / "INCEPTION_HANDOFF.md"
     target.parent.mkdir(parents=True, exist_ok=True)
-    skill = skill_path()
+    skill = root / ".agora" / "skills" / "agora-ai-sdlc-guided" / "SKILL.md"
+    skill_reference = skill.relative_to(root).as_posix()
+    inception_reference = (skill.parent / "references" / "inception.md").relative_to(root).as_posix()
 
     target.write_text(
         "\n".join(
@@ -71,8 +71,8 @@ def write_inception_handoff(
                 "## Authority",
                 "",
                 "Follow the installed Agora AI-SDLC guided skill. Agora Core remains lifecycle authority.",
-                f"Skill: `{skill}`",
-                f"Load only the Inception resource: `{skill.parent / 'references' / 'inception.md'}`.",
+                f"Skill: `{skill_reference}`",
+                f"Load only the Inception resource: `{inception_reference}`.",
                 "Human observation logs are not agent context; do not load or replay them.",
                 "",
                 "## Required inputs",

@@ -247,9 +247,7 @@ def _risk_flags(
     test_changes = [
         path
         for path in material
-        if "/test/" in path.casefold()
-        or "/tests/" in path.casefold()
-        or Path(path).name.casefold().startswith("test_")
+        if "/test/" in path.casefold() or "/tests/" in path.casefold() or Path(path).name.casefold().startswith("test_")
     ]
     if source_changes and not test_changes:
         risks.append("source-change-without-test-change")

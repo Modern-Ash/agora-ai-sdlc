@@ -131,3 +131,32 @@ def test_guided_projection_can_be_empty(monkeypatch, tmp_path):
     monkeypatch.setattr(guided, "AgoraWorkspace", EmptyWorkspace)
     assert guided.inspect_next(tmp_path) is None
     assert "No governed action currently needs attention." in guided.render(None)
+
+
+
+def test_construction_command_bundle_launches_executor_instead_of_rollback():
+    decision = guided.GuidedDecision(
+        swarm="issue-26-demo",
+        work="issue-26",
+        title="Deliver GitHub issue #26",
+        method="ai-sdlc",
+        actor="project:ai-claude",
+        role="developer",
+        state="construction",
+        target="inception",
+        gate=None,
+        blockers=("construction obligations remain",),
+        messages=("Prepare required artifacts.",),
+        missing_artifacts=("domain-model", "architecture"),
+        missing_evidence=("test-suite",),
+        unsatisfied_criteria=("source-issue",),
+    )
+
+    commands = guided.command_plan(decision)
+    command_text = "\n".join(command for command, _ in commands)
+
+    assert (
+        "aisdlc continue --swarm issue-26-demo --work issue-26 --run"
+        in command_text
+    )
+    assert "--to inception" not in command_text

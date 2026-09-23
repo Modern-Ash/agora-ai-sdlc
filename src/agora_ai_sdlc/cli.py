@@ -109,7 +109,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     guided.add_argument("--agent", help="Override the assigned Construction executor runtime")
     guided.add_argument("--model", help="Optional model override for runtimes that support explicit model selection")
-    guided.add_argument("--json", action="store_true", help="Print structured guided decision or execution result as JSON")
+    guided.add_argument(
+        "--json", action="store_true", help="Print structured guided decision or execution result as JSON"
+    )
     guided.add_argument("--skill", action="store_true", help="Print the packaged guided-agent skill path")
     guided.add_argument("--non-interactive", action="store_true", help="Force one-shot output even on a terminal")
     guided.add_argument("--lang", choices=SUPPORTED_LANGUAGES, help="Presentation language")
@@ -442,9 +444,7 @@ def main(argv: list[str] | None = None) -> int:
                 if decision is None:
                     raise ValueError("No governed Construction action currently needs execution.")
                 if decision.state != "construction":
-                    raise ValueError(
-                        f"--run requires Work state 'construction', found {decision.state!r}."
-                    )
+                    raise ValueError(f"--run requires Work state 'construction', found {decision.state!r}.")
                 if not decision.actor:
                     raise ValueError("Construction has no assigned responsible actor.")
                 result = launch_construction_executor(

@@ -157,14 +157,10 @@ def _split_front_matter(text: str) -> tuple[dict, str] | None:
 
 def _formatting_only_equivalent(installed: Path, packaged: Path) -> bool:
     installed_files = {
-        path.relative_to(installed)
-        for path in installed.rglob("*")
-        if path.is_file() and not path.is_symlink()
+        path.relative_to(installed) for path in installed.rglob("*") if path.is_file() and not path.is_symlink()
     }
     packaged_files = {
-        path.relative_to(packaged)
-        for path in packaged.rglob("*")
-        if path.is_file() and not path.is_symlink()
+        path.relative_to(packaged) for path in packaged.rglob("*") if path.is_file() and not path.is_symlink()
     }
     if installed_files != packaged_files:
         return False
@@ -229,8 +225,7 @@ def _ensure_skill(root: Path, actions: list[str]) -> None:
         packaged = source / relative
         if existing.is_file() and existing.read_text(encoding="utf-8") != packaged.read_text(encoding="utf-8"):
             raise StartPreparationError(
-                "The guided AI-SDLC skill is incomplete and contains local changes. "
-                "Automatic repair was refused."
+                "The guided AI-SDLC skill is incomplete and contains local changes. Automatic repair was refused."
             )
     install_resources(source, destination)
     actions.append("skill.installed")
@@ -349,15 +344,11 @@ def _ensure_delivery_swarm(
         )
     assignments = dict(workspace.show_swarm(swarm_id).assignments)
     if "product-owner" not in assignments:
-        workspace.assign_actor(
-            AssignActorInput(swarm_id=swarm_id, role_id="product-owner", actor_id="product-owner")
-        )
+        workspace.assign_actor(AssignActorInput(swarm_id=swarm_id, role_id="product-owner", actor_id="product-owner"))
         actions.append("swarm.product-owner-assigned")
     assignments = dict(workspace.show_swarm(swarm_id).assignments)
     if "developer" not in assignments:
-        workspace.assign_actor(
-            AssignActorInput(swarm_id=swarm_id, role_id="developer", actor_id=runtime_actor)
-        )
+        workspace.assign_actor(AssignActorInput(swarm_id=swarm_id, role_id="developer", actor_id=runtime_actor))
         actions.append("swarm.developer-assigned")
 
 

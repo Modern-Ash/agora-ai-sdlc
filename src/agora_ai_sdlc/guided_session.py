@@ -11,6 +11,7 @@ from agora_ai_sdlc.guided import GuidedDecision, inspect_next, render
 from agora_ai_sdlc.i18n import t
 from agora_ai_sdlc.opencode_runner import list_available_models, list_ollama_agent_models
 from agora_ai_sdlc.runtime_discovery import discover_runtimes
+from agora_ai_sdlc.workflow_advisor import advise_workflow
 
 
 @dataclass(frozen=True)
@@ -106,13 +107,35 @@ def run_interactive(
                 selected_runtime.model if selected_runtime else None,
             )
 
+        advice = advise_workflow(root, decision)
+        if selected_runtime is None and advice.recommended_runtime is not None:
+            selected_runtime = advice.recommended_runtime
+            output_fn("")
+            output_fn(t("session.auto_selected", lang=lang, runtime=selected_runtime.label))
+
         output_fn("")
+        output_fn(t("session.recommendation", lang=lang, summary=advice.summary))
+        if advice.source == "laya" and advice.reasoning_tier is not None:
+            confidence = f"{advice.confidence:.2f}" if advice.confidence is not None else "-"
+            output_fn(
+                t(
+                    "session.laya_signal",
+                    lang=lang,
+                    tier=advice.reasoning_tier,
+                    confidence=confidence,
+                )
+            )
+
         if selected_runtime is not None:
             output_fn(t("session.active", lang=lang, runtime=selected_runtime.label))
+        default_key = "P" if advice.action == "prepare" else "R"
+        output_fn(t("session.default_action", lang=lang, action=default_key))
         output_fn(t("session.menu", lang=lang))
         output_fn(t("session.menu2", lang=lang))
 
         answer = input_fn(t("session.select", lang=lang)).strip().casefold()
+        if not answer:
+            answer = advice.action
 
         if answer in {"x", "q", "exit"}:
             return GuidedSessionResult(

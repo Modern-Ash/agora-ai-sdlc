@@ -326,7 +326,7 @@ def test_newly_completed_irrelevant_output_is_recoverable_contract_failure(tmp_p
     assert captured.value.recoverable is True
 
 
-def test_completed_session_without_output_does_not_create_false_human_review(tmp_path):
+def test_completed_session_without_output_is_not_reused_and_gets_new_attempt(tmp_path):
     path = tmp_path / ".agora" / "sessions" / "ai-sdlc-inception-issue-14"
     write_result(path, "")
     completed = SimpleNamespace(
@@ -339,15 +339,18 @@ def test_completed_session_without_output_does_not_create_false_human_review(tmp
     )
     workspace = Workspace(tmp_path, [completed])
 
-    with pytest.raises(ExecutorLaunchError, match="without reviewable output"):
-        launch_inception_executor(
-            tmp_path,
-            runtime=runtime("opencode"),
-            handoff_path=handoff(tmp_path),
-            swarm_id="delivery",
-            work_id="issue-14",
-            workspace_factory=lambda cwd: workspace,
-        )
+    result = launch_inception_executor(
+        tmp_path,
+        runtime=runtime("opencode"),
+        handoff_path=handoff(tmp_path),
+        swarm_id="delivery",
+        work_id="issue-14",
+        workspace_factory=lambda cwd: workspace,
+    )
+
+    assert workspace.started[0].id == "ai-sdlc-inception-issue-14-retry-2"
+    assert result.status == "completed"
+    assert result.reused is False
 
 
 def test_failed_executor_surfaces_provider_stderr(tmp_path):

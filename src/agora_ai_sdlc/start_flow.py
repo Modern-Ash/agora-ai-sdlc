@@ -23,6 +23,11 @@ from agora_ai_sdlc.depth_profiles import asset_root
 from agora_ai_sdlc.i18n import t
 from agora_ai_sdlc.inception_handoff import write_inception_handoff
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
+from agora_ai_sdlc.start_preflight import (
+    StartPreparationResult,
+    ensure_start_ready,
+    isolate_dirty_work,
+)
 
 
 class StartFlowError(ValueError):
@@ -47,6 +52,9 @@ class StartFlowResult:
     tool_run_id: str
     handoff_path: str
     skill_path: str
+    workspace_root: str
+    workspace_isolated: bool
+    preflight_actions: tuple[str, ...]
     status: str = "human-review-required"
 
     def snapshot(self) -> dict:
@@ -301,6 +309,8 @@ def prepare_start(
     actor: str = "product-owner",
     workspace_factory: Callable[..., AgoraWorkspace] = AgoraWorkspace,
     runtime_discovery: Callable[[Path], tuple[RuntimeDiscovery, ...]] = discover_runtimes,
+    preflight: Callable[..., StartPreparationResult] = ensure_start_ready,
+    isolation: Callable[[Path, int], tuple[Path, str | None]] = isolate_dirty_work,
     progress: Callable[[str], None] | None = None,
 ) -> StartFlowResult:
     """Read one issue through Core, persist a draft Intent, and stop for human review."""
@@ -313,10 +323,19 @@ def prepare_start(
                 pass  # Human presentation cannot invalidate an already performed Core operation.
 
     notify("start.inspect")
-    root = root.expanduser().resolve()
+    root, isolation_action = isolation(root, issue)
+    notify("start.workspace-ready")
     project = project or infer_project(root)
     runtime = _select_runtime(root, agent, discovery=runtime_discovery)
     notify("start.runtime-ready")
+    prepared = preflight(
+        root,
+        runtime,
+        swarm_id=swarm,
+        workspace_factory=workspace_factory,
+    )
+    root = prepared.root
+    notify("start.project-ready")
     workspace = workspace_factory(cwd=root)
 
     issue_url = f"https://github.com/{project}/issues/{issue}"
@@ -422,6 +441,11 @@ def prepare_start(
         tool_run_id=run_id,
         handoff_path=handoff.path,
         skill_path=handoff.skill,
+        workspace_root=str(root),
+        workspace_isolated=isolation_action is not None,
+        preflight_actions=tuple(
+            ([isolation_action] if isolation_action is not None else []) + list(prepared.actions)
+        ),
     )
 
 
@@ -434,6 +458,16 @@ def render_start(result: StartFlowResult, *, lang: str = "en") -> str:
             "",
             f"Issue: #{result.issue} {result.issue_title}",
             f"{t('start.project', lang=lang)}: {result.project}",
+            *(
+                [f"{t('start.workspace', lang=lang)}: {result.workspace_root}"]
+                if result.workspace_isolated
+                else []
+            ),
+            *(
+                [t("start.auto_prepared", lang=lang, count=len(result.preflight_actions))]
+                if result.preflight_actions
+                else []
+            ),
             f"{t('start.candidate_intent', lang=lang)}: {result.intent_id} ({t('common.draft', lang=lang)})",
             f"{t('start.work', lang=lang)}: {result.work_id}",
             f"{t('start.branch', lang=lang)}: {result.branch or 'unknown'}"

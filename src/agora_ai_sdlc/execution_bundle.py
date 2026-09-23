@@ -42,7 +42,7 @@ FRAMEWORK_PATH_PREFIXES = (
 
 
 def _is_framework_path(path: str) -> bool:
-    normalized = path.replace("\\", "/").lstrip("./")
+    normalized = path.replace("\\", "/").removeprefix("./")
     return any(normalized.startswith(prefix) for prefix in FRAMEWORK_PATH_PREFIXES)
 
 

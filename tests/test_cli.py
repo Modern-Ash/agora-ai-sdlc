@@ -319,7 +319,8 @@ def test_continue_json_stays_non_interactive_on_tty(monkeypatch, capsys):
 
 
 
-def test_start_interrupt_returns_130_without_traceback(\n    monkeypatch, capsys, tmp_path\n):\n    from agora_ai_sdlc import start_flow
+def test_start_interrupt_returns_130_without_traceback(monkeypatch, capsys, tmp_path):
+    from agora_ai_sdlc import start_flow
 
     def interrupt(*args, **kwargs):
         raise KeyboardInterrupt

@@ -35,9 +35,7 @@ class Workspace:
         )
 
 
-def test_launch_construction_executor_uses_deterministic_bundle_and_assigned_actor(
-    monkeypatch, tmp_path
-):
+def test_launch_construction_executor_uses_deterministic_bundle_and_assigned_actor(monkeypatch, tmp_path):
     bundle_path = tmp_path / ".agora" / "ai-sdlc" / "bundles" / "issue-26" / "EXECUTION_BUNDLE.json"
     bundle_path.parent.mkdir(parents=True)
     bundle_path.write_text("{}\n", encoding="utf-8")

@@ -162,6 +162,14 @@ def build_executor_runner(
         raise ExecutorLaunchError(
             f"Executor adapter {runtime.id!r} references unknown placeholder {error.args[0]!r}"
         ) from error
+    if runtime.id == "opencode" and not model:
+        try:
+            model_index = argv.index("--model")
+        except ValueError:
+            pass
+        else:
+            if model_index + 1 < len(argv) and argv[model_index + 1] == "":
+                del argv[model_index : model_index + 2]
     expected_executable = sys.executable if runtime.id == "opencode" else executable
     if not argv or Path(argv[0]).name != Path(expected_executable).name:
         raise ExecutorLaunchError(f"Executor adapter {runtime.id!r} produced an invalid launch command")

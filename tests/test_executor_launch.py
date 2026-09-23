@@ -100,7 +100,8 @@ def test_executor_registry_distinguishes_agent_host_from_model_provider():
 def test_opencode_runner_is_non_interactive_and_binds_handoff_and_root(tmp_path):
     runner = build_executor_runner(runtime("opencode"), tmp_path, handoff(tmp_path))
 
-    assert runner.startswith("/usr/bin/opencode run ")
+    assert runner.startswith("/usr/bin/opencode run --dir ")
+    assert f"--dir {tmp_path.resolve()}" in runner
     assert "INCEPTION_HANDOFF.md" in runner
     assert str(tmp_path.resolve()) in runner
     assert "Do not implement product code" in runner

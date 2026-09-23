@@ -34,10 +34,16 @@ STOP_WORDS = {
 }
 RISK_PATTERNS = (
     ("ci-configuration", re.compile(r"^(?:\.github/workflows/|\.gitlab-ci\.yml$)")),
-    ("dependency-or-build-change", re.compile(r"(?:^|/)(?:pom\.xml|build\.gradle(?:\.kts)?|package(?:-lock)?\.json|pyproject\.toml)$")),
+    (
+        "dependency-or-build-change",
+        re.compile(r"(?:^|/)(?:pom\.xml|build\.gradle(?:\.kts)?|package(?:-lock)?\.json|pyproject\.toml)$"),
+    ),
     ("database-migration", re.compile(r"(?:^|/)(?:migrations?|db/migration|liquibase|flyway)(?:/|$)", re.I)),
     ("security-sensitive", re.compile(r"(?:auth|oauth|security|permission|credential|secret)", re.I)),
-    ("deployment-or-infrastructure", re.compile(r"(?:^|/)(?:Dockerfile|docker-compose|terraform|infra|k8s|helm)(?:[./]|$)", re.I)),
+    (
+        "deployment-or-infrastructure",
+        re.compile(r"(?:^|/)(?:Dockerfile|docker-compose|terraform|infra|k8s|helm)(?:[./]|$)", re.I),
+    ),
 )
 
 
@@ -304,7 +310,10 @@ def _render(bundle: ExecutionBundle) -> str:
         f"- Missing approvals: {values(tuple(bundle.governance.get('missing_approvals', ())))}",
         f"- Unsatisfied criteria: {values(tuple(bundle.governance.get('unsatisfied_criteria', ())))}",
         "",
-        "This bundle is deterministic read-only context. It does not authorize Construction, approval, review or merge.",
+        (
+            "This bundle is deterministic read-only context. "
+            "It does not authorize Construction, approval, review or merge."
+        ),
         "",
     ]
     return "\n".join(lines)

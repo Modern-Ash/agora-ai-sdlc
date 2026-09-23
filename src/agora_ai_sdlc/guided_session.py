@@ -9,7 +9,7 @@ from pathlib import Path
 from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice, select_executor_model
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next, render
 from agora_ai_sdlc.i18n import t
-from agora_ai_sdlc.opencode_runner import list_available_models, list_ollama_models
+from agora_ai_sdlc.opencode_runner import list_available_models, list_ollama_agent_models
 from agora_ai_sdlc.runtime_discovery import discover_runtimes
 
 
@@ -36,7 +36,7 @@ def _select_runtime(
         lang=lang,
         discovery=discover_runtimes,
         model_lister=list_available_models,
-        ollama_model_lister=list_ollama_models,
+        ollama_model_lister=list_ollama_agent_models,
     )
     if choice is None:
         output_fn(t("session.no_runtime", lang=lang))

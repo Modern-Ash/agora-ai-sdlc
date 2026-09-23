@@ -66,7 +66,7 @@ def _free_model_rank(model: str) -> tuple[int, int | str]:
     return (3, normalized)
 
 
-def discover_free_model(*, executable: str, root: Path) -> str:
+def list_available_models(*, executable: str, root: Path) -> tuple[str, ...]:
     try:
         result = subprocess.run(
             [executable, "models"],
@@ -83,7 +83,11 @@ def discover_free_model(*, executable: str, root: Path) -> str:
         detail = _normalize_diagnostic(result.stderr or result.stdout)
         raise RuntimeError(f"Cannot list OpenCode models: {detail or 'unknown error'}")
 
-    models = _available_models(result.stdout)
+    return tuple(_available_models(result.stdout))
+
+
+def discover_free_model(*, executable: str, root: Path) -> str:
+    models = list_available_models(executable=executable, root=root)
     free_models = [
         model for model in models if "free" in model.casefold() or model.casefold().startswith(LOCAL_FREE_PREFIXES)
     ]

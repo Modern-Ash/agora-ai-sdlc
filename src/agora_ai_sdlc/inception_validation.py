@@ -65,11 +65,7 @@ def _objective(handoff_path: Path) -> str:
 
 
 def _objective_terms(objective: str) -> set[str]:
-    return {
-        token
-        for token in re.findall(r"[a-z0-9][a-z0-9_-]{2,}", objective.casefold())
-        if token not in STOP_WORDS
-    }
+    return {token for token in re.findall(r"[a-z0-9][a-z0-9_-]{2,}", objective.casefold()) if token not in STOP_WORDS}
 
 
 def validate_inception_output(output: str, handoff_path: Path) -> InceptionValidation:

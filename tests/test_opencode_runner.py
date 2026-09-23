@@ -65,7 +65,10 @@ def test_ollama_runtime_env_configures_opencode_v2(monkeypatch, tmp_path: Path):
     )
 
     payload = json.loads(env["OPENCODE_CONFIG_CONTENT"])
-    assert payload["providers"]["ollama"]["settings"]["baseURL"] == "http://127.0.0.1:11434/v1"
+    provider = payload["providers"]["ollama"]
+    assert provider["package"] == "aisdk:@ai-sdk/openai-compatible"
+    assert provider["settings"]["baseURL"] == "http://127.0.0.1:11434/v1"
+    assert provider["models"]["qwen3:8b"]["modelID"] == "qwen3:8b"
 
 
 def test_list_ollama_models_includes_every_installed_local_model(monkeypatch, tmp_path: Path):

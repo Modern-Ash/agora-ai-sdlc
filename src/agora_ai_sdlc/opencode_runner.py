@@ -10,6 +10,8 @@ import threading
 from pathlib import Path
 from typing import TextIO
 
+from agora_ai_sdlc.llm_failures import recoverable_llm_failure
+
 MODEL_DISCOVERY_TIMEOUT_SECONDS = 15
 PREFERRED_FREE_MODELS = (
     "opencode/nemotron-3-ultra-free",
@@ -17,27 +19,9 @@ PREFERRED_FREE_MODELS = (
     "opencode/mimo-v2.5-free",
 )
 LOCAL_FREE_PREFIXES = ("ollama/", "lmstudio/")
-TERMINAL_PROVIDER_ERRORS = (
-    "usage limit has been reached",
-    "usage limit reached",
-    "monthly usage limit",
-    "free usage exceeded",
-    "quota exceeded",
-    "quota has been reached",
-    "invalid api key",
-    "api key is missing",
-    "authentication failed",
-    "unauthorized",
-    "forbidden",
-    "provider not found",
-    "model not found",
-    "provider is not configured",
-)
-
 
 def terminal_provider_error(line: str) -> bool:
-    normalized = line.casefold()
-    return any(marker in normalized for marker in TERMINAL_PROVIDER_ERRORS)
+    return recoverable_llm_failure(line)
 
 
 def _normalize_diagnostic(text: str) -> str:

@@ -131,8 +131,9 @@ def test_start_preflight_repairs_pack_when_only_front_matter_formatting_changed(
     result = ensure_start_ready(project, _runtime())
 
     assert "method.repaired" in result.actions
-    assert 'criterion-stages: ["elaborated", "designed", "built", "verified", "deployed", "accepted"]' in method.read_text(
-        encoding="utf-8"
+    assert (
+        'criterion-stages: ["elaborated", "designed", "built", "verified", "deployed", "accepted"]'
+        in method.read_text(encoding="utf-8")
     )
 
 

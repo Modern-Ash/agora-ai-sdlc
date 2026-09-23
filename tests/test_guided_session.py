@@ -1,4 +1,5 @@
 from pathlib import Path
+from types import SimpleNamespace
 
 from agora_ai_sdlc.guided import GuidedDecision
 from agora_ai_sdlc.guided_session import run_interactive
@@ -54,6 +55,10 @@ def test_interactive_continue_waits_for_exit(monkeypatch):
 
 def test_prepare_prompts_for_runtime_and_keeps_selection(monkeypatch):
     outputs = []
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_session.execute_guided_preparation",
+        lambda *args, **kwargs: SimpleNamespace(runtime="Claude Code"),
+    )
     answers = iter(["p", "2", "1", "b", "x"])
     monkeypatch.setattr("agora_ai_sdlc.guided_session.inspect_next", lambda *args, **kwargs: decision())
     monkeypatch.setattr(
@@ -97,6 +102,10 @@ def test_change_agent_replaces_session_runtime(monkeypatch):
 
 def test_opencode_selection_chooses_provider_then_model_and_includes_ollama(monkeypatch):
     outputs = []
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_session.execute_guided_preparation",
+        lambda *args, **kwargs: SimpleNamespace(runtime="OpenCode"),
+    )
     answers = iter(["p", "1", "2", "b", "x"])
     monkeypatch.setattr("agora_ai_sdlc.guided_session.inspect_next", lambda *args, **kwargs: decision())
     monkeypatch.setattr(
@@ -164,3 +173,46 @@ def test_prepare_with_no_runtime_returns_to_menu(monkeypatch):
 
     assert result.reason == "exit"
     assert "No responsive AI CLI runtime was detected." in outputs
+
+
+def test_enter_accepts_proactive_prepare_and_rechecks_core(monkeypatch):
+    outputs = []
+    calls = {"inspect": 0, "execute": 0}
+    local = SimpleNamespace(agent="opencode", model="ollama/qwen3:8b", label="Ollama · qwen3:8b [local]")
+
+    def inspect(*args, **kwargs):
+        calls["inspect"] += 1
+        return decision() if calls["inspect"] == 1 else None
+
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.inspect_next", inspect)
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_session.advise_workflow",
+        lambda *args, **kwargs: SimpleNamespace(
+            action="prepare",
+            summary="Use the local assistant.",
+            source="laya",
+            reasoning_tier="local",
+            confidence=0.97,
+            recommended_runtime=local,
+        ),
+    )
+
+    def execute(*args, **kwargs):
+        calls["execute"] += 1
+        assert kwargs["runtime_id"] == "opencode"
+        assert kwargs["model"] == "ollama/qwen3:8b"
+        return SimpleNamespace(runtime="OpenCode/Ollama")
+
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.execute_guided_preparation", execute)
+
+    result = run_interactive(
+        Path("."),
+        input_fn=lambda prompt: "",
+        output_fn=outputs.append,
+    )
+
+    assert result.reason == "clear"
+    assert calls["execute"] == 1
+    assert calls["inspect"] == 2
+    assert any("preselected automatically" in line for line in outputs)
+    assert any("Re-reading Agora Core state" in line for line in outputs)

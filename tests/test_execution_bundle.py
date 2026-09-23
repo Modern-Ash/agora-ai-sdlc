@@ -144,9 +144,7 @@ def test_framework_generated_paths_are_excluded_from_execution_context(monkeypat
     _repo(tmp_path)
     _inception(tmp_path)
 
-    generated = (
-        tmp_path / ".agora-corrupted" / "sessions" / "old" / "RESULT.md"
-    )
+    generated = tmp_path / ".agora-corrupted" / "sessions" / "old" / "RESULT.md"
     generated.parent.mkdir(parents=True)
     generated.write_text("old transcript\n", encoding="utf-8")
 

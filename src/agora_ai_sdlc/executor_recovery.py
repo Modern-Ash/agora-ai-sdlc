@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+
 from agora_ai_sdlc.executor_launch import executor_capable
 from agora_ai_sdlc.opencode_runner import LOCAL_FREE_PREFIXES, list_available_models
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
@@ -145,15 +146,14 @@ def prompt_executor_recovery(
         output_stream.flush()
 
 
-
 def run_with_recovery(
     operation: Callable[[str | None, str | None], object],
     *,
     initial_agent: str | None,
     initial_model: str | None,
     interactive: bool,
-    input_stream: TextIO,
-    output_stream: TextIO,
+    input_stream,
+    output_stream,
     lang: str,
     failure_context: Callable[[BaseException], RecoveryFailureContext | None],
 ) -> object:

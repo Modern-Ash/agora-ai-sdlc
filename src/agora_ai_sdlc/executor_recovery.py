@@ -229,7 +229,6 @@ def select_executor_model(
         discovery=discovery,
         model_lister=model_lister,
         ollama_model_lister=ollama_model_lister,
-        ollama_model_puller=ollama_model_puller,
     )
     if not groups:
         output_fn("(no alternatives detected)" if lang == "en" else "(no se detectaron alternativas)")
@@ -394,6 +393,7 @@ def prompt_executor_recovery(
         discovery=discovery,
         model_lister=model_lister,
         ollama_model_lister=ollama_model_lister,
+        ollama_model_puller=ollama_model_puller,
     )
 
 

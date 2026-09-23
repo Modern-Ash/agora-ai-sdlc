@@ -128,14 +128,7 @@ def test_ollama_model_without_tools_is_not_agent_capable(monkeypatch, tmp_path: 
     result = subprocess.CompletedProcess(
         args=["ollama", "show", "qwen2.5-coder:1.5b-base"],
         returncode=0,
-        stdout=(
-            "  Model\n"
-            "    architecture qwen2\n\n"
-            "  Capabilities\n"
-            "    completion\n"
-            "    insert\n\n"
-            "  Parameters\n"
-        ),
+        stdout=("  Model\n    architecture qwen2\n\n  Capabilities\n    completion\n    insert\n\n  Parameters\n"),
         stderr="",
     )
     monkeypatch.setattr(opencode_runner.subprocess, "run", lambda *args, **kwargs: result)

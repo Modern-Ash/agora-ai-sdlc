@@ -213,6 +213,16 @@ def _compact_diagnostic(text: str) -> str:
     return "… " + value[-(MAX_PROVIDER_DIAGNOSTIC_CHARS - 2) :]
 
 
+def _session_failure_diagnostic(path: Path) -> str:
+    stderr = _session_stderr(path)
+    if stderr:
+        return _compact_diagnostic(stderr)
+    stdout = _session_output(path)
+    if stdout:
+        return _compact_diagnostic(stdout)
+    return ""
+
+
 def _result(
     record,
     *,
@@ -362,6 +372,11 @@ def launch_inception_executor(
         error_text = str(error)
         suffix = ""
         timed_out = durable is not None and getattr(durable, "exit_code", None) == 124
+        executor_failed = (
+            durable is not None
+            and getattr(durable, "status", None) == "failed"
+            and getattr(durable, "exit_code", None) not in {None, 0}
+        )
         if durable is not None:
             durable_path = Path(durable.path)
             if timed_out:
@@ -370,15 +385,15 @@ def launch_inception_executor(
                     f"the next governed retry will use {INCEPTION_RETRY_TIMEOUT_SECONDS} seconds."
                 )
             else:
-                provider_error = _session_stderr(durable_path)
-                if provider_error:
-                    suffix += f" Provider error: {_compact_diagnostic(provider_error)}."
+                diagnostic = _session_failure_diagnostic(durable_path)
+                if diagnostic:
+                    suffix += f" Executor diagnostic: {diagnostic}."
             if "Durable diagnostics:" not in error_text:
                 suffix += f" Durable diagnostics: {durable_path / 'SUMMARY.md'}."
         message = f"Inception executor {runtime.name} failed: {error_text}.{suffix}"
         raise ExecutorLaunchError(
             message,
-            recoverable=timed_out or recoverable_llm_failure(message),
+            recoverable=executor_failed or timed_out or recoverable_llm_failure(message),
         ) from error
 
     if completed.status != "completed":

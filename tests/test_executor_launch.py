@@ -434,6 +434,110 @@ def test_completed_session_without_output_is_not_reused_and_gets_new_attempt(tmp
     assert result.reused is False
 
 
+def test_failed_claude_executor_surfaces_stdout_diagnostic_and_is_recoverable(tmp_path):
+    class FailingClaudeWorkspace(Workspace):
+        def start_session(self, data):
+            self.started.append(data)
+            path = self.cwd / ".agora" / "sessions" / data.id
+            path.mkdir(parents=True, exist_ok=True)
+            result = render_markdown(
+                MarkdownDocument(
+                    attributes={
+                        "schema": "agora/session-result/v1",
+                        "session": data.id,
+                        "status": "failed",
+                        "exit-code": 1,
+                    },
+                    body=(
+                        f"# Session result {data.id}\n\n"
+                        "## Standard output\n\n"
+                        "    Not logged in - Please run /login\n\n"
+                        "## Standard error\n\n"
+                        "    (empty)"
+                    ),
+                )
+            )
+            (path / "RESULT.md").write_text(result, encoding="utf-8")
+            (path / "SUMMARY.md").write_text("# failed\n", encoding="utf-8")
+            record = SimpleNamespace(
+                id=data.id,
+                status="failed",
+                path=str(path),
+                retry_of=getattr(data, "retry_of", None),
+                exit_code=1,
+                created_at="2026-09-23T00:00:00Z",
+            )
+            self.sessions.append(record)
+            raise RuntimeError(f"Session runner exited with code 1: {data.id} (nonzero-exit)")
+
+    workspace = FailingClaudeWorkspace(tmp_path)
+
+    with pytest.raises(ExecutorLaunchError, match="Not logged in") as captured:
+        launch_inception_executor(
+            tmp_path,
+            runtime=runtime("claude"),
+            handoff_path=handoff(tmp_path),
+            swarm_id="delivery",
+            work_id="issue-14",
+            workspace_factory=lambda cwd: workspace,
+        )
+
+    assert captured.value.recoverable is True
+    assert "Executor diagnostic:" in str(captured.value)
+    assert "SUMMARY.md" in str(captured.value)
+
+
+def test_failed_executor_without_output_is_still_recoverable(tmp_path):
+    class SilentFailingWorkspace(Workspace):
+        def start_session(self, data):
+            self.started.append(data)
+            path = self.cwd / ".agora" / "sessions" / data.id
+            path.mkdir(parents=True, exist_ok=True)
+            result = render_markdown(
+                MarkdownDocument(
+                    attributes={
+                        "schema": "agora/session-result/v1",
+                        "session": data.id,
+                        "status": "failed",
+                        "exit-code": 1,
+                    },
+                    body=(
+                        f"# Session result {data.id}\n\n"
+                        "## Standard output\n\n    (empty)\n\n"
+                        "## Standard error\n\n    (empty)"
+                    ),
+                )
+            )
+            (path / "RESULT.md").write_text(result, encoding="utf-8")
+            (path / "SUMMARY.md").write_text("# failed\n", encoding="utf-8")
+            record = SimpleNamespace(
+                id=data.id,
+                status="failed",
+                path=str(path),
+                retry_of=getattr(data, "retry_of", None),
+                exit_code=1,
+                created_at="2026-09-23T00:00:00Z",
+            )
+            self.sessions.append(record)
+            raise RuntimeError(f"Session runner exited with code 1: {data.id} (nonzero-exit)")
+
+    workspace = SilentFailingWorkspace(tmp_path)
+
+    with pytest.raises(ExecutorLaunchError) as captured:
+        launch_inception_executor(
+            tmp_path,
+            runtime=runtime("claude"),
+            handoff_path=handoff(tmp_path),
+            swarm_id="delivery",
+            work_id="issue-14",
+            workspace_factory=lambda cwd: workspace,
+        )
+
+    assert captured.value.recoverable is True
+    assert "Executor diagnostic:" not in str(captured.value)
+    assert "SUMMARY.md" in str(captured.value)
+
+
 def test_failed_executor_surfaces_provider_stderr(tmp_path):
     class FailingWorkspace(Workspace):
         def start_session(self, data):

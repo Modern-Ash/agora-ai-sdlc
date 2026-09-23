@@ -153,6 +153,35 @@ def test_materialization_is_idempotent(tmp_path: Path):
     assert len(workspace.satisfied) == 1
 
 
+def test_existing_registered_manual_requirements_are_preserved(tmp_path: Path):
+    intent = setup_intent(tmp_path)
+    manual = intent.parent / "MANUAL_REQUIREMENTS.md"
+    manual.write_text("# Human requirements\n\nKeep this.\n", encoding="utf-8")
+    workspace = Workspace()
+    workspace.records.append(
+        SimpleNamespace(
+            kind="requirements",
+            uri="repo://.agora/intents/issue-14/MANUAL_REQUIREMENTS.md",
+            content_sha256=None,
+        )
+    )
+
+    result = materialize_deterministic_inception(
+        tmp_path,
+        workspace=workspace,
+        swarm_id="delivery",
+        work_id="issue-14",
+        intent_path=str(intent),
+        issue=issue(),
+        pathway="brownfield",
+    )
+
+    assert result.requirements_uri == "repo://.agora/intents/issue-14/MANUAL_REQUIREMENTS.md"
+    assert not (intent.parent / "REQUIREMENTS.md").exists()
+    assert manual.read_text(encoding="utf-8") == "# Human requirements\n\nKeep this.\n"
+    assert {item.kind for item in workspace.added} == {"intent", "unit-of-work"}
+
+
 def test_materialization_refuses_to_overwrite_manual_requirements(tmp_path: Path):
     intent = setup_intent(tmp_path)
     manual = intent.parent / "REQUIREMENTS.md"

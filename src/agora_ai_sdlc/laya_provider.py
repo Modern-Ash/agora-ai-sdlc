@@ -32,7 +32,7 @@ class LayaDecisionProvider:
             from laya import Router
         except ImportError as error:
             raise LayaUnavailable(
-                'Laya is optional. Install it with: pip install "agora-ai-sdlc[laya]"'
+                "Laya is part of the standard Agora AI-SDLC install but is not importable in this environment"
             ) from error
         try:
             self._router = Router()

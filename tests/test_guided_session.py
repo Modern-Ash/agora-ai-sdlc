@@ -54,7 +54,7 @@ def test_interactive_continue_waits_for_exit(monkeypatch):
 
 def test_prepare_prompts_for_runtime_and_keeps_selection(monkeypatch):
     outputs = []
-    answers = iter(["p", "2", "b", "x"])
+    answers = iter(["p", "2", "1", "b", "x"])
     monkeypatch.setattr("agora_ai_sdlc.guided_session.inspect_next", lambda *args, **kwargs: decision())
     monkeypatch.setattr(
         "agora_ai_sdlc.guided_session.discover_runtimes",
@@ -77,7 +77,7 @@ def test_prepare_prompts_for_runtime_and_keeps_selection(monkeypatch):
 
 def test_change_agent_replaces_session_runtime(monkeypatch):
     outputs = []
-    answers = iter(["c", "1", "c", "2", "x"])
+    answers = iter(["c", "1", "1", "c", "2", "1", "x"])
     monkeypatch.setattr("agora_ai_sdlc.guided_session.inspect_next", lambda *args, **kwargs: decision())
     monkeypatch.setattr(
         "agora_ai_sdlc.guided_session.discover_runtimes",
@@ -95,20 +95,29 @@ def test_change_agent_replaces_session_runtime(monkeypatch):
     assert outputs.count("Selected assistant: Claude Code · configured model") == 1
 
 
-def test_opencode_selection_lists_models_from_local_and_hosted_providers(monkeypatch):
+def test_opencode_selection_chooses_provider_then_model_and_includes_ollama(monkeypatch):
     outputs = []
-    answers = iter(["p", "1", "b", "x"])
+    answers = iter(["p", "1", "2", "b", "x"])
     monkeypatch.setattr("agora_ai_sdlc.guided_session.inspect_next", lambda *args, **kwargs: decision())
     monkeypatch.setattr(
         "agora_ai_sdlc.guided_session.discover_runtimes",
-        lambda root: (runtime("opencode", "OpenCode"),),
+        lambda root: (
+            runtime("opencode", "OpenCode"),
+            runtime("ollama", "Ollama"),
+        ),
     )
     monkeypatch.setattr(
         "agora_ai_sdlc.guided_session.list_available_models",
         lambda **kwargs: (
             "openai/gpt-5.5",
             "opencode/nemotron-3-ultra-free",
-            "ollama/claude",
+        ),
+    )
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_session.list_ollama_models",
+        lambda **kwargs: (
+            "ollama/claude:latest",
+            "ollama/gpt-oss:20b",
         ),
     )
 
@@ -119,9 +128,11 @@ def test_opencode_selection_lists_models_from_local_and_hosted_providers(monkeyp
     )
 
     assert result.selected_runtime == "opencode"
-    assert result.selected_model == "ollama/claude"
-    assert any("OpenCode · ollama/claude [local]" in line for line in outputs)
-    assert any("OpenCode · openai/gpt-5.5 [external]" in line for line in outputs)
+    assert result.selected_model == "ollama/gpt-oss:20b"
+    assert any("Step 1/2: choose the LLM/provider:" in line for line in outputs)
+    assert any("Ollama (local)" in line for line in outputs)
+    assert any("Step 2/2: choose the model for Ollama (local):" in line for line in outputs)
+    assert any("gpt-oss:20b [local]" in line for line in outputs)
 
 
 def test_review_and_details_are_selectable(monkeypatch):

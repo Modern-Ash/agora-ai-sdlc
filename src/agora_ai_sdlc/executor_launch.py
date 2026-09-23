@@ -15,6 +15,7 @@ from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 
 SCHEMA = "agora-ai-sdlc/executor-adapters/v1"
 MAX_PRESENTATION_CHARS = 6000
+INCEPTION_TIMEOUT_SECONDS = 300
 
 
 class ExecutorLaunchError(ValueError):
@@ -259,6 +260,8 @@ def launch_inception_executor(
         "runner": runner,
         "launch": True,
     }
+    if "timeout_seconds" in fields:
+        kwargs["timeout_seconds"] = INCEPTION_TIMEOUT_SECONDS
     if "executor_id" in fields:
         kwargs["executor_id"] = executor_id
     if "retry_of" in fields and retry_of is not None:

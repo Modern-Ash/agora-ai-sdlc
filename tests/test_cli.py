@@ -316,3 +316,18 @@ def test_continue_json_stays_non_interactive_on_tty(monkeypatch, capsys):
     assert main(["continue", "--json"]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["work"] == "first-work"
+
+
+
+def test_start_interrupt_returns_130_without_traceback(monkeypatch, capsys, tmp_path):
+    from agora_ai_sdlc import start_flow
+
+    def interrupt(*args, **kwargs):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(start_flow, "prepare_start", interrupt)
+
+    assert main(["start", "--issue", "14", "--root", str(tmp_path)]) == 130
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err == "Start cancelled by user.\n"

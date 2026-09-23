@@ -54,6 +54,15 @@ def main(argv: list[str] | None = None) -> int:
     context.add_argument("--strict", action="store_true")
     context.add_argument("--content", action="store_true", help="include document text")
     context.add_argument("--json", action="store_true")
+    context.add_argument("--laya", action="store_true", help="semantically prune deterministic candidates with local Laya")
+    context.add_argument("--objective", help="task objective supplied to Laya relevance decisions")
+    context.add_argument("--acceptance", action="append", default=[], help="acceptance criterion; may be repeated")
+    context.add_argument(
+        "--confidence-threshold",
+        type=float,
+        default=0.90,
+        help="minimum Laya confidence; uncertain artifacts fail open and stay in context",
+    )
     bolt_validate = sub.add_parser(
         "bolt-validate", help="Validate a Bolt plan and print Unit -> Bolt -> evidence trace"
     )
@@ -134,6 +143,15 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Do not persist EXECUTION_BUNDLE.json/.md under .agora",
     )
+    decision = sub.add_parser(
+        "decision",
+        help="Run advisory local Laya decisions over the deterministic execution bundle",
+    )
+    decision.add_argument("--root", default=".", help="Project root")
+    decision.add_argument("--swarm", help="Limit to one delivery swarm")
+    decision.add_argument("--work", help="Limit to one work item")
+    decision.add_argument("--threshold", type=float, default=0.90, help="confidence required to avoid escalation")
+    decision.add_argument("--json", action="store_true", help="Print machine-readable decision output")
     status = sub.add_parser("status", help="Show rich local/Core iteration status without invoking an LLM")
     status.add_argument("--root", default=".", help="Project root")
     status.add_argument("--swarm", help="Limit to one delivery swarm")
@@ -256,26 +274,62 @@ def main(argv: list[str] | None = None) -> int:
         from agora_ai_sdlc.context_graph import ContextError, context_bundle, graph_from_directory
 
         try:
-            bundle = context_bundle(
-                graph_from_directory(Path(args.artifacts)),
-                args.id,
-                direction=args.direction,
-                max_depth=args.depth,
-                max_tokens=args.max_tokens,
-                strict=args.strict,
-            )
-        except (OSError, ContextError) as error:
+            graph = graph_from_directory(Path(args.artifacts))
+            selection = None
+            if args.laya:
+                from agora_ai_sdlc.context_selection import select_context_with_laya
+                from agora_ai_sdlc.laya_provider import LayaDecisionProvider
+
+                selection = select_context_with_laya(
+                    graph,
+                    args.id,
+                    provider=LayaDecisionProvider(),
+                    objective=args.objective,
+                    acceptance_criteria=tuple(args.acceptance),
+                    direction=args.direction,
+                    max_depth=args.depth,
+                    max_tokens=args.max_tokens,
+                    confidence_threshold=args.confidence_threshold,
+                )
+                bundle = selection.selected
+            else:
+                bundle = context_bundle(
+                    graph,
+                    args.id,
+                    direction=args.direction,
+                    max_depth=args.depth,
+                    max_tokens=args.max_tokens,
+                    strict=args.strict,
+                )
+        except (OSError, ContextError, ValueError, RuntimeError) as error:
             print(error, file=sys.stderr)
             return 2
         if args.json:
-            print(json.dumps(bundle.snapshot(include_text=args.content), sort_keys=True))
+            payload = bundle.snapshot(include_text=args.content)
+            if selection is not None:
+                payload["decision_plane"] = {
+                    "provider": "laya",
+                    "classifications": dict(selection.classifications),
+                    "confidences": dict(selection.confidences),
+                    "escalated": list(selection.escalated),
+                    "metrics": selection.metrics.snapshot(),
+                }
+            print(json.dumps(payload, sort_keys=True))
         else:
             for item in bundle.items:
                 print(f"{item.distance} {item.relation} {item.id} ({item.kind}) {item.path} ~{item.tokens}t")
                 if args.content:
                     print(bundle.text[item.id])
             if bundle.omitted:
-                print(f"omitted (budget): {', '.join(bundle.omitted)}")
+                label = "omitted (Laya/budget)" if selection is not None else "omitted (budget)"
+                print(f"{label}: {', '.join(bundle.omitted)}")
+            if selection is not None:
+                metrics = selection.metrics
+                print(
+                    f"laya decisions={metrics.decisions} escalated={metrics.escalated} "
+                    f"context_tokens={metrics.candidate_context_tokens}->{metrics.selected_context_tokens} "
+                    f"saved={metrics.context_tokens_saved}"
+                )
         return 0
     if args.command == "bolt-validate":
         from agora_ai_sdlc.bolts import BoltError, parse_bolt_plan, trace
@@ -293,6 +347,53 @@ def main(argv: list[str] | None = None) -> int:
                 f"construction_evidence_complete={summary['construction_evidence_complete']}"
             )
         return 0
+    if args.command == "decision":
+        from agora_ai_sdlc.execution_bundle import build_execution_bundle
+        from agora_ai_sdlc.execution_decisions import advise_execution
+        from agora_ai_sdlc.laya_provider import LayaDecisionProvider
+
+        try:
+            bundle = build_execution_bundle(
+                Path(args.root).expanduser(),
+                swarm=args.swarm,
+                work=args.work,
+                persist=False,
+            )
+            evaluation = advise_execution(
+                bundle,
+                provider=LayaDecisionProvider(),
+                confidence_threshold=args.threshold,
+            )
+        except (OSError, ValueError, RuntimeError) as error:
+            print(error, file=sys.stderr)
+            return 2
+
+        payload = {
+            "authoritative": False,
+            "provider": evaluation.result.provider,
+            "model": evaluation.result.model,
+            "latency_ms": evaluation.result.latency_ms,
+            "accepted_advisory": list(evaluation.accepted),
+            "escalated": list(evaluation.escalated),
+            "answers": {
+                name: {
+                    "type": answer.type,
+                    "value": answer.value,
+                    "confidence": answer.confidence,
+                    "probabilities": dict(answer.probabilities),
+                }
+                for name, answer in evaluation.result.answers.items()
+            },
+        }
+        if args.json:
+            print(json.dumps(payload, sort_keys=True))
+        else:
+            print("Laya advisory decision plane (non-authoritative)")
+            for name, answer in evaluation.result.answers.items():
+                suffix = "ESCALATE" if name in evaluation.escalated else "confident"
+                print(f"- {name}: {answer.value} confidence={answer.confidence:.3f} {suffix}")
+        return 0
+
     if args.command == "runtimes":
         from agora_ai_sdlc.runtime_discovery import discover_runtimes, render_runtimes
 

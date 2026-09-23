@@ -8,7 +8,7 @@ executors:
     argv: ["{executable}", "--print", "--permission-mode", "acceptEdits", "--no-session-persistence", "{prompt}"]
   opencode:
     kind: "agent"
-    argv: ["{executable}", "run", "--auto", "--model", "{model}", "--dir", "{root}", "{prompt}"]
+    argv: ["{python}", "-m", "agora_ai_sdlc.opencode_runner", "--executable", "{executable}", "--root", "{root}", "--model", "{model}", "--prompt", "{prompt}"]
   ollama:
     kind: "provider"
     guidance: "Ollama is a model provider for this flow; select an agent host such as OpenCode and configure it to use Ollama."

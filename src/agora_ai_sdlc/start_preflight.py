@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
+from agora.filesystem import packs_root
 from agora.markdown import MarkdownDocument, parse_markdown, read_markdown, render_markdown
 from agora.methods import load_method_contract
 from agora.model import (
@@ -23,6 +24,7 @@ from agora.model import (
     InstallToolAdapterInput,
     RefreshPackLockInput,
 )
+from agora.tools import load_tool_contract
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.depth_profiles import asset_root
@@ -263,6 +265,79 @@ def _ensure_method(workspace: AgoraWorkspace, root: Path, actions: list[str]) ->
     actions.append("method.repaired")
 
 
+def _body_only_equivalent(installed: Path, packaged: Path) -> bool:
+    if installed.read_bytes() == packaged.read_bytes():
+        return True
+    packaged_parts = _split_front_matter(packaged.read_text(encoding="utf-8"))
+    if packaged_parts is None:
+        return False
+    packaged_front, packaged_body = packaged_parts
+    installed_text = installed.read_text(encoding="utf-8")
+    installed_parts = _split_front_matter(installed_text)
+    if installed_parts is not None:
+        installed_front, installed_body = installed_parts
+        return installed_front == packaged_front and installed_body.strip() == packaged_body.strip()
+    return installed_text.strip() == packaged_body.strip()
+
+
+def _repair_bundled_adapter(target: Path, source: Path) -> bool:
+    source_files = {
+        path.relative_to(source): path
+        for path in source.rglob("*")
+        if path.is_file() and not path.is_symlink()
+    }
+    target_files = {
+        path.relative_to(target): path
+        for path in target.rglob("*")
+        if path.is_file() and not path.is_symlink()
+    }
+
+    extra = sorted(set(target_files) - set(source_files))
+    if extra:
+        return False
+
+    for relative, packaged in source_files.items():
+        installed = target_files.get(relative)
+        if installed is None:
+            continue
+        if not _body_only_equivalent(installed, packaged):
+            return False
+
+    for relative, packaged in source_files.items():
+        destination = target / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(packaged.read_bytes())
+    return True
+
+
+def _ensure_github_adapter(workspace: AgoraWorkspace, root: Path, actions: list[str]) -> None:
+    target = root / ".agora" / "tools" / "github-issues"
+    source = packs_root() / "adapters" / "cli" / "github-issues"
+
+    if not (target / "TOOL.md").is_file():
+        workspace.install_tool_adapter(InstallToolAdapterInput(adapter_id="github-issues", scope="project"))
+        actions.append("github-adapter.installed")
+        return
+
+    try:
+        contract = load_tool_contract(target)
+        if "view" not in contract.operations:
+            raise ValueError("github-issues adapter is missing the view operation")
+        return
+    except (OSError, ValueError) as error:
+        if not source.is_dir() or not _repair_bundled_adapter(target, source):
+            raise StartPreparationError(
+                "The installed GitHub Issues adapter is malformed or customized. "
+                "Automatic repair was refused to preserve local changes. "
+                "Inspect .agora/tools/github-issues or run aisdlc doctor."
+            ) from error
+
+    load_tool_contract(target)
+    workspace.refresh_pack_lock(RefreshPackLockInput(scope="project"))
+    actions.append("github-adapter.repaired")
+    actions.append("pack-lock.refreshed")
+
+
 def _ensure_skill(root: Path, actions: list[str]) -> None:
     source = resource_root()
     destination = root / ".agora" / "skills" / "agora-ai-sdlc-guided"
@@ -448,10 +523,7 @@ def ensure_start_ready(
         actions.append("pack-lock.refreshed")
     _ensure_skill(root, actions)
 
-    adapter = root / ".agora" / "tools" / "github-issues" / "TOOL.md"
-    if not adapter.is_file():
-        workspace.install_tool_adapter(InstallToolAdapterInput(adapter_id="github-issues", scope="project"))
-        actions.append("github-adapter.installed")
+    _ensure_github_adapter(workspace, root, actions)
 
     runtime_actor = _ensure_actors(workspace, runtime, actions)
     _ensure_delivery_swarm(workspace, root, runtime_actor, swarm_id, actions)

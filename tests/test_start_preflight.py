@@ -131,6 +131,7 @@ def test_start_preflight_repairs_formatter_wrapped_method_front_matter(tmp_path,
     result = ensure_start_ready(project, _runtime())
 
     assert any(action.startswith("state.front-matter-repaired:") for action in result.actions)
+    assert "pack-lock.refreshed" in result.actions
     assert read_markdown(method).attributes["criterion-stages"] == [
         "elaborated",
         "designed",
@@ -158,6 +159,7 @@ def test_start_preflight_repairs_formatter_wrapped_role_front_matter_without_cha
     result = ensure_start_ready(project, _runtime())
 
     assert any(action.startswith("state.front-matter-repaired:") for action in result.actions)
+    assert "pack-lock.refreshed" in result.actions
     repaired = role.read_text(encoding="utf-8")
     assert "allowed-actions: [" in repaired
     assert repaired.split("---", 2)[2].strip() == original.split("---", 2)[2].strip()

@@ -4,7 +4,8 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from agora.model import CreateWorkInput
+from agora.model import CreateIntentInput, CreateWorkInput
+from agora.sdlc import SdlcService
 
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 from agora_ai_sdlc.start_flow import (
@@ -241,6 +242,38 @@ def test_prepare_start_ignores_unrelated_malformed_intent(tmp_path):
 
     assert result.intent_id == "issue-11"
     assert workspace._intent.id == "issue-11"
+
+
+def test_prepare_start_loads_target_intent_when_workspace_facade_has_no_getter(tmp_path):
+    class LegacyWorkspace(FakeWorkspace):
+        get_intent = None
+
+    workspace = LegacyWorkspace(tmp_path)
+    state = tmp_path / ".agora"
+    state.mkdir()
+    (state / "project.md").write_text("project", encoding="utf-8")
+    SdlcService(tmp_path).create_intent(
+        CreateIntentInput(
+            id="issue-11",
+            author="project:product-owner",
+            problem="Existing target Intent",
+            outcome="Deliver issue 11",
+            affected_systems=["Modern-Ash/agorix"],
+            constraints=[],
+            open_questions=[],
+            source="https://github.com/Modern-Ash/agorix/issues/11",
+        )
+    )
+
+    result = _prepare_start(
+        tmp_path,
+        issue=11,
+        project="Modern-Ash/agorix",
+        workspace_factory=lambda cwd: workspace,
+        runtime_discovery=lambda root: (runtime(),),
+    )
+
+    assert result.intent_id == "issue-11"
 
 
 def test_prepare_start_reports_exact_target_intent_when_it_is_malformed(tmp_path):

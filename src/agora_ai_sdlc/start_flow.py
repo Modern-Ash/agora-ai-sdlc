@@ -18,6 +18,7 @@ from agora.model import (
     InstallToolAdapterInput,
     InvokeToolInput,
 )
+from agora.sdlc import SdlcService
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.depth_profiles import asset_root
@@ -312,6 +313,15 @@ def _diagnose_issue_read_markdown(root: Path, run_id: str) -> str | None:
     return f"{path.relative_to(root)}: {detail}"
 
 
+def _get_target_intent(workspace: AgoraWorkspace, root: Path, intent_id: str):
+    """Load exactly one Intent without scanning unrelated durable history."""
+
+    getter = getattr(workspace, "get_intent", None)
+    if callable(getter):
+        return getter(intent_id)
+    return SdlcService(root).get_intent(intent_id)
+
+
 def _issue_payload(workspace: AgoraWorkspace, run_id: str) -> dict:
     inspection = workspace.show_tool_run(run_id)
     result = inspection.result
@@ -424,7 +434,7 @@ def prepare_start(
 
     intent_id = f"issue-{number}"
     try:
-        existing = workspace.get_intent(intent_id)
+        existing = _get_target_intent(workspace, root, intent_id)
     except FileNotFoundError:
         existing = None
     except ValueError as error:

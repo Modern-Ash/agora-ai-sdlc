@@ -301,7 +301,7 @@ def main(argv: list[str] | None = None) -> int:
             )
         return 0
     if args.command == "start":
-        from agora_ai_sdlc.executor_recovery import prompt_executor_recovery
+        from agora_ai_sdlc.executor_recovery import RecoveryFailureContext, run_with_recovery
         from agora_ai_sdlc.observation_ui import HumanChannel, safe_text
         from agora_ai_sdlc.start_flow import (
             StartExecutorError,
@@ -332,35 +332,38 @@ def main(argv: list[str] | None = None) -> int:
                 lang=language,
             ) as channel:
                 options = {"progress": channel.event} if channel.active else {}
-                while True:
-                    try:
-                        result = prepare_start(
-                            Path(args.root),
-                            issue=args.issue,
-                            project=args.project,
-                            agent=selected_agent,
-                            model=selected_model,
-                            swarm=args.swarm,
-                            actor=args.actor,
-                            launch_executor=not args.prepare_only,
-                            **options,
-                        )
-                        break
-                    except StartExecutorError as error:
-                        if not interactive_recovery or not error.recoverable:
-                            raise
-                        choice = prompt_executor_recovery(
-                            Path(error.workspace_root),
-                            error=safe_text(str(error), max_chars=1024),
-                            input_stream=sys.stdin,
-                            output_stream=sys.stderr,
-                            lang=language,
-                        )
-                        if choice is None:
-                            print("Executor recovery cancelled.", file=sys.stderr)
-                            return 2
-                        selected_agent = choice.agent
-                        selected_model = choice.model
+                def operation(agent: str | None, model: str | None):
+                    return prepare_start(
+                        Path(args.root),
+                        issue=args.issue,
+                        project=args.project,
+                        agent=agent,
+                        model=model,
+                        swarm=args.swarm,
+                        actor=args.actor,
+                        launch_executor=not args.prepare_only,
+                        **options,
+                    )
+
+                def failure_context(error: BaseException):
+                    if not isinstance(error, StartExecutorError):
+                        return None
+                    return RecoveryFailureContext(
+                        workspace_root=Path(error.workspace_root),
+                        message=safe_text(str(error), max_chars=1024),
+                        recoverable=error.recoverable,
+                    )
+
+                result = run_with_recovery(
+                    operation,
+                    initial_agent=selected_agent,
+                    initial_model=selected_model,
+                    interactive=interactive_recovery,
+                    input_stream=sys.stdin,
+                    output_stream=sys.stderr,
+                    lang=language,
+                    failure_context=failure_context,
+                )
 
                 if args.json:
                     print(json.dumps(result.snapshot(), sort_keys=True))

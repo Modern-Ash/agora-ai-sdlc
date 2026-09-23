@@ -330,3 +330,65 @@ def test_start_interrupt_returns_130_without_traceback(monkeypatch, capsys, tmp_
     captured = capsys.readouterr()
     assert captured.out == ""
     assert captured.err == "Start cancelled by user.\n"
+
+
+
+def test_start_recoverable_failure_prompts_and_retries_selected_model(
+    monkeypatch, capsys, tmp_path
+):
+    from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice
+    from agora_ai_sdlc.start_flow import StartExecutorError
+
+    calls = []
+
+    def prepare(root, **kwargs):
+        calls.append((kwargs.get("agent"), kwargs.get("model")))
+        if len(calls) == 1:
+            raise StartExecutorError(
+                "Inception executor OpenCode failed: usage limit reached",
+                runtime_id="opencode",
+                workspace_root=str(tmp_path),
+                recoverable=True,
+            )
+        return object()
+
+    monkeypatch.setattr("sys.stdin.isatty", lambda: True)
+    monkeypatch.setattr("sys.stderr.isatty", lambda: True)
+    monkeypatch.setattr("agora_ai_sdlc.start_flow.prepare_start", prepare)
+    monkeypatch.setattr(
+        "agora_ai_sdlc.start_flow.render_start",
+        lambda result, **kwargs: "recovered",
+    )
+    monkeypatch.setattr(
+        "agora_ai_sdlc.executor_recovery.prompt_executor_recovery",
+        lambda *args, **kwargs: ExecutorRecoveryChoice(
+            agent="opencode",
+            model="ollama/claude",
+            label="OpenCode · ollama/claude [local]",
+        ),
+    )
+
+    assert (
+        main(
+            [
+                "start",
+                "--issue",
+                "14",
+                "--agent",
+                "opencode",
+                "--root",
+                str(tmp_path),
+            ]
+        )
+        == 0
+    )
+    assert calls == [
+        ("opencode", None),
+        ("opencode", "ollama/claude"),
+    ]
+    assert "recovered" in capsys.readouterr().out
+
+
+def test_start_rejects_model_with_non_opencode_agent(capsys):
+    assert main(["start", "--issue", "14", "--agent", "claude", "--model", "claude-sonnet"]) == 2
+    assert "--model can only be used with --agent opencode" in capsys.readouterr().err

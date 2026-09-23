@@ -97,6 +97,76 @@ def test_list_ollama_models_includes_every_installed_local_model(monkeypatch, tm
     )
 
 
+def test_ollama_model_supports_tools_reads_capabilities_section(monkeypatch, tmp_path: Path):
+    result = subprocess.CompletedProcess(
+        args=["ollama", "show", "qwen3:8b"],
+        returncode=0,
+        stdout=(
+            "  Model\n"
+            "    architecture qwen3\n\n"
+            "  Capabilities\n"
+            "    completion\n"
+            "    tools\n"
+            "    thinking\n\n"
+            "  Parameters\n"
+        ),
+        stderr="",
+    )
+    monkeypatch.setattr(opencode_runner.subprocess, "run", lambda *args, **kwargs: result)
+
+    assert (
+        opencode_runner.ollama_model_supports_tools(
+            executable="/usr/bin/ollama",
+            root=tmp_path,
+            model="ollama/qwen3:8b",
+        )
+        is True
+    )
+
+
+def test_ollama_model_without_tools_is_not_agent_capable(monkeypatch, tmp_path: Path):
+    result = subprocess.CompletedProcess(
+        args=["ollama", "show", "qwen2.5-coder:1.5b-base"],
+        returncode=0,
+        stdout=("  Model\n    architecture qwen2\n\n  Capabilities\n    completion\n    insert\n\n  Parameters\n"),
+        stderr="",
+    )
+    monkeypatch.setattr(opencode_runner.subprocess, "run", lambda *args, **kwargs: result)
+
+    assert (
+        opencode_runner.ollama_model_supports_tools(
+            executable="/usr/bin/ollama",
+            root=tmp_path,
+            model="ollama/qwen2.5-coder:1.5b-base",
+        )
+        is False
+    )
+
+
+def test_list_ollama_agent_models_filters_non_tool_models(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr(
+        opencode_runner,
+        "list_ollama_models",
+        lambda **kwargs: (
+            "ollama/qwen3:8b",
+            "ollama/qwen2.5-coder:1.5b-base",
+            "ollama/gpt-oss:20b",
+        ),
+    )
+    monkeypatch.setattr(
+        opencode_runner,
+        "ollama_model_supports_tools",
+        lambda **kwargs: kwargs["model"] != "ollama/qwen2.5-coder:1.5b-base",
+    )
+
+    models = opencode_runner.list_ollama_agent_models(
+        executable="/usr/bin/ollama",
+        root=tmp_path,
+    )
+
+    assert models == ("ollama/qwen3:8b", "ollama/gpt-oss:20b")
+
+
 def test_pull_ollama_model_downloads_and_verifies_installation(monkeypatch, tmp_path: Path):
     commands = []
 
@@ -104,6 +174,13 @@ def test_pull_ollama_model_downloads_and_verifies_installation(monkeypatch, tmp_
         commands.append(command)
         if command[1] == "pull":
             return subprocess.CompletedProcess(command, 0, "", "")
+        if command[1] == "show":
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                "  Capabilities\n    completion\n    tools\n",
+                "",
+            )
         return subprocess.CompletedProcess(
             command,
             0,
@@ -122,6 +199,35 @@ def test_pull_ollama_model_downloads_and_verifies_installation(monkeypatch, tmp_
     assert model == "ollama/qwen3:8b"
     assert commands[0] == ["/usr/bin/ollama", "pull", "qwen3:8b"]
     assert commands[1] == ["/usr/bin/ollama", "list"]
+    assert commands[2] == ["/usr/bin/ollama", "show", "qwen3:8b"]
+
+
+def test_pull_ollama_model_rejects_model_without_tools(monkeypatch, tmp_path: Path):
+    def fake_run(command, **kwargs):
+        if command[1] == "pull":
+            return subprocess.CompletedProcess(command, 0, "", "")
+        if command[1] == "list":
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                "NAME ID SIZE MODIFIED\nqwen2.5-coder:1.5b-base abc 1 GB now\n",
+                "",
+            )
+        return subprocess.CompletedProcess(
+            command,
+            0,
+            "  Capabilities\n    completion\n    insert\n",
+            "",
+        )
+
+    monkeypatch.setattr(opencode_runner.subprocess, "run", fake_run)
+
+    with pytest.raises(RuntimeError, match="does not support tools"):
+        opencode_runner.pull_ollama_model(
+            executable="/usr/bin/ollama",
+            root=tmp_path,
+            model="qwen2.5-coder:1.5b-base",
+        )
 
 
 def test_pull_ollama_model_rejects_invalid_name_before_execution(monkeypatch, tmp_path: Path):
@@ -146,7 +252,7 @@ def test_discovers_preferred_free_model_from_configured_models(monkeypatch, tmp_
         stderr="",
     )
     monkeypatch.setattr(opencode_runner.subprocess, "run", lambda *args, **kwargs: result)
-    monkeypatch.setattr(opencode_runner, "list_ollama_models", lambda **kwargs: ())
+    monkeypatch.setattr(opencode_runner, "list_ollama_agent_models", lambda **kwargs: ())
 
     selected = opencode_runner.discover_free_model(
         executable="/usr/bin/opencode",
@@ -166,7 +272,7 @@ def test_prefers_ollama_even_when_local_alias_looks_like_paid_model(monkeypatch,
     monkeypatch.setattr(opencode_runner.subprocess, "run", lambda *args, **kwargs: result)
     monkeypatch.setattr(
         opencode_runner,
-        "list_ollama_models",
+        "list_ollama_agent_models",
         lambda **kwargs: ("ollama/claude", "ollama/gpt-oss"),
     )
 
@@ -188,7 +294,7 @@ def test_discovers_local_model_missing_from_opencode_models(monkeypatch, tmp_pat
     monkeypatch.setattr(opencode_runner.subprocess, "run", lambda *args, **kwargs: result)
     monkeypatch.setattr(
         opencode_runner,
-        "list_ollama_models",
+        "list_ollama_agent_models",
         lambda **kwargs: ("ollama/qwen2.5-coder:7b",),
     )
 
@@ -208,7 +314,7 @@ def test_free_model_discovery_fails_when_none_is_available(monkeypatch, tmp_path
         stderr="",
     )
     monkeypatch.setattr(opencode_runner.subprocess, "run", lambda *args, **kwargs: result)
-    monkeypatch.setattr(opencode_runner, "list_ollama_models", lambda **kwargs: ())
+    monkeypatch.setattr(opencode_runner, "list_ollama_agent_models", lambda **kwargs: ())
 
     with pytest.raises(RuntimeError, match="no free or local model"):
         opencode_runner.discover_free_model(

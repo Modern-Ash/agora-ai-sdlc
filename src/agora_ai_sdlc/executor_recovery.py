@@ -10,7 +10,7 @@ from agora_ai_sdlc.executor_launch import executor_capable
 from agora_ai_sdlc.opencode_runner import (
     LOCAL_FREE_PREFIXES,
     list_available_models,
-    list_ollama_models,
+    list_ollama_agent_models,
     pull_ollama_model,
 )
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
@@ -96,7 +96,7 @@ def recovery_groups(
     *,
     discovery: Callable[[Path], tuple[RuntimeDiscovery, ...]] = discover_runtimes,
     model_lister: Callable[..., tuple[str, ...]] = list_available_models,
-    ollama_model_lister: Callable[..., tuple[str, ...]] = list_ollama_models,
+    ollama_model_lister: Callable[..., tuple[str, ...]] = list_ollama_agent_models,
 ) -> tuple[ExecutorModelGroup, ...]:
     discovered = tuple(discovery(root))
     executors = [item for item in discovered if item.installed and item.responsive and executor_capable(item.id)]
@@ -107,10 +107,12 @@ def recovery_groups(
         models: list[str] = []
         try:
             models.extend(
-                model_lister(
+                model
+                for model in model_lister(
                     executable=opencode.executable or opencode.command,
                     root=root,
                 )
+                if not model.casefold().startswith("ollama/")
             )
         except RuntimeError:
             pass
@@ -166,7 +168,7 @@ def recovery_choices(
     *,
     discovery: Callable[[Path], tuple[RuntimeDiscovery, ...]] = discover_runtimes,
     model_lister: Callable[..., tuple[str, ...]] = list_available_models,
-    ollama_model_lister: Callable[..., tuple[str, ...]] = list_ollama_models,
+    ollama_model_lister: Callable[..., tuple[str, ...]] = list_ollama_agent_models,
 ) -> tuple[ExecutorRecoveryChoice, ...]:
     choices: list[ExecutorRecoveryChoice] = []
     for group in recovery_groups(
@@ -221,7 +223,7 @@ def select_executor_model(
     lang: str = "en",
     discovery: Callable[[Path], tuple[RuntimeDiscovery, ...]] = discover_runtimes,
     model_lister: Callable[..., tuple[str, ...]] = list_available_models,
-    ollama_model_lister: Callable[..., tuple[str, ...]] = list_ollama_models,
+    ollama_model_lister: Callable[..., tuple[str, ...]] = list_ollama_agent_models,
     ollama_model_puller: Callable[..., str] = pull_ollama_model,
 ) -> ExecutorRecoveryChoice | None:
     groups = recovery_groups(
@@ -364,7 +366,7 @@ def prompt_executor_recovery(
     lang: str = "en",
     discovery: Callable[[Path], tuple[RuntimeDiscovery, ...]] = discover_runtimes,
     model_lister: Callable[..., tuple[str, ...]] = list_available_models,
-    ollama_model_lister: Callable[..., tuple[str, ...]] = list_ollama_models,
+    ollama_model_lister: Callable[..., tuple[str, ...]] = list_ollama_agent_models,
     ollama_model_puller: Callable[..., str] = pull_ollama_model,
 ) -> ExecutorRecoveryChoice | None:
     if lang == "es":

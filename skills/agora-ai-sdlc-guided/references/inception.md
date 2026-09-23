@@ -22,18 +22,20 @@ Mandatory Inception sequence:
 
 ### Inception output contract
 
-A Start/Inception response is incomplete unless it contains all of:
+A Start/Inception response is incomplete unless its final response contains these exact Markdown H2 headings, each with substantive content:
 
-- Intent interpretation
-- Material clarifications requiring human decision
-- Level 1 Plan
-- Proposed Units
-- Suggested Bolts
-- Acceptance criteria trace
-- Risks, constraints and dependencies
-- Product decisions explicitly marked as source fact, AI proposal, or human-selected decision
-- Files created or modified
-- Human decision required to continue
+- `## Intent interpretation`
+- `## Material clarifications`
+- `## Level 1 Plan`
+- `## Proposed Units`
+- `## Suggested Bolts`
+- `## Acceptance criteria trace`
+- `## Risks, constraints and dependencies`
+- `## Source facts and proposed decisions`
+- `## Files created or modified`
+- `## Human decision required`
+
+The response must remain grounded in the handoff Objective. Source facts, AI proposals, and human-selected decisions must be explicitly distinguished under `Source facts and proposed decisions`.
 
 Do not jump directly from Intent to implementation or directly to a final product artifact without first presenting the Level 1 Plan and decomposition.
 

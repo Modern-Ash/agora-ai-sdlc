@@ -12,6 +12,7 @@ from agora.markdown import read_markdown
 from agora.model import LaunchSessionInput, StartSessionInput
 from agora.workspace import AgoraWorkspace
 
+from agora_ai_sdlc.inception_validation import validate_inception_output
 from agora_ai_sdlc.llm_failures import recoverable_llm_failure
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 
@@ -115,7 +116,11 @@ def _inception_prompt(root: Path, handoff_path: Path) -> str:
         "and useful Bolts, trace acceptance criteria, identify risks/constraints/dependencies, and persist "
         "non-authoritative proposal artifacts only where the installed AI-SDLC contracts permit. "
         "Do not implement product code, do not enter Construction, and do not infer or fabricate human approval. "
-        "Finish with a concise proposal and an explicit human decision required to continue."
+        "Your final response must use these exact Markdown H2 headings, each with substantive content: "
+        "Intent interpretation; Material clarifications; Level 1 Plan; Proposed Units; Suggested Bolts; "
+        "Acceptance criteria trace; Risks, constraints and dependencies; Source facts and proposed decisions; "
+        "Files created or modified; Human decision required. "
+        "Finish after Human decision required."
     )
 
 
@@ -180,7 +185,7 @@ def _session_output(path: Path) -> str:
     for line in stdout.splitlines():
         lines.append(line.removeprefix("    "))
     value = "\n".join(lines).strip()
-    return "" if value == "(empty)" else _bounded_output(value)
+    return "" if value == "(empty)" else value
 
 
 def _session_stderr(path: Path) -> str:
@@ -207,19 +212,34 @@ def _compact_diagnostic(text: str) -> str:
     return "… " + value[-(MAX_PROVIDER_DIAGNOSTIC_CHARS - 2) :]
 
 
-def _result(record, *, reused: bool) -> InceptionExecutionResult:
+def _result(
+    record,
+    *,
+    reused: bool,
+    handoff_path: Path,
+) -> InceptionExecutionResult:
     session_path = Path(record.path)
-    output = _session_output(session_path) if record.status == "completed" else ""
-    if record.status == "completed" and not output:
+    raw_output = _session_output(session_path) if record.status == "completed" else ""
+    if record.status == "completed" and not raw_output:
         raise ExecutorLaunchError(
-            f"Inception executor session {record.id} completed without reviewable output: {session_path / 'RESULT.md'}"
+            f"Inception executor session {record.id} completed without reviewable output: {session_path / 'RESULT.md'}",
+            recoverable=True,
         )
+    if record.status == "completed":
+        validation = validate_inception_output(raw_output, handoff_path)
+        if not validation.valid:
+            detail = "; ".join(validation.violations)
+            raise ExecutorLaunchError(
+                f"Inception executor session {record.id} completed with output that violates the Inception contract: "
+                f"{detail}. Durable result: {session_path / 'RESULT.md'}",
+                recoverable=True,
+            )
     return InceptionExecutionResult(
         session_id=record.id,
         status=record.status,
         result_path=str(session_path / "RESULT.md"),
         summary_path=str(session_path / "SUMMARY.md"),
-        output=output,
+        output=_bounded_output(raw_output),
         reused=reused,
         retry_of=getattr(record, "retry_of", None),
         exit_code=getattr(record, "exit_code", None),
@@ -283,8 +303,14 @@ def launch_inception_executor(
     sessions = _matching_sessions(workspace, root, base_id)
     latest = sessions[-1] if sessions else None
 
+    completed_but_invalid = False
     if latest is not None and latest.status == "completed":
-        return _result(latest, reused=True)
+        try:
+            return _result(latest, reused=True, handoff_path=handoff_path)
+        except ExecutorLaunchError as error:
+            if not error.recoverable:
+                raise
+            completed_but_invalid = True
     if latest is not None and latest.status == "running":
         raise ExecutorLaunchError(
             f"Inception executor session {latest.id} is already running; inspect its durable session state instead of launching a duplicate."
@@ -296,13 +322,15 @@ def launch_inception_executor(
             raise ExecutorLaunchError(
                 f"Inception executor failed while launching prepared session {latest.id}: {error}"
             ) from error
-        return _result(completed, reused=False)
+        return _result(completed, reused=False, handoff_path=handoff_path)
 
     session_id = base_id
     retry_of = None
     if latest is not None and latest.status == "failed":
         session_id = _retry_id(base_id, sessions)
         retry_of = latest.id
+    elif latest is not None and completed_but_invalid:
+        session_id = _retry_id(base_id, sessions)
 
     fields = getattr(StartSessionInput, "__dataclass_fields__", {})
     kwargs = {
@@ -346,4 +374,4 @@ def launch_inception_executor(
         raise ExecutorLaunchError(
             f"Inception executor {runtime.name} ended with unexpected session status {completed.status!r}"
         )
-    return _result(completed, reused=False)
+    return _result(completed, reused=False, handoff_path=handoff_path)

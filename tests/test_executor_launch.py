@@ -112,9 +112,7 @@ def handoff(root: Path) -> Path:
     path = root / ".agora" / "ai-sdlc" / "handoffs" / "issue-14" / "INCEPTION_HANDOFF.md"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        "# Inception handoff\n\n"
-        "## Objective\n\n"
-        "Implement deterministic canonical program interpreter\n",
+        "# Inception handoff\n\n## Objective\n\nImplement deterministic canonical program interpreter\n",
         encoding="utf-8",
     )
     return path
@@ -237,8 +235,7 @@ def test_completed_but_invalid_inception_is_not_reused_and_gets_new_attempt(tmp_
     invalid_path = tmp_path / ".agora" / "sessions" / "ai-sdlc-inception-issue-14"
     write_result(
         invalid_path,
-        "## Inception Proposal\n\nCreate a Flask API client.\n\n"
-        "## Human decision required\n\nApprove or modify.",
+        "## Inception Proposal\n\nCreate a Flask API client.\n\n## Human decision required\n\nApprove or modify.",
     )
     invalid = SimpleNamespace(
         id="ai-sdlc-inception-issue-14",

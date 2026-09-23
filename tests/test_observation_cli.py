@@ -122,6 +122,7 @@ def test_start_json_uses_explicit_file_for_progress(tmp_path, monkeypatch, capsy
     workspace = FakeWorkspace(tmp_path)
 
     def prepared(root, **options):
+        options["launch_executor"] = False
         return original(
             root,
             **options,
@@ -129,7 +130,6 @@ def test_start_json_uses_explicit_file_for_progress(tmp_path, monkeypatch, capsy
             runtime_discovery=lambda r: (runtime(),),
             isolation=lambda candidate, issue: (candidate.resolve(), None),
             preflight=lambda candidate, runtime, **kwargs: StartPreparationResult(candidate.resolve(), ()),
-            launch_executor=False,
         )
 
     monkeypatch.setattr(start_flow, "prepare_start", prepared)
@@ -157,7 +157,7 @@ def test_start_json_uses_explicit_file_for_progress(tmp_path, monkeypatch, capsy
     assert out.err == ""
     assert json.loads(out.out)["intent_id"] == "issue-11"
     human = file.read_text()
-    assert "Start no lanzó el executor" in human
+    assert "Inicio del executor omitido por modo prepare-only explícito" in human
     assert "Leyendo el issue" in human
     assert "100% 12/12" in human
     assert "Work gobernado y rama del issue resueltos" in human

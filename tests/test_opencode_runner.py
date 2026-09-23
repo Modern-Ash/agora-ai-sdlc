@@ -32,9 +32,7 @@ class FakeProcess:
 
 
 def test_terminal_provider_error_classification():
-    assert opencode_runner.terminal_provider_error(
-        'error.error="AI_APICallError: The usage limit has been reached"'
-    )
+    assert opencode_runner.terminal_provider_error('error.error="AI_APICallError: The usage limit has been reached"')
     assert opencode_runner.terminal_provider_error("Model not found")
     assert not opencode_runner.terminal_provider_error("temporary network timeout")
 
@@ -43,12 +41,7 @@ def test_discovers_preferred_free_model_from_configured_models(monkeypatch, tmp_
     result = subprocess.CompletedProcess(
         args=["opencode", "models"],
         returncode=0,
-        stdout=(
-            "openai/gpt-5.5\n"
-            "ollama/qwen2.5-coder\n"
-            "opencode/mimo-v2.5-free\n"
-            "opencode/nemotron-3-ultra-free\n"
-        ),
+        stdout=("openai/gpt-5.5\nollama/qwen2.5-coder\nopencode/mimo-v2.5-free\nopencode/nemotron-3-ultra-free\n"),
         stderr="",
     )
     monkeypatch.setattr(opencode_runner.subprocess, "run", lambda *args, **kwargs: result)
@@ -66,11 +59,7 @@ def test_prefers_ollama_even_when_local_alias_looks_like_paid_model(monkeypatch,
         args=["opencode", "models"],
         returncode=0,
         stdout=(
-            "openai/gpt-5.5\n"
-            "anthropic/claude-sonnet-4\n"
-            "opencode/nemotron-3-ultra-free\n"
-            "ollama/claude\n"
-            "ollama/gpt-oss\n"
+            "openai/gpt-5.5\nanthropic/claude-sonnet-4\nopencode/nemotron-3-ultra-free\nollama/claude\nollama/gpt-oss\n"
         ),
         stderr="",
     )
@@ -120,8 +109,7 @@ def test_free_model_discovery_fails_when_none_is_available(monkeypatch, tmp_path
 def test_run_opencode_fails_fast_on_terminal_provider_error(monkeypatch, tmp_path: Path):
     process = FakeProcess(
         "",
-        'level=ERROR message="stream error" '
-        'error.error="AI_APICallError: The usage limit has been reached"\n',
+        'level=ERROR message="stream error" error.error="AI_APICallError: The usage limit has been reached"\n',
     )
     monkeypatch.setattr(opencode_runner.subprocess, "Popen", lambda *args, **kwargs: process)
 

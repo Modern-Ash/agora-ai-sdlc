@@ -7,7 +7,6 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from agora.markdown import read_markdown
 
 REQUIRED_SECTIONS = (
     "Intent interpretation",
@@ -58,8 +57,7 @@ def _section_map(text: str) -> dict[str, str]:
 
 
 def _objective(handoff_path: Path) -> str:
-    document = read_markdown(handoff_path)
-    body = document.body
+    body = handoff_path.read_text(encoding="utf-8")
     match = re.search(
         r"(?ms)^## Objective\s*$\n+(.*?)(?=^##\s+|\Z)",
         body,

@@ -332,7 +332,6 @@ def test_start_interrupt_returns_130_without_traceback(monkeypatch, capsys, tmp_
     assert captured.err == "Start cancelled by user.\n"
 
 
-
 def test_start_recoverable_failure_prompts_and_retries_selected_model(monkeypatch, capsys, tmp_path):
     from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice
     from agora_ai_sdlc.start_flow import StartExecutorError

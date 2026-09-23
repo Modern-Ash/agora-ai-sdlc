@@ -5,8 +5,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import queue
+import re
 import shutil
 import subprocess
 import sys
@@ -221,6 +221,41 @@ def list_ollama_models(
             continue
         models.append(f"ollama/{name}")
     return tuple(dict.fromkeys(models))
+
+
+def pull_ollama_model(
+    *,
+    root: Path,
+    model: str,
+    executable: str | None = None,
+) -> str:
+    command = executable or shutil.which("ollama")
+    if not command:
+        raise RuntimeError("Ollama executable is not available")
+
+    model_name = model.removeprefix("ollama/").strip()
+    if not model_name or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/-]*", model_name) is None:
+        raise RuntimeError(f"Invalid Ollama model name: {model!r}")
+
+    try:
+        result = subprocess.run(
+            [command, "pull", model_name],
+            cwd=root,
+            text=True,
+            timeout=None,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise RuntimeError(f"Cannot pull Ollama model {model_name}: {error}") from error
+
+    if result.returncode != 0:
+        raise RuntimeError(f"Ollama pull failed for {model_name} with exit code {result.returncode}")
+
+    installed = list_ollama_models(root=root, executable=command)
+    normalized = f"ollama/{model_name}"
+    if normalized not in installed:
+        raise RuntimeError(f"Ollama model was not installed after pull: {model_name}")
+    return normalized
 
 
 def discover_free_model(*, executable: str, root: Path) -> str:

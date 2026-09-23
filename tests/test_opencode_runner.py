@@ -58,7 +58,30 @@ def test_discovers_preferred_free_model_from_configured_models(monkeypatch, tmp_
         root=tmp_path,
     )
 
-    assert selected == "opencode/nemotron-3-ultra-free"
+    assert selected == "ollama/qwen2.5-coder"
+
+
+def test_prefers_ollama_even_when_local_alias_looks_like_paid_model(monkeypatch, tmp_path: Path):
+    result = subprocess.CompletedProcess(
+        args=["opencode", "models"],
+        returncode=0,
+        stdout=(
+            "openai/gpt-5.5\n"
+            "anthropic/claude-sonnet-4\n"
+            "opencode/nemotron-3-ultra-free\n"
+            "ollama/claude\n"
+            "ollama/gpt-oss\n"
+        ),
+        stderr="",
+    )
+    monkeypatch.setattr(opencode_runner.subprocess, "run", lambda *args, **kwargs: result)
+
+    selected = opencode_runner.discover_free_model(
+        executable="/usr/bin/opencode",
+        root=tmp_path,
+    )
+
+    assert selected == "ollama/claude"
 
 
 def test_discovers_local_model_when_no_explicit_free_model_exists(monkeypatch, tmp_path: Path):

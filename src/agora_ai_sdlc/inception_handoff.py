@@ -35,6 +35,8 @@ def write_inception_handoff(
     branch: str | None,
     base_branch: str | None,
     pathway: str,
+    deterministic_draft: str | None = None,
+    semantic_gaps: tuple[str, ...] = (),
 ) -> InceptionHandoff:
     """Persist the portable Start -> Inception contract for any compatible agent."""
 
@@ -86,6 +88,19 @@ def write_inception_handoff(
                 f"- Source issue: {issue_url}",
                 "- Repository AGENTS.md and bounded product/architecture context referenced by the issue",
                 "",
+                *(
+                    [
+                        "## Deterministic draft",
+                        "",
+                        f"- Draft: `{deterministic_draft}`",
+                        "- Treat this Python-generated draft as the baseline; do not re-explore the repository or recreate facts already present there.",
+                        "- Only resolve the semantic gaps listed below and preserve deterministic facts unless authoritative evidence contradicts them.",
+                        *([f"- Semantic gap: {gap}" for gap in semantic_gaps] or ["- Semantic gap: none"]),
+                        "",
+                    ]
+                    if deterministic_draft is not None
+                    else []
+                ),
                 "## Required Inception output contract",
                 "",
                 "Return and, where existing AI-SDLC contracts permit, persist all of the following.",

@@ -315,9 +315,7 @@ def launch_inception_executor(
                 suffix += f" Provider error: {_compact_diagnostic(provider_error)}."
             if "Durable diagnostics:" not in error_text:
                 suffix += f" Durable diagnostics: {durable_path / 'SUMMARY.md'}."
-        raise ExecutorLaunchError(
-            f"Inception executor {runtime.name} failed: {error_text}.{suffix}"
-        ) from error
+        raise ExecutorLaunchError(f"Inception executor {runtime.name} failed: {error_text}.{suffix}") from error
 
     if completed.status != "completed":
         raise ExecutorLaunchError(

@@ -242,3 +242,53 @@ def test_completed_session_without_output_does_not_create_false_human_review(tmp
             work_id="issue-14",
             workspace_factory=lambda cwd: workspace,
         )
+
+
+
+def test_failed_executor_surfaces_provider_stderr(tmp_path):
+    class FailingWorkspace(Workspace):
+        def start_session(self, data):
+            self.started.append(data)
+            path = self.cwd / ".agora" / "sessions" / data.id
+            path.mkdir(parents=True, exist_ok=True)
+            result = render_markdown(
+                MarkdownDocument(
+                    attributes={
+                        "schema": "agora/session-result/v1",
+                        "session": data.id,
+                        "status": "failed",
+                        "exit-code": 70,
+                    },
+                    body=(
+                        f"# Session result {data.id}\n\n"
+                        "## Standard output\n\n    (empty)\n\n"
+                        "## Standard error\n\n"
+                        "    OpenCode terminal provider error: "
+                        "AI_APICallError: The usage limit has been reached"
+                    ),
+                )
+            )
+            (path / "RESULT.md").write_text(result, encoding="utf-8")
+            (path / "SUMMARY.md").write_text("# failed\n", encoding="utf-8")
+            record = SimpleNamespace(
+                id=data.id,
+                status="failed",
+                path=str(path),
+                retry_of=getattr(data, "retry_of", None),
+                exit_code=70,
+                created_at="2026-09-23T00:00:00Z",
+            )
+            self.sessions.append(record)
+            raise RuntimeError("Session runner exited with code 70")
+
+    workspace = FailingWorkspace(tmp_path)
+
+    with pytest.raises(ExecutorLaunchError, match="usage limit has been reached"):
+        launch_inception_executor(
+            tmp_path,
+            runtime=runtime("opencode"),
+            handoff_path=handoff(tmp_path),
+            swarm_id="delivery",
+            work_id="issue-14",
+            workspace_factory=lambda cwd: workspace,
+        )

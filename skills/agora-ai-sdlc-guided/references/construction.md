@@ -2,6 +2,8 @@
 
 Before exploratory repository reads, build the deterministic bounded context with `aisdlc execution-bundle --root . --swarm <swarm> --work <work> --json`. Use its objective, acceptance criteria, related paths, branch/base/HEAD, verification commands and mechanical risk flags as the default Construction context. Expand beyond that bundle only when an explicit unresolved need remains; do not repeat broad `find`, `grep`, `git status`, build-tool discovery or repository inventory work already represented by the bundle.
 
+Before spending reviewer/model tokens on mechanical validation, run `aisdlc verify --root . --swarm <swarm> --work <work>` to inspect the deterministic verification plan. Execute it with `--run` only inside current authorization. Treat command success as evidence, never as automatic acceptance-criterion satisfaction.
+
 Read the exact Work/revision, approved scope, allowed paths, Plan and Bolt Plan.
 Check structure, pathway applicability, references and current Core readiness.
 Use the installed Plan and Bolt validators. `parse_bolt_plan` succeeding does not

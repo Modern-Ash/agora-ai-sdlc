@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from collections import Counter
 from dataclasses import dataclass
@@ -171,24 +172,28 @@ def inspect_repository(root: Path, *, max_files: int = 5000) -> RepositoryFacts:
             build_systems.append(build_system)
             test_commands.append(test_command)
 
-    for path in root.rglob("*"):
-        if files_scanned >= max_files:
+    stop = False
+    for current, directories, filenames in os.walk(root):
+        directories[:] = [
+            directory
+            for directory in directories
+            if directory not in SKIP_DIRS and not directory.startswith(".")
+        ]
+        current_path = Path(current)
+        for filename in filenames:
+            if files_scanned >= max_files:
+                stop = True
+                break
+            path = current_path / filename
+            files_scanned += 1
+            language = LANGUAGE_EXTENSIONS.get(path.suffix.casefold())
+            if language:
+                languages[language] += 1
+            lowered = path.as_posix().casefold()
+            if "/test/" in lowered or "/tests/" in lowered or path.name.casefold().startswith("test_"):
+                test_files += 1
+        if stop:
             break
-        try:
-            relative = path.relative_to(root)
-        except ValueError:
-            continue
-        if any(part in SKIP_DIRS for part in relative.parts):
-            continue
-        if not path.is_file():
-            continue
-        files_scanned += 1
-        language = LANGUAGE_EXTENSIONS.get(path.suffix.casefold())
-        if language:
-            languages[language] += 1
-        lowered = path.as_posix().casefold()
-        if "/test/" in lowered or "/tests/" in lowered or path.name.casefold().startswith("test_"):
-            test_files += 1
 
     return RepositoryFacts(
         languages=tuple(name for name, _ in languages.most_common()),

@@ -14,6 +14,7 @@ from agora_ai_sdlc.execution_bundle import build_execution_bundle
 from agora_ai_sdlc.executor_launch import ExecutorLaunchError, load_executor_adapters
 from agora_ai_sdlc.guided import GuidedDecision
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
+from agora_ai_sdlc.wizard import load_answers
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,14 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
         parts.append(f"Use the bounded deterministic execution bundle at {bundle_path}.")
     if decision.messages:
         parts.append("Current obligations: " + " | ".join(decision.messages))
+    answers = load_answers(root, decision.work)
+    if answers:
+        resolved = " | ".join(f"{key}={value}" for key, value in sorted(answers.items()))
+        parts.append(
+            "Human clarification answers collected by the Agora wizard: "
+            + resolved
+            + ". Treat these as explicit user-provided context; do not ask them again."
+        )
     parts.extend(
         [
             "Be proactive: inspect only the bounded relevant context, create or update the non-authoritative "

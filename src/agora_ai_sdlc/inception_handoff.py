@@ -94,7 +94,7 @@ def write_inception_handoff(
                 "1. `## Intent interpretation`",
                 "2. `## Material clarifications`",
                 "3. `## Level 1 Plan`",
-                "4. `## Proposed Units`",
+                "4. `## Proposed Units` (Cohesive Units where decomposition adds execution value)",
                 "5. `## Suggested Bolts`",
                 "6. `## Acceptance criteria trace`",
                 "7. `## Risks, constraints and dependencies`",

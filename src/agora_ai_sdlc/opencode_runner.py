@@ -231,6 +231,65 @@ def list_ollama_models(
     return tuple(dict.fromkeys(models))
 
 
+def ollama_model_supports_tools(
+    *,
+    root: Path,
+    model: str,
+    executable: str | None = None,
+) -> bool:
+    command = executable or shutil.which("ollama")
+    if not command:
+        return False
+
+    model_name = model.removeprefix("ollama/").strip()
+    try:
+        result = subprocess.run(
+            [command, "show", model_name],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=MODEL_DISCOVERY_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise RuntimeError(f"Cannot inspect Ollama model {model_name}: {error}") from error
+
+    if result.returncode != 0:
+        detail = _normalize_diagnostic(result.stderr or result.stdout)
+        raise RuntimeError(f"Cannot inspect Ollama model {model_name}: {detail or 'unknown error'}")
+
+    lines = result.stdout.splitlines()
+    for index, raw in enumerate(lines):
+        if raw.strip().casefold() != "capabilities":
+            continue
+        heading_indent = len(raw) - len(raw.lstrip())
+        for capability_line in lines[index + 1 :]:
+            if not capability_line.strip():
+                continue
+            indent = len(capability_line) - len(capability_line.lstrip())
+            if indent <= heading_indent:
+                break
+            if capability_line.strip().casefold() in {"tool", "tools"}:
+                return True
+        return False
+    return False
+
+
+def list_ollama_agent_models(
+    *,
+    root: Path,
+    executable: str | None = None,
+) -> tuple[str, ...]:
+    compatible: list[str] = []
+    for model in list_ollama_models(root=root, executable=executable):
+        try:
+            if ollama_model_supports_tools(root=root, model=model, executable=executable):
+                compatible.append(model)
+        except RuntimeError:
+            continue
+    return tuple(compatible)
+
+
 def pull_ollama_model(
     *,
     root: Path,
@@ -263,13 +322,19 @@ def pull_ollama_model(
     normalized = f"ollama/{model_name}"
     if normalized not in installed:
         raise RuntimeError(f"Ollama model was not installed after pull: {model_name}")
+    if not ollama_model_supports_tools(root=root, model=normalized, executable=command):
+        raise RuntimeError(f"Ollama model does not support tools: {model_name}")
     return normalized
 
 
 def discover_free_model(*, executable: str, root: Path) -> str:
-    models = list(list_available_models(executable=executable, root=root))
+    models = [
+        model
+        for model in list_available_models(executable=executable, root=root)
+        if not model.casefold().startswith("ollama/")
+    ]
     try:
-        models.extend(list_ollama_models(root=root))
+        models.extend(list_ollama_agent_models(root=root))
     except RuntimeError:
         pass
     models = list(dict.fromkeys(models))

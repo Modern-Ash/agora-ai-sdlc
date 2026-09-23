@@ -4,6 +4,24 @@ Agora AI-SDLC uses [Laya](https://github.com/NandhaKishorM/laya) as its local Sy
 decision engine. Laya is the only System-1 provider shipped by this integration and is Apache-2.0
 licensed. It is deliberately separate from the generative runtimes used by Construction and Review.
 
+## UX principle: one continuous wizard
+
+Laya is not a user-facing mode. The normal workflow is a transparent wizard over Core:
+
+```text
+Understand -> Clarify -> Plan -> Build -> Verify -> Review -> Done
+```
+
+Every screen answers four questions: where the Work is, what Agora knows, what is still missing, and
+what will happen if the user confirms. The default interaction is `Enter` to confirm the proposed next
+step. `Adjust` changes the executor/model or returns to the decision, and `Details` expands the full
+Core blockers, artifacts, evidence and underlying command bundle.
+
+Material semantic gaps are converted into bounded questions inside the wizard. Answers are stored under
+`.agora/ai-sdlc/wizard/<work>/ANSWERS.json` and are injected into the next governed executor session as
+explicit human-provided context. This avoids prompt-writing and repeated clarification while preserving
+the source of every decision.
+
 ## Authority boundary
 
 The Decision Plane is advisory. It MUST NOT approve a lifecycle transition, satisfy an approval,

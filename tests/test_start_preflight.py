@@ -202,6 +202,41 @@ def test_start_preflight_restores_missing_guided_skill_resource(tmp_path, monkey
     assert missing.is_file()
 
 
+
+
+def test_start_preflight_repairs_body_only_github_issue_operation(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGORA_HOME", str(tmp_path / "home"))
+    project = tmp_path / "project"
+    project.mkdir()
+    _repo(project)
+    ensure_start_ready(project, _runtime())
+
+    operation = project / ".agora" / "tools" / "github-issues" / "operations" / "view.md"
+    original = operation.read_text(encoding="utf-8")
+    body = original.split("---", 2)[2]
+    operation.write_text(body.lstrip(), encoding="utf-8")
+
+    result = ensure_start_ready(project, _runtime())
+
+    assert "github-adapter.repaired" in result.actions
+    assert "pack-lock.refreshed" in result.actions
+    assert read_markdown(operation).attributes["id"] == "view"
+
+
+def test_start_preflight_refuses_unknown_github_adapter_customization(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGORA_HOME", str(tmp_path / "home"))
+    project = tmp_path / "project"
+    project.mkdir()
+    _repo(project)
+    ensure_start_ready(project, _runtime())
+
+    operation = project / ".agora" / "tools" / "github-issues" / "operations" / "view.md"
+    operation.write_text("# custom local operation\n", encoding="utf-8")
+
+    with pytest.raises(StartPreparationError, match="GitHub Issues adapter"):
+        ensure_start_ready(project, _runtime())
+
+
 def test_dirty_unrelated_branch_gets_isolated_worktree_without_stash_or_reset(tmp_path):
     project = tmp_path / "project"
     project.mkdir()

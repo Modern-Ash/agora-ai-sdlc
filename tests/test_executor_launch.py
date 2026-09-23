@@ -137,6 +137,32 @@ def test_launch_uses_governed_core_session_in_exact_workspace(tmp_path):
     assert "Plan ready." in result.output
 
 
+def test_unrelated_broken_session_does_not_block_inception_lookup(tmp_path):
+    class TargetedWorkspace(Workspace):
+        def list_sessions(self):
+            raise AssertionError("targeted Core lookup must not scan unrelated sessions")
+
+        def show_session(self, session_id):
+            return next(item for item in self.sessions if item.id == session_id)
+
+    unrelated = tmp_path / ".agora" / "sessions" / "unrelated-session" / "SESSION.md"
+    unrelated.parent.mkdir(parents=True)
+    unrelated.write_text("# broken session\n", encoding="utf-8")
+    workspace = TargetedWorkspace(tmp_path)
+
+    result = launch_inception_executor(
+        tmp_path,
+        runtime=runtime("opencode"),
+        handoff_path=handoff(tmp_path),
+        swarm_id="delivery",
+        work_id="issue-14",
+        workspace_factory=lambda cwd: workspace,
+    )
+
+    assert result.status == "completed"
+    assert len(workspace.started) == 1
+
+
 def test_completed_inception_session_is_reused_without_relaunch(tmp_path):
     path = tmp_path / ".agora" / "sessions" / "ai-sdlc-inception-issue-14"
     write_result(path, "Existing proposal.")

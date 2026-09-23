@@ -16,6 +16,7 @@ from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 SCHEMA = "agora-ai-sdlc/executor-adapters/v1"
 MAX_PRESENTATION_CHARS = 6000
 INCEPTION_TIMEOUT_SECONDS = 300
+OPENCODE_FREE_MODEL = "opencode/deepseek-v4-flash-free"
 
 
 class ExecutorLaunchError(ValueError):
@@ -116,7 +117,12 @@ def build_executor_runner(runtime: RuntimeDiscovery, root: Path, handoff_path: P
     adapter = _adapter(runtime.id)
     executable = runtime.executable or runtime.command
     prompt = _inception_prompt(root, handoff_path)
-    values = {"executable": executable, "root": str(root.resolve()), "prompt": prompt}
+    values = {
+        "executable": executable,
+        "root": str(root.resolve()),
+        "model": OPENCODE_FREE_MODEL if runtime.id == "opencode" else "",
+        "prompt": prompt,
+    }
     try:
         argv = [part.format(**values) for part in adapter.argv]
     except KeyError as error:

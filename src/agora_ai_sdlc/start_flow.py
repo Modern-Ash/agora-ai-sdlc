@@ -435,6 +435,10 @@ def prepare_start(
         issue_url=issue_url,
     )
     notify("start.work-ready")
+    resolved_branch = getattr(work_record, "branch", None)
+    if not resolved_branch and _is_git_repository(root):
+        observed_branch = _run_git(root, "branch", "--show-current")
+        resolved_branch = observed_branch or None
     run_id = f"ai-dlc-start-issue-{issue}"
 
     try:
@@ -531,7 +535,7 @@ def prepare_start(
         runtime_name=runtime.name,
         swarm_id=swarm,
         work_id=work_record.id,
-        branch=getattr(work_record, "branch", None),
+        branch=resolved_branch,
         base_branch=getattr(work_record, "base_branch", None),
         pathway=pathway,
         deterministic_draft=deterministic_relative,
@@ -587,7 +591,7 @@ def prepare_start(
         work_id=work_record.id,
         work_path=work_record.path,
         base_branch=getattr(work_record, "base_branch", None),
-        branch=getattr(work_record, "branch", None),
+        branch=resolved_branch,
         pathway=pathway,
         runtime_id=runtime.id,
         runtime_name=runtime.name,

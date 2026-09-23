@@ -362,6 +362,34 @@ def test_prepare_start_repairs_legacy_product_owner_issue_read(tmp_path):
     assert '"issue.read"' in role.read_text(encoding="utf-8")
 
 
+def test_prepare_start_rejects_provider_only_runtime_as_executor(tmp_path):
+    with pytest.raises(StartFlowError, match="not a repository executor"):
+        _prepare_start(
+            tmp_path,
+            issue=11,
+            project="Modern-Ash/agorix",
+            agent="ollama",
+            workspace_factory=FakeWorkspace,
+            runtime_discovery=lambda root: (runtime("ollama"),),
+        )
+
+
+def test_prepare_start_auto_selection_skips_provider_only_runtime(tmp_path):
+    workspace = FakeWorkspace(tmp_path)
+    result = _prepare_start(
+        tmp_path,
+        issue=11,
+        project="Modern-Ash/agorix",
+        workspace_factory=lambda cwd: workspace,
+        runtime_discovery=lambda root: (
+            runtime("ollama", configured=True),
+            runtime("codex", configured=False),
+        ),
+    )
+
+    assert result.runtime_id == "codex"
+
+
 def test_prepare_start_rejects_unavailable_requested_runtime(tmp_path):
     with pytest.raises(StartFlowError, match="not installed and responsive"):
         _prepare_start(

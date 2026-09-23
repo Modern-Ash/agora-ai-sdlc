@@ -112,7 +112,7 @@ def run_interactive(
 
         view = build_wizard_view(root, decision)
         output_fn("")
-        output_fn(render_wizard(view))
+        output_fn(render_wizard(view, lang=lang))
 
         # Material ambiguity is handled as part of the same wizard. No prompt
         # engineering or secondary command is exposed to the user.

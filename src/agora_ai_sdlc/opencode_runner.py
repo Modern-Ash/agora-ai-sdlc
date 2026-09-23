@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import queue
+import re
 import shutil
 import subprocess
 import sys
@@ -28,6 +31,126 @@ def terminal_provider_error(line: str) -> bool:
 
 def _normalize_diagnostic(text: str) -> str:
     return " ".join(text.split())
+
+
+def _opencode_major_version(*, executable: str, root: Path) -> int:
+    try:
+        result = subprocess.run(
+            [executable, "--version"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=MODEL_DISCOVERY_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return 1
+    match = re.search(r"(\d+)(?:\.\d+)+", result.stdout or result.stderr or "")
+    return int(match.group(1)) if match else 1
+
+
+def _merge_inline_config(existing: str | None, patch: dict) -> str:
+    try:
+        payload = json.loads(existing) if existing else {}
+    except json.JSONDecodeError:
+        payload = {}
+    if not isinstance(payload, dict):
+        payload = {}
+
+    for key, value in patch.items():
+        if isinstance(value, dict) and isinstance(payload.get(key), dict):
+            payload[key] = {**payload[key], **value}
+        else:
+            payload[key] = value
+    return json.dumps(payload, separators=(",", ":"))
+
+
+def _ollama_runtime_env(*, executable: str, root: Path, model: str) -> dict[str, str]:
+    model_id = model.split("/", 1)[1]
+    major = _opencode_major_version(executable=executable, root=root)
+    if major >= 2:
+        patch = {
+            "providers": {
+                "ollama": {
+                    "name": "Ollama (local)",
+                    "package": "aisdk:@ai-sdk/openai-compatible",
+                    "settings": {
+                        "baseURL": "http://127.0.0.1:11434/v1",
+                    },
+                    "models": {
+                        model_id: {
+                            "modelID": model_id,
+                            "name": model_id,
+                        }
+                    },
+                }
+            }
+        }
+    else:
+        patch = {
+            "provider": {
+                "ollama": {
+                    "npm": "@ai-sdk/openai-compatible",
+                    "name": "Ollama (local)",
+                    "options": {
+                        "baseURL": "http://127.0.0.1:11434/v1",
+                    },
+                    "models": {
+                        model_id: {
+                            "name": model_id,
+                        }
+                    },
+                }
+            }
+        }
+
+    environment = os.environ.copy()
+    environment["OPENCODE_CONFIG_CONTENT"] = _merge_inline_config(
+        environment.get("OPENCODE_CONFIG_CONTENT"),
+        patch,
+    )
+    return environment
+
+
+def _model_runtime_env(*, executable: str, root: Path, model: str) -> dict[str, str]:
+    if model.casefold().startswith("ollama/"):
+        return _ollama_runtime_env(
+            executable=executable,
+            root=root,
+            model=model,
+        )
+    return os.environ.copy()
+
+
+def _validate_selected_model(
+    *,
+    executable: str,
+    root: Path,
+    model: str,
+    env: dict[str, str],
+) -> None:
+    try:
+        result = subprocess.run(
+            [executable, "models"],
+            cwd=root,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=MODEL_DISCOVERY_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise RuntimeError(f"Cannot validate OpenCode model {model}: {error}") from error
+
+    if result.returncode != 0:
+        detail = _normalize_diagnostic(result.stderr or result.stdout)
+        raise RuntimeError(f"Cannot validate OpenCode model {model}: {detail or 'unknown error'}")
+
+    if model not in _available_models(result.stdout):
+        raise RuntimeError(
+            f"OpenCode model is not available after provider setup: {model}. "
+            "Verify the provider configuration and model capabilities."
+        )
 
 
 def _available_models(output: str) -> list[str]:
@@ -108,6 +231,41 @@ def list_ollama_models(
     return tuple(dict.fromkeys(models))
 
 
+def pull_ollama_model(
+    *,
+    root: Path,
+    model: str,
+    executable: str | None = None,
+) -> str:
+    command = executable or shutil.which("ollama")
+    if not command:
+        raise RuntimeError("Ollama executable is not available")
+
+    model_name = model.removeprefix("ollama/").strip()
+    if not model_name or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._:/-]*", model_name) is None:
+        raise RuntimeError(f"Invalid Ollama model name: {model!r}")
+
+    try:
+        result = subprocess.run(
+            [command, "pull", model_name],
+            cwd=root,
+            text=True,
+            timeout=None,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise RuntimeError(f"Cannot pull Ollama model {model_name}: {error}") from error
+
+    if result.returncode != 0:
+        raise RuntimeError(f"Ollama pull failed for {model_name} with exit code {result.returncode}")
+
+    installed = list_ollama_models(root=root, executable=command)
+    normalized = f"ollama/{model_name}"
+    if normalized not in installed:
+        raise RuntimeError(f"Ollama model was not installed after pull: {model_name}")
+    return normalized
+
+
 def discover_free_model(*, executable: str, root: Path) -> str:
     models = list(list_available_models(executable=executable, root=root))
     try:
@@ -149,6 +307,22 @@ def run_opencode(
         return 69
 
     print(f"OpenCode free model selected: {selected_model}", file=sys.stderr)
+    environment = _model_runtime_env(
+        executable=executable,
+        root=root,
+        model=selected_model,
+    )
+    try:
+        _validate_selected_model(
+            executable=executable,
+            root=root,
+            model=selected_model,
+            env=environment,
+        )
+    except RuntimeError as error:
+        print(f"OpenCode model preflight failed: {error}", file=sys.stderr)
+        return 69
+
     command = [
         executable,
         "--print-logs",
@@ -165,6 +339,7 @@ def run_opencode(
     process = subprocess.Popen(
         command,
         cwd=root,
+        env=environment,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,

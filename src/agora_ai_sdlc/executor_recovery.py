@@ -11,6 +11,7 @@ from agora_ai_sdlc.opencode_runner import (
     LOCAL_FREE_PREFIXES,
     list_available_models,
     list_ollama_models,
+    pull_ollama_model,
 )
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
 
@@ -221,6 +222,7 @@ def select_executor_model(
     discovery: Callable[[Path], tuple[RuntimeDiscovery, ...]] = discover_runtimes,
     model_lister: Callable[..., tuple[str, ...]] = list_available_models,
     ollama_model_lister: Callable[..., tuple[str, ...]] = list_ollama_models,
+    ollama_model_puller: Callable[..., str] = pull_ollama_model,
 ) -> ExecutorRecoveryChoice | None:
     groups = recovery_groups(
         root,
@@ -240,6 +242,10 @@ def select_executor_model(
         cancel = "Cancelar"
         back = "Volver"
         configured = "Modelo configurado por {provider}"
+        download = "Descargar otro modelo con ollama pull…"
+        download_prompt = "Modelo Ollama a descargar (ej. qwen3:8b): "
+        downloading = "Descargando {model} con ollama pull…"
+        pull_failed = "No se pudo descargar el modelo: {error}"
         invalid = "Opción inválida."
     else:
         provider_title = "Step 1/2: choose the LLM/provider:"
@@ -249,6 +255,10 @@ def select_executor_model(
         cancel = "Cancel"
         back = "Back"
         configured = "Configured model for {provider}"
+        download = "Download another model with ollama pull…"
+        download_prompt = "Ollama model to download (e.g. qwen3:8b): "
+        downloading = "Downloading {model} with ollama pull…"
+        pull_failed = "Could not download model: {error}"
         invalid = "Invalid option."
 
     while True:
@@ -280,38 +290,69 @@ def select_executor_model(
             return current
         group = groups[group_index]
 
-        output_fn("")
-        output_fn(model_title.format(provider=group.label))
-        for index, model in enumerate(group.models, start=1):
-            if model is None:
-                label = configured.format(provider=group.label)
-            else:
-                label = f"{_model_display(model)} [{_model_badge(model)}]"
-            selected = ""
-            if current is not None and current.agent == group.agent and current.model == model:
-                selected = " (actual)" if lang == "es" else " (current)"
-            output_fn(f"  {index}) {label}{selected}")
-        output_fn(f"  0) {back}")
+        while True:
+            output_fn("")
+            output_fn(model_title.format(provider=group.label))
+            for index, model in enumerate(group.models, start=1):
+                if model is None:
+                    label = configured.format(provider=group.label)
+                else:
+                    label = f"{_model_display(model)} [{_model_badge(model)}]"
+                selected = ""
+                if current is not None and current.agent == group.agent and current.model == model:
+                    selected = " (actual)" if lang == "es" else " (current)"
+                output_fn(f"  {index}) {label}{selected}")
 
-        model_index = _choose_index(
-            count=len(group.models),
-            input_fn=input_fn,
-            output_fn=output_fn,
-            prompt=model_prompt,
-            invalid=invalid,
-        )
-        if model_index is None:
-            continue
-        model = group.models[model_index]
-        if model is None:
-            label = f"{group.label} · configured model"
-        else:
-            label = f"{group.label} · {model} [{_model_badge(model)}]"
-        return ExecutorRecoveryChoice(
-            agent=group.agent,
-            model=model,
-            label=label,
-        )
+            can_pull = group.id == "ollama"
+            if can_pull:
+                output_fn(f"  {len(group.models) + 1}) {download}")
+            output_fn(f"  0) {back}")
+
+            model_index = _choose_index(
+                count=len(group.models) + (1 if can_pull else 0),
+                input_fn=input_fn,
+                output_fn=output_fn,
+                prompt=model_prompt,
+                invalid=invalid,
+            )
+            if model_index is None:
+                break
+
+            if can_pull and model_index == len(group.models):
+                requested = input_fn(download_prompt).strip()
+                if not requested:
+                    continue
+                output_fn(downloading.format(model=requested))
+                discovered = tuple(discovery(root))
+                ollama = next(
+                    (item for item in discovered if item.id == "ollama" and item.installed and item.responsive),
+                    None,
+                )
+                try:
+                    model = ollama_model_puller(
+                        root=root,
+                        model=requested,
+                        executable=(ollama.executable or ollama.command) if ollama else None,
+                    )
+                except RuntimeError as error:
+                    output_fn(pull_failed.format(error=error))
+                    continue
+                return ExecutorRecoveryChoice(
+                    agent="opencode",
+                    model=model,
+                    label=f"{group.label} · {model} [local]",
+                )
+
+            model = group.models[model_index]
+            if model is None:
+                label = f"{group.label} · configured model"
+            else:
+                label = f"{group.label} · {model} [{_model_badge(model)}]"
+            return ExecutorRecoveryChoice(
+                agent=group.agent,
+                model=model,
+                label=label,
+            )
 
 
 def prompt_executor_recovery(
@@ -324,6 +365,7 @@ def prompt_executor_recovery(
     discovery: Callable[[Path], tuple[RuntimeDiscovery, ...]] = discover_runtimes,
     model_lister: Callable[..., tuple[str, ...]] = list_available_models,
     ollama_model_lister: Callable[..., tuple[str, ...]] = list_ollama_models,
+    ollama_model_puller: Callable[..., str] = pull_ollama_model,
 ) -> ExecutorRecoveryChoice | None:
     if lang == "es":
         print(f"\nEl LLM/proveedor falló: {error}", file=output_stream)
@@ -347,6 +389,7 @@ def prompt_executor_recovery(
         discovery=discovery,
         model_lister=model_lister,
         ollama_model_lister=ollama_model_lister,
+        ollama_model_puller=ollama_model_puller,
     )
 
 

@@ -77,7 +77,11 @@ def _prepare_start(root: Path, **kwargs):
     kwargs.setdefault("executor_launcher", _execution)
     kwargs.setdefault(
         "inception_materializer",
-        lambda *args, **options: SimpleNamespace(actions=()),
+        lambda *args, **options: SimpleNamespace(actions=(), actor_id="project:ai-test"),
+    )
+    kwargs.setdefault(
+        "deterministic_clarifier",
+        lambda **options: SimpleNamespace(actions=()),
     )
     return prepare_start(root, **kwargs)
 
@@ -399,6 +403,7 @@ def test_explicit_issue_invokes_deterministic_materializer_before_human_review(t
         observed["root"] = root
         observed.update(kwargs)
         return SimpleNamespace(
+            actor_id="project:ai-opencode",
             actions=(
                 "artifact.registered:intent",
                 "artifact.registered:requirements",
@@ -406,6 +411,12 @@ def test_explicit_issue_invokes_deterministic_materializer_before_human_review(t
                 "criterion.elaborated:source-issue",
             )
         )
+
+    clarified = {}
+
+    def clarifier(**kwargs):
+        clarified.update(kwargs)
+        return SimpleNamespace(actions=("clarification.resolved:deterministic-zero-question",))
 
     result = _prepare_start(
         tmp_path,
@@ -415,6 +426,7 @@ def test_explicit_issue_invokes_deterministic_materializer_before_human_review(t
         workspace_factory=lambda cwd: workspace,
         runtime_discovery=lambda root: (runtime("codex"),),
         inception_materializer=materializer,
+        deterministic_clarifier=clarifier,
         executor_launcher=lambda *args, **kwargs: (_ for _ in ()).throw(
             AssertionError("deterministic Inception must not launch an executor")
         ),
@@ -428,6 +440,11 @@ def test_explicit_issue_invokes_deterministic_materializer_before_human_review(t
     assert observed["pathway"] == result.pathway
     assert "artifact.registered:intent" in result.preflight_actions
     assert "criterion.elaborated:source-issue" in result.preflight_actions
+    assert "clarification.resolved:deterministic-zero-question" in result.preflight_actions
+    assert clarified["workspace"] is workspace
+    assert clarified["swarm_id"] == "delivery"
+    assert clarified["work_id"] == "issue-14"
+    assert clarified["actor_id"] == "project:ai-opencode"
     assert result.status == "human-review-required"
 
 

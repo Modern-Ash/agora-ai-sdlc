@@ -85,9 +85,7 @@ def discover_free_model(*, executable: str, root: Path) -> str:
 
     models = _available_models(result.stdout)
     free_models = [
-        model
-        for model in models
-        if "free" in model.casefold() or model.casefold().startswith(LOCAL_FREE_PREFIXES)
+        model for model in models if "free" in model.casefold() or model.casefold().startswith(LOCAL_FREE_PREFIXES)
     ]
     if not free_models:
         raise RuntimeError(

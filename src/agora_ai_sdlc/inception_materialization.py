@@ -174,7 +174,10 @@ def materialize_deterministic_inception(
             f"developer actor is not assigned in swarm {swarm_id!r}; cannot materialize Inception"
         )
 
-    intent = Path(intent_path).resolve()
+    intent = Path(intent_path)
+    if not intent.is_absolute():
+        intent = root / intent
+    intent = intent.resolve()
     if not intent.is_file():
         raise InceptionMaterializationError(f"durable Intent file does not exist: {intent}")
 

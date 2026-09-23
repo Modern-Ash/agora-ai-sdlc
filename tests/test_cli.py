@@ -150,6 +150,52 @@ def test_plan_validate_cli_rejects_unknown_pathway(capsys):
     assert "pathway.unknown" in capsys.readouterr().err
 
 
+def test_verify_cli_json_uses_deterministic_report(monkeypatch, capsys, tmp_path):
+    from types import SimpleNamespace
+
+    observed = {}
+    payload = {
+        "schema": "agora-ai-sdlc/verification-report/v1",
+        "work": "issue-14",
+        "executed": False,
+    }
+    report = SimpleNamespace(snapshot=lambda: payload)
+
+    def build(root, **kwargs):
+        observed["root"] = root
+        observed.update(kwargs)
+        return report
+
+    monkeypatch.setattr("agora_ai_sdlc.verification.build_verification_report", build)
+
+    assert (
+        main(
+            [
+                "verify",
+                "--root",
+                str(tmp_path),
+                "--swarm",
+                "delivery",
+                "--work",
+                "issue-14",
+                "--json",
+                "--no-write",
+            ]
+        )
+        == 0
+    )
+
+    assert json.loads(capsys.readouterr().out) == payload
+    assert observed == {
+        "root": tmp_path,
+        "swarm": "delivery",
+        "work": "issue-14",
+        "run": False,
+        "timeout_seconds": 300,
+        "persist": False,
+    }
+
+
 def test_execution_bundle_cli_json_uses_deterministic_builder(monkeypatch, capsys, tmp_path):
     from types import SimpleNamespace
 

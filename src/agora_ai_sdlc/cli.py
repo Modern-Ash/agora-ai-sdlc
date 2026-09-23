@@ -323,6 +323,9 @@ def main(argv: list[str] | None = None) -> int:
                     channel.write(render_start(result, lang=resolve_language(args.lang), details=args.details))
                 else:
                     print(render_start(result, lang=resolve_language(args.lang), details=args.details))
+        except KeyboardInterrupt:
+            print("Start cancelled by user.", file=sys.stderr)
+            return 130
         except (OSError, StartFlowError, ValueError, PermissionError) as error:
             print(safe_text(str(error), max_chars=1024), file=sys.stderr)
             return 2

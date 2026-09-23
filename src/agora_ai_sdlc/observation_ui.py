@@ -260,10 +260,7 @@ class HumanChannel(AbstractContextManager):
         self._spinner_thread: threading.Thread | None = None
         self._spinner_visible = False
         self._spinner_enabled = bool(
-            path is None
-            and stream is not None
-            and callable(getattr(stream, "isatty", None))
-            and stream.isatty()
+            path is None and stream is not None and callable(getattr(stream, "isatty", None)) and stream.isatty()
         )
         if path is not None:
             target = path.expanduser().absolute()

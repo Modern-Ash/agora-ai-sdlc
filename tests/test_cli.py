@@ -318,7 +318,6 @@ def test_continue_json_stays_non_interactive_on_tty(monkeypatch, capsys):
     assert payload["work"] == "first-work"
 
 
-
 def test_start_interrupt_returns_130_without_traceback(monkeypatch, capsys, tmp_path):
     from agora_ai_sdlc import start_flow
 

@@ -100,8 +100,8 @@ def test_executor_registry_distinguishes_agent_host_from_model_provider():
 def test_opencode_runner_is_non_interactive_and_binds_handoff_and_root(tmp_path):
     runner = build_executor_runner(runtime("opencode"), tmp_path, handoff(tmp_path))
 
-    assert runner.startswith("/usr/bin/opencode run --auto --dir ")
-    assert f"--dir {tmp_path.resolve()}" in runner
+    assert "-m agora_ai_sdlc.opencode_runner" in runner
+    assert f"--root {tmp_path.resolve()}" in runner
     assert "INCEPTION_HANDOFF.md" in runner
     assert str(tmp_path.resolve()) in runner
     assert "Do not implement product code" in runner
@@ -133,7 +133,7 @@ def test_launch_uses_governed_core_session_in_exact_workspace(tmp_path):
     assert started.executor_id == "ai-opencode"
     assert started.launch is True
     assert started.timeout_seconds == 300
-    assert started.runner.startswith("/usr/bin/opencode run --auto ")
+    assert "--model opencode/deepseek-v4-flash-free" in started.runner
     assert result.status == "completed"
     assert result.reused is False
     assert "Plan ready." in result.output
@@ -234,6 +234,55 @@ def test_completed_session_without_output_does_not_create_false_human_review(tmp
     workspace = Workspace(tmp_path, [completed])
 
     with pytest.raises(ExecutorLaunchError, match="without reviewable output"):
+        launch_inception_executor(
+            tmp_path,
+            runtime=runtime("opencode"),
+            handoff_path=handoff(tmp_path),
+            swarm_id="delivery",
+            work_id="issue-14",
+            workspace_factory=lambda cwd: workspace,
+        )
+
+
+def test_failed_executor_surfaces_provider_stderr(tmp_path):
+    class FailingWorkspace(Workspace):
+        def start_session(self, data):
+            self.started.append(data)
+            path = self.cwd / ".agora" / "sessions" / data.id
+            path.mkdir(parents=True, exist_ok=True)
+            result = render_markdown(
+                MarkdownDocument(
+                    attributes={
+                        "schema": "agora/session-result/v1",
+                        "session": data.id,
+                        "status": "failed",
+                        "exit-code": 70,
+                    },
+                    body=(
+                        f"# Session result {data.id}\n\n"
+                        "## Standard output\n\n    (empty)\n\n"
+                        "## Standard error\n\n"
+                        "    OpenCode terminal provider error: "
+                        "AI_APICallError: The usage limit has been reached"
+                    ),
+                )
+            )
+            (path / "RESULT.md").write_text(result, encoding="utf-8")
+            (path / "SUMMARY.md").write_text("# failed\n", encoding="utf-8")
+            record = SimpleNamespace(
+                id=data.id,
+                status="failed",
+                path=str(path),
+                retry_of=getattr(data, "retry_of", None),
+                exit_code=70,
+                created_at="2026-09-23T00:00:00Z",
+            )
+            self.sessions.append(record)
+            raise RuntimeError("Session runner exited with code 70")
+
+    workspace = FailingWorkspace(tmp_path)
+
+    with pytest.raises(ExecutorLaunchError, match="usage limit has been reached"):
         launch_inception_executor(
             tmp_path,
             runtime=runtime("opencode"),

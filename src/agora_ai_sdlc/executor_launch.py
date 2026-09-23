@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import shlex
+import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
@@ -16,6 +17,7 @@ from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 SCHEMA = "agora-ai-sdlc/executor-adapters/v1"
 MAX_PRESENTATION_CHARS = 6000
 INCEPTION_TIMEOUT_SECONDS = 300
+OPENCODE_FREE_MODEL = "opencode/deepseek-v4-flash-free"
 
 
 class ExecutorLaunchError(ValueError):
@@ -116,14 +118,21 @@ def build_executor_runner(runtime: RuntimeDiscovery, root: Path, handoff_path: P
     adapter = _adapter(runtime.id)
     executable = runtime.executable or runtime.command
     prompt = _inception_prompt(root, handoff_path)
-    values = {"executable": executable, "root": str(root.resolve()), "prompt": prompt}
+    values = {
+        "executable": executable,
+        "python": sys.executable,
+        "root": str(root.resolve()),
+        "model": OPENCODE_FREE_MODEL if runtime.id == "opencode" else "",
+        "prompt": prompt,
+    }
     try:
         argv = [part.format(**values) for part in adapter.argv]
     except KeyError as error:
         raise ExecutorLaunchError(
             f"Executor adapter {runtime.id!r} references unknown placeholder {error.args[0]!r}"
         ) from error
-    if not argv or Path(argv[0]).name != Path(executable).name:
+    expected_executable = sys.executable if runtime.id == "opencode" else executable
+    if not argv or Path(argv[0]).name != Path(expected_executable).name:
         raise ExecutorLaunchError(f"Executor adapter {runtime.id!r} produced an invalid launch command")
     return shlex.join(argv)
 
@@ -153,6 +162,23 @@ def _session_output(path: Path) -> str:
         lines.append(line.removeprefix("    "))
     value = "\n".join(lines).strip()
     return "" if value == "(empty)" else _bounded_output(value)
+
+
+def _session_stderr(path: Path) -> str:
+    result_path = path / "RESULT.md"
+    if not result_path.is_file():
+        return ""
+    document = read_markdown(result_path)
+    body = document.body
+    start = body.find("## Standard error")
+    if start < 0:
+        return ""
+    stderr = body[start + len("## Standard error") :].strip("\n")
+    lines = [line.removeprefix("    ") for line in stderr.splitlines()]
+    value = "\n".join(lines).strip()
+    if not value or value == "(empty)":
+        return ""
+    return _bounded_output(value)
 
 
 def _result(record, *, reused: bool) -> InceptionExecutionResult:
@@ -274,7 +300,14 @@ def launch_inception_executor(
     except (OSError, RuntimeError, ValueError) as error:
         latest_after = _matching_sessions(workspace, root, base_id)
         durable = latest_after[-1] if latest_after else None
-        suffix = f" Durable diagnostics: {Path(durable.path) / 'SUMMARY.md'}." if durable is not None else ""
+        suffix = ""
+        if durable is not None:
+            durable_path = Path(durable.path)
+            provider_error = _session_stderr(durable_path)
+            if provider_error:
+                provider_line = provider_error.splitlines()[-1]
+                suffix += f" Provider error: {provider_line}."
+            suffix += f" Durable diagnostics: {durable_path / 'SUMMARY.md'}."
         raise ExecutorLaunchError(f"Inception executor {runtime.name} failed: {error}.{suffix}") from error
 
     if completed.status != "completed":

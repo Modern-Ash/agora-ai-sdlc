@@ -150,6 +150,50 @@ def test_plan_validate_cli_rejects_unknown_pathway(capsys):
     assert "pathway.unknown" in capsys.readouterr().err
 
 
+def test_execution_bundle_cli_json_uses_deterministic_builder(monkeypatch, capsys, tmp_path):
+    from types import SimpleNamespace
+
+    observed = {}
+    payload = {
+        "schema": "agora-ai-sdlc/execution-bundle/v1",
+        "work": "issue-14",
+        "related_paths": ["src/interpreter.py"],
+    }
+    bundle = SimpleNamespace(snapshot=lambda: payload)
+
+    def build(root, **kwargs):
+        observed["root"] = root
+        observed.update(kwargs)
+        return bundle
+
+    monkeypatch.setattr("agora_ai_sdlc.execution_bundle.build_execution_bundle", build)
+
+    assert (
+        main(
+            [
+                "execution-bundle",
+                "--root",
+                str(tmp_path),
+                "--swarm",
+                "delivery",
+                "--work",
+                "issue-14",
+                "--json",
+                "--no-write",
+            ]
+        )
+        == 0
+    )
+
+    assert json.loads(capsys.readouterr().out) == payload
+    assert observed == {
+        "root": tmp_path,
+        "swarm": "delivery",
+        "work": "issue-14",
+        "persist": False,
+    }
+
+
 def test_bolt_validate_cli_reports_trace_and_fails_closed(capsys, tmp_path):
     root = Path(__file__).parent.parent
     fixture = root / "tests" / "fixtures" / "bolts" / "parallel.md"

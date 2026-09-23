@@ -150,7 +150,7 @@ def _session_output(path: Path) -> str:
     stdout = body[start + len("## Standard output") : end if end >= 0 else None].strip("\n")
     lines = []
     for line in stdout.splitlines():
-        lines.append(line[4:] if line.startswith("    ") else line)
+        lines.append(line.removeprefix("    "))
     value = "\n".join(lines).strip()
     return "" if value == "(empty)" else _bounded_output(value)
 

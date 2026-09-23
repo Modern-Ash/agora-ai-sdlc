@@ -164,3 +164,65 @@ def test_prepare_with_no_runtime_returns_to_menu(monkeypatch):
 
     assert result.reason == "exit"
     assert "No responsive AI CLI runtime was detected." in outputs
+
+
+
+def test_prepare_in_construction_launches_governed_executor(monkeypatch):
+    outputs = []
+    answers = iter(["p", "2", "1", "x"])
+    construction = GuidedDecision(
+        swarm="issue-26-demo",
+        work="issue-26",
+        title="Deliver GitHub issue #26",
+        method="ai-sdlc",
+        actor="project:ai-claude",
+        role="developer",
+        state="construction",
+        target="inception",
+        gate=None,
+        blockers=("construction obligations remain",),
+        messages=("Prepare required artifacts.",),
+        missing_artifacts=("domain-model",),
+    )
+    decisions = iter([construction, None])
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_session.inspect_next",
+        lambda *args, **kwargs: next(decisions),
+    )
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_session.discover_runtimes",
+        lambda root: (runtime("codex", "Codex"), runtime("claude", "Claude Code")),
+    )
+
+    observed = {}
+
+    def launch(root, **kwargs):
+        observed.update(kwargs)
+        return type(
+            "Result",
+            (),
+            {
+                "session_id": "ai-sdlc-construction-issue-26",
+                "status": "completed",
+                "output": "Construction complete.",
+                "result_path": "/tmp/RESULT.md",
+            },
+        )()
+
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_session.launch_construction_executor",
+        launch,
+    )
+
+    result = run_interactive(
+        Path("."),
+        input_fn=lambda prompt: next(answers),
+        output_fn=outputs.append,
+    )
+
+    assert result.reason == "clear"
+    assert observed["swarm_id"] == "issue-26-demo"
+    assert observed["work_id"] == "issue-26"
+    assert observed["actor_reference"] == "project:ai-claude"
+    assert observed["runtime_id"] == "claude"
+    assert "Construction complete." in outputs

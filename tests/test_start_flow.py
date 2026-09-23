@@ -7,6 +7,7 @@ import pytest
 from agora.model import CreateIntentInput, CreateWorkInput
 from agora.sdlc import SdlcService
 
+from agora_ai_sdlc.executor_launch import InceptionExecutionResult
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 from agora_ai_sdlc.start_flow import (
     StartFlowError,
@@ -49,6 +50,21 @@ def runtime(runtime_id="codex", *, responsive=True, configured=True):
     )
 
 
+def _execution(root: Path, **kwargs):
+    session = root / ".agora" / "sessions" / "ai-sdlc-inception-test"
+    session.mkdir(parents=True, exist_ok=True)
+    return InceptionExecutionResult(
+        session_id="ai-sdlc-inception-test",
+        status="completed",
+        result_path=str(session / "RESULT.md"),
+        summary_path=str(session / "SUMMARY.md"),
+        output="## Inception Proposal\n\nPlan ready.\n\n## Human decision required\n\nApprove or modify.",
+        reused=False,
+        retry_of=None,
+        exit_code=0,
+    )
+
+
 def _prepare_start(root: Path, **kwargs):
     kwargs.setdefault("isolation", lambda candidate, issue: (candidate.resolve(), None))
     kwargs.setdefault(
@@ -58,6 +74,7 @@ def _prepare_start(root: Path, **kwargs):
             actions=(),
         ),
     )
+    kwargs.setdefault("executor_launcher", _execution)
     return prepare_start(root, **kwargs)
 
 
@@ -198,10 +215,10 @@ def test_prepare_start_reads_issue_through_governed_tool_and_creates_draft_inten
     output = render_start(result)
     assert "Agora Flow | Start" in output
     assert "Issue #11" in output
-    assert "INCEPTION READY" in output
-    assert "Construction is not authorized yet" in output
-    assert "Human review boundary" in output
-    assert "No ad hoc methodology prompt is required." in output
+    assert "INCEPTION PROPOSAL" in output
+    assert "Plan ready." in output
+    assert "HUMAN DECISION REQUIRED" in output
+    assert "Next executor action" not in output
     assert "Portable Inception handoff" not in output
     assert "human-review-required" in output
 
@@ -211,7 +228,8 @@ def test_prepare_start_reads_issue_through_governed_tool_and_creates_draft_inten
 
     spanish = render_start(result, lang="es")
     assert "Agora Flow | Inicio" in spanish
-    assert "INCEPTION LISTA" in spanish
+    assert "PROPUESTA DE INCEPTION" in spanish
+    assert "DECISIÓN HUMANA REQUERIDA" in spanish
     assert "Estado: human-review-required" in spanish
 
     handoff = Path(result.handoff_path).read_text(encoding="utf-8")
@@ -294,6 +312,26 @@ def test_prepare_start_reports_exact_target_intent_when_it_is_malformed(tmp_path
             workspace_factory=lambda cwd: workspace,
             runtime_discovery=lambda root: (runtime(),),
         )
+
+
+def test_prepare_only_stops_before_executor_and_does_not_claim_human_review(tmp_path):
+    workspace = FakeWorkspace(tmp_path)
+
+    result = _prepare_start(
+        tmp_path,
+        issue=11,
+        project="Modern-Ash/agorix",
+        workspace_factory=lambda cwd: workspace,
+        runtime_discovery=lambda root: (runtime(),),
+        launch_executor=False,
+    )
+
+    assert result.status == "inception-prepared"
+    assert result.executor_session_id is None
+    output = render_start(result)
+    assert "INCEPTION READY" in output
+    assert "Next executor action" in output
+    assert "HUMAN DECISION REQUIRED" not in output
 
 
 def test_prepare_start_repairs_legacy_product_owner_issue_read(tmp_path):

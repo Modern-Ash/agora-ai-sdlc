@@ -381,9 +381,8 @@ def ensure_start_ready(
             )
         workspace.initialize(InitInput(**init_kwargs))
         actions.append("project.initialized")
-    else:
-        _ensure_project_selection(root, actions)
 
+    _ensure_project_selection(root, actions)
     _ensure_method(workspace, root, actions)
     _ensure_skill(root, actions)
 

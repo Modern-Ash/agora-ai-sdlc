@@ -16,6 +16,11 @@ T = TypeVar("T")
 
 
 @dataclass(frozen=True)
+class ExecutorRecoveryCancelled(ValueError):
+    """Human declined to retry an LLM-backed step with another runtime/model."""
+
+
+@dataclass(frozen=True)
 class ExecutorRecoveryChoice:
     agent: str
     model: str | None
@@ -178,6 +183,6 @@ def run_with_recovery(
                 lang=lang,
             )
             if choice is None:
-                raise
+                raise ExecutorRecoveryCancelled("Executor recovery cancelled.") from error
             selected_agent = choice.agent
             selected_model = choice.model

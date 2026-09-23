@@ -221,7 +221,9 @@ def launch_inception_executor(
         try:
             completed = workspace.launch_session(LaunchSessionInput(session_id=latest.id))
         except (OSError, RuntimeError, ValueError) as error:
-            raise ExecutorLaunchError(f"Inception executor failed while launching prepared session {latest.id}: {error}") from error
+            raise ExecutorLaunchError(
+                f"Inception executor failed while launching prepared session {latest.id}: {error}"
+            ) from error
         return _result(completed, reused=False)
 
     session_id = base_id
@@ -251,11 +253,7 @@ def launch_inception_executor(
     except (OSError, RuntimeError, ValueError) as error:
         latest_after = _matching_sessions(workspace, base_id)
         durable = latest_after[-1] if latest_after else None
-        suffix = (
-            f" Durable diagnostics: {Path(durable.path) / 'SUMMARY.md'}."
-            if durable is not None
-            else ""
-        )
+        suffix = f" Durable diagnostics: {Path(durable.path) / 'SUMMARY.md'}." if durable is not None else ""
         raise ExecutorLaunchError(f"Inception executor {runtime.name} failed: {error}.{suffix}") from error
 
     if completed.status != "completed":

@@ -157,12 +157,17 @@ def _session_output(path: Path) -> str:
 
 def _result(record, *, reused: bool) -> InceptionExecutionResult:
     session_path = Path(record.path)
+    output = _session_output(session_path) if record.status == "completed" else ""
+    if record.status == "completed" and not output:
+        raise ExecutorLaunchError(
+            f"Inception executor session {record.id} completed without reviewable output: {session_path / 'RESULT.md'}"
+        )
     return InceptionExecutionResult(
         session_id=record.id,
         status=record.status,
         result_path=str(session_path / "RESULT.md"),
         summary_path=str(session_path / "SUMMARY.md"),
-        output=_session_output(session_path) if record.status == "completed" else "",
+        output=output,
         reused=reused,
         retry_of=getattr(record, "retry_of", None),
         exit_code=getattr(record, "exit_code", None),

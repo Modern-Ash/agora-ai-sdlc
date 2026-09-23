@@ -185,7 +185,7 @@ def _session_output(path: Path) -> str:
     for line in stdout.splitlines():
         lines.append(line.removeprefix("    "))
     value = "\n".join(lines).strip()
-    return "" if value == "(empty)" else _bounded_output(value)
+    return "" if value == "(empty)" else value
 
 
 def _session_stderr(path: Path) -> str:
@@ -219,14 +219,14 @@ def _result(
     handoff_path: Path,
 ) -> InceptionExecutionResult:
     session_path = Path(record.path)
-    output = _session_output(session_path) if record.status == "completed" else ""
-    if record.status == "completed" and not output:
+    raw_output = _session_output(session_path) if record.status == "completed" else ""
+    if record.status == "completed" and not raw_output:
         raise ExecutorLaunchError(
             f"Inception executor session {record.id} completed without reviewable output: {session_path / 'RESULT.md'}",
             recoverable=True,
         )
     if record.status == "completed":
-        validation = validate_inception_output(output, handoff_path)
+        validation = validate_inception_output(raw_output, handoff_path)
         if not validation.valid:
             detail = "; ".join(validation.violations)
             raise ExecutorLaunchError(
@@ -239,7 +239,7 @@ def _result(
         status=record.status,
         result_path=str(session_path / "RESULT.md"),
         summary_path=str(session_path / "SUMMARY.md"),
-        output=output,
+        output=_bounded_output(raw_output),
         reused=reused,
         retry_of=getattr(record, "retry_of", None),
         exit_code=getattr(record, "exit_code", None),

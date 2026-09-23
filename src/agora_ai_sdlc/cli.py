@@ -554,14 +554,27 @@ def main(argv: list[str] | None = None) -> int:
         except (OSError, ValueError) as error:
             print(error, file=sys.stderr)
             return 2
+        advice = None
+        if decision is not None:
+            from agora_ai_sdlc.workflow_advisor import advise_workflow
+
+            advice = advise_workflow(root, decision)
         if args.json:
-            print(json.dumps(decision.snapshot() if decision is not None else {"status": "clear"}, sort_keys=True))
+            payload = decision.snapshot() if decision is not None else {"status": "clear"}
+            if advice is not None:
+                payload["workflow_advice"] = advice.snapshot()
+            print(json.dumps(payload, sort_keys=True))
         else:
-            print(
+            rendered = (
                 render(decision, expert=args.expert, show_commands=args.commands)
                 if language == "en"
                 else render(decision, expert=args.expert, show_commands=args.commands, lang=language)
             )
+            if advice is not None:
+                rendered += "\n\nRecommended now: " + advice.summary
+                if advice.recommended_runtime is not None:
+                    rendered += "\nLocal/free default: " + advice.recommended_runtime.label
+            print(rendered)
         return 0
     if args.command == "verify":
         from agora_ai_sdlc.verification import VerificationError, build_verification_report, render_verification

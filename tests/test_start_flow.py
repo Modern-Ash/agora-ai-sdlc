@@ -75,6 +75,10 @@ def _prepare_start(root: Path, **kwargs):
         ),
     )
     kwargs.setdefault("executor_launcher", _execution)
+    kwargs.setdefault(
+        "inception_materializer",
+        lambda *args, **options: SimpleNamespace(actions=()),
+    )
     return prepare_start(root, **kwargs)
 
 
@@ -365,6 +369,66 @@ def test_prepare_start_repairs_legacy_product_owner_issue_read(tmp_path):
     assert repair.scope == "project"
     assert repair.force is True
     assert '"issue.read"' in role.read_text(encoding="utf-8")
+
+
+def test_explicit_issue_invokes_deterministic_materializer_before_human_review(tmp_path):
+    workspace = FakeWorkspace(tmp_path)
+    workspace._has_run = True
+
+    def show_tool_run(run_id):
+        payload = {
+            "number": 14,
+            "title": "Implement deterministic canonical program interpreter",
+            "body": (
+                "## Objective\n"
+                "Execute learner programs deterministically.\n\n"
+                "## Requirements\n"
+                "- deterministic state transitions\n"
+                "- explicit execution budget\n\n"
+                "## Acceptance\n"
+                "- deterministic repeated run\n"
+            ),
+            "url": "https://github.com/Modern-Ash/agorix/issues/14",
+        }
+        return SimpleNamespace(result=SimpleNamespace(status="completed", stdout=json.dumps(payload), stderr=""))
+
+    workspace.show_tool_run = show_tool_run
+    observed = {}
+
+    def materializer(root, **kwargs):
+        observed["root"] = root
+        observed.update(kwargs)
+        return SimpleNamespace(
+            actions=(
+                "artifact.registered:intent",
+                "artifact.registered:requirements",
+                "artifact.registered:unit-of-work",
+                "criterion.elaborated:source-issue",
+            )
+        )
+
+    result = _prepare_start(
+        tmp_path,
+        issue=14,
+        project="Modern-Ash/agorix",
+        agent="codex",
+        workspace_factory=lambda cwd: workspace,
+        runtime_discovery=lambda root: (runtime("codex"),),
+        inception_materializer=materializer,
+        executor_launcher=lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("deterministic Inception must not launch an executor")
+        ),
+    )
+
+    assert observed["root"] == tmp_path.resolve()
+    assert observed["swarm_id"] == "delivery"
+    assert observed["work_id"] == "issue-14"
+    assert observed["intent_path"] == result.intent_path
+    assert observed["issue"].objective == "Execute learner programs deterministically."
+    assert observed["pathway"] == result.pathway
+    assert "artifact.registered:intent" in result.preflight_actions
+    assert "criterion.elaborated:source-issue" in result.preflight_actions
+    assert result.status == "human-review-required"
 
 
 def test_explicit_issue_uses_deterministic_inception_without_executor(tmp_path):

@@ -106,6 +106,17 @@ def main(argv: list[str] | None = None) -> int:
     guided.add_argument("--skill", action="store_true", help="Print the packaged guided-agent skill path")
     guided.add_argument("--non-interactive", action="store_true", help="Force one-shot output even on a terminal")
     guided.add_argument("--lang", choices=SUPPORTED_LANGUAGES, help="Presentation language")
+    verification = sub.add_parser(
+        "verify",
+        help="Plan or run deterministic verification without invoking an LLM",
+    )
+    verification.add_argument("--root", default=".", help="Project root")
+    verification.add_argument("--swarm", help="Limit to one delivery swarm")
+    verification.add_argument("--work", help="Limit to one work item")
+    verification.add_argument("--run", action="store_true", help="Execute only allowlisted deterministic verification commands")
+    verification.add_argument("--timeout", type=int, default=300, help="Per-command timeout in seconds")
+    verification.add_argument("--json", action="store_true", help="Print machine-readable verification report")
+    verification.add_argument("--no-write", action="store_true", help="Do not persist VERIFICATION.json under .agora")
     execution_bundle = sub.add_parser(
         "execution-bundle",
         help="Build bounded deterministic Construction/Review context without invoking an LLM",
@@ -446,6 +457,26 @@ def main(argv: list[str] | None = None) -> int:
                 if language == "en"
                 else render(decision, expert=args.expert, show_commands=args.commands, lang=language)
             )
+        return 0
+    if args.command == "verify":
+        from agora_ai_sdlc.verification import VerificationError, build_verification_report, render_verification
+
+        try:
+            report = build_verification_report(
+                Path(args.root),
+                swarm=args.swarm,
+                work=args.work,
+                run=args.run,
+                timeout_seconds=args.timeout,
+                persist=not args.no_write,
+            )
+        except (OSError, ValueError, VerificationError) as error:
+            print(error, file=sys.stderr)
+            return 2
+        if args.json:
+            print(json.dumps(report.snapshot(), sort_keys=True))
+        else:
+            print(render_verification(report))
         return 0
     if args.command == "execution-bundle":
         from agora_ai_sdlc.execution_bundle import build_execution_bundle, render_execution_bundle

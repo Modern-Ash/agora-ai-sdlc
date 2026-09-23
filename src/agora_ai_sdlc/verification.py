@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shlex
 import subprocess
 from dataclasses import asdict, dataclass
@@ -123,8 +124,6 @@ def _criterion_terms(criterion: str) -> tuple[str, ...]:
         "both",
         "runtime",
     }
-    import re
-
     terms = []
     for token in re.findall(r"[a-z][a-z0-9_-]{3,}", criterion.casefold()):
         if token in stop or token in terms:
@@ -304,7 +303,10 @@ def render_verification(report: VerificationReport) -> str:
     lines.extend(
         [
             "",
-            "Boundary: command success is verification evidence only; it does not automatically satisfy an acceptance criterion.",
+            (
+                "Boundary: command success is verification evidence only; "
+                "it does not automatically satisfy an acceptance criterion."
+            ),
         ]
     )
     return "\n".join(lines)

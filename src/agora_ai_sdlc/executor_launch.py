@@ -337,12 +337,14 @@ def launch_inception_executor(
 
     session_id = base_id
     retry_of = None
-    timeout_seconds = INCEPTION_TIMEOUT_SECONDS
+    prior_timeout = any(
+        getattr(session, "status", None) == "failed" and getattr(session, "exit_code", None) == 124
+        for session in sessions
+    )
+    timeout_seconds = INCEPTION_RETRY_TIMEOUT_SECONDS if prior_timeout else INCEPTION_TIMEOUT_SECONDS
     if latest is not None and latest.status == "failed":
         session_id = _retry_id(base_id, sessions)
         retry_of = latest.id
-        if getattr(latest, "exit_code", None) == 124:
-            timeout_seconds = INCEPTION_RETRY_TIMEOUT_SECONDS
     elif latest is not None and completed_but_invalid:
         session_id = _retry_id(base_id, sessions)
 
@@ -380,9 +382,10 @@ def launch_inception_executor(
         if durable is not None:
             durable_path = Path(durable.path)
             if timed_out:
+                next_timeout = max(timeout_seconds, INCEPTION_RETRY_TIMEOUT_SECONDS)
                 suffix += (
-                    f" Executor timed out after {INCEPTION_TIMEOUT_SECONDS} seconds; "
-                    f"the next governed retry will use {INCEPTION_RETRY_TIMEOUT_SECONDS} seconds."
+                    f" Executor timed out after {timeout_seconds} seconds; "
+                    f"the next governed retry will use {next_timeout} seconds."
                 )
             else:
                 diagnostic = _session_failure_diagnostic(durable_path)

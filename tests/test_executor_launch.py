@@ -320,6 +320,48 @@ def test_failed_timeout_retry_uses_extended_timeout(tmp_path):
     assert result.status == "completed"
 
 
+def test_prior_timeout_keeps_extended_timeout_after_invalid_completed_attempt(tmp_path):
+    timeout_path = tmp_path / ".agora" / "sessions" / "ai-sdlc-inception-issue-14"
+    timeout_path.mkdir(parents=True)
+    (timeout_path / "SUMMARY.md").write_text("# timeout\n", encoding="utf-8")
+    timed_out = SimpleNamespace(
+        id="ai-sdlc-inception-issue-14",
+        status="failed",
+        path=str(timeout_path),
+        retry_of=None,
+        exit_code=124,
+        created_at="2026-09-23T00:00:00Z",
+    )
+
+    invalid_path = tmp_path / ".agora" / "sessions" / "ai-sdlc-inception-issue-14-retry-2"
+    write_result(
+        invalid_path,
+        "## Inception Proposal\n\nCreate a Flask API client.\n\n## Human decision required\n\nApprove or modify.",
+    )
+    invalid = SimpleNamespace(
+        id="ai-sdlc-inception-issue-14-retry-2",
+        status="completed",
+        path=str(invalid_path),
+        retry_of="ai-sdlc-inception-issue-14",
+        exit_code=0,
+        created_at="2026-09-23T00:01:00Z",
+    )
+    workspace = Workspace(tmp_path, [timed_out, invalid])
+
+    result = launch_inception_executor(
+        tmp_path,
+        runtime=runtime("opencode"),
+        handoff_path=handoff(tmp_path),
+        swarm_id="delivery",
+        work_id="issue-14",
+        workspace_factory=lambda cwd: workspace,
+    )
+
+    assert workspace.started[0].id == "ai-sdlc-inception-issue-14-retry-3"
+    assert workspace.started[0].timeout_seconds == 600
+    assert result.status == "completed"
+
+
 def test_timeout_failure_is_recoverable_and_hides_unrelated_stderr(tmp_path):
     class TimeoutWorkspace(Workspace):
         def start_session(self, data):
@@ -369,6 +411,69 @@ def test_timeout_failure_is_recoverable_and_hides_unrelated_stderr(tmp_path):
 
     assert captured.value.recoverable is True
     assert "noisy unrelated GitHub JSON" not in str(captured.value)
+
+
+def test_timeout_message_reports_actual_extended_timeout(tmp_path):
+    prior_path = tmp_path / ".agora" / "sessions" / "ai-sdlc-inception-issue-14"
+    prior_path.mkdir(parents=True)
+    (prior_path / "SUMMARY.md").write_text("# timeout\n", encoding="utf-8")
+    prior = SimpleNamespace(
+        id="ai-sdlc-inception-issue-14",
+        status="failed",
+        path=str(prior_path),
+        retry_of=None,
+        exit_code=124,
+        created_at="2026-09-23T00:00:00Z",
+    )
+
+    class ExtendedTimeoutWorkspace(Workspace):
+        def start_session(self, data):
+            self.started.append(data)
+            assert data.timeout_seconds == 600
+            path = self.cwd / ".agora" / "sessions" / data.id
+            path.mkdir(parents=True, exist_ok=True)
+            result = render_markdown(
+                MarkdownDocument(
+                    attributes={
+                        "schema": "agora/session-result/v1",
+                        "session": data.id,
+                        "status": "failed",
+                        "exit-code": 124,
+                    },
+                    body=(
+                        f"# Session result {data.id}\n\n"
+                        "## Standard output\n\n    (empty)\n\n"
+                        "## Standard error\n\n    timeout"
+                    ),
+                )
+            )
+            (path / "RESULT.md").write_text(result, encoding="utf-8")
+            (path / "SUMMARY.md").write_text("# timeout\n", encoding="utf-8")
+            record = SimpleNamespace(
+                id=data.id,
+                status="failed",
+                path=str(path),
+                retry_of=getattr(data, "retry_of", None),
+                exit_code=124,
+                created_at="2026-09-23T00:01:00Z",
+            )
+            self.sessions.append(record)
+            raise RuntimeError(f"Session runner exited with code 124: {data.id} (timeout)")
+
+    workspace = ExtendedTimeoutWorkspace(tmp_path, [prior])
+
+    with pytest.raises(ExecutorLaunchError, match="timed out after 600 seconds") as captured:
+        launch_inception_executor(
+            tmp_path,
+            runtime=runtime("opencode"),
+            handoff_path=handoff(tmp_path),
+            swarm_id="delivery",
+            work_id="issue-14",
+            workspace_factory=lambda cwd: workspace,
+        )
+
+    assert "next governed retry will use 600 seconds" in str(captured.value)
+    assert captured.value.recoverable is True
 
 
 def test_newly_completed_irrelevant_output_is_recoverable_contract_failure(tmp_path):

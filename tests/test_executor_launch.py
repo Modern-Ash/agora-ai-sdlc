@@ -244,7 +244,6 @@ def test_completed_session_without_output_does_not_create_false_human_review(tmp
         )
 
 
-
 def test_failed_executor_surfaces_provider_stderr(tmp_path):
     class FailingWorkspace(Workspace):
         def start_session(self, data):

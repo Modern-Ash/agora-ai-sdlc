@@ -265,9 +265,9 @@ def select_executor_model(
         for index, group in enumerate(groups, start=1):
             selected = ""
             if current is not None:
-                if group.agent != "opencode" and current.agent == group.agent:
-                    selected = " (actual)" if lang == "es" else " (current)"
-                elif (
+                if (
+                    group.agent != "opencode" and current.agent == group.agent
+                ) or (
                     group.agent == "opencode"
                     and current.agent == "opencode"
                     and current.model is not None

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+from types import SimpleNamespace
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -186,13 +187,18 @@ def materialize_deterministic_inception(
     unit_of_work = intent_dir / "UNIT-OF-WORK.md"
 
     actions: list[str] = []
-    if _write_generated(requirements, _requirements_document(issue)):
-        actions.append("artifact.generated:requirements")
-    if _write_generated(
-        unit_of_work,
-        _unit_of_work_document(issue, work_id=work_id, pathway=pathway),
-    ):
-        actions.append("artifact.generated:unit-of-work")
+    existing = workspace.list_work_artifacts(swarm_id, work_id)
+    existing_by_kind = {record.kind: record for record in existing}
+
+    if "requirements" not in existing_by_kind:
+        if _write_generated(requirements, _requirements_document(issue)):
+            actions.append("artifact.generated:requirements")
+    if "unit-of-work" not in existing_by_kind:
+        if _write_generated(
+            unit_of_work,
+            _unit_of_work_document(issue, work_id=work_id, pathway=pathway),
+        ):
+            actions.append("artifact.generated:unit-of-work")
 
     _ensure_artifact(
         workspace,
@@ -226,24 +232,34 @@ def materialize_deterministic_inception(
     )
 
     work = workspace.show_work(swarm_id, work_id)
-    if "source-issue" in work.acceptance_criteria:
-        stages = work.criterion_statuses.get("source-issue", [])
-        if "elaborated" not in stages:
-            workspace.satisfy_criterion(
-                WorkActorInput(
-                    swarm_id=swarm_id,
-                    work_id=work_id,
-                    actor_id=actor_id,
-                ),
-                "source-issue",
-                stage="elaborated",
-            )
-            actions.append("criterion.elaborated:source-issue")
+    if "source-issue" not in work.acceptance_criteria:
+        raise InceptionMaterializationError(
+            f"Work {work_id!r} has no source-issue acceptance criterion to elaborate"
+        )
+    stages = work.criterion_statuses.get("source-issue", [])
+    if "elaborated" not in stages:
+        workspace.satisfy_criterion(
+            WorkActorInput(
+                swarm_id=swarm_id,
+                work_id=work_id,
+                actor_id=actor_id,
+            ),
+            "source-issue",
+            stage="elaborated",
+        )
+        actions.append("criterion.elaborated:source-issue")
+
+    final_records = workspace.list_work_artifacts(swarm_id, work_id)
+    final_by_kind = {record.kind: record for record in final_records}
 
     return InceptionMaterializationResult(
         actor_id=actor_id,
-        intent_uri=_repo_uri(root, intent),
-        requirements_uri=_repo_uri(root, requirements),
-        unit_of_work_uri=_repo_uri(root, unit_of_work),
+        intent_uri=final_by_kind.get("intent", SimpleNamespace(uri=_repo_uri(root, intent))).uri,
+        requirements_uri=final_by_kind.get(
+            "requirements", SimpleNamespace(uri=_repo_uri(root, requirements))
+        ).uri,
+        unit_of_work_uri=final_by_kind.get(
+            "unit-of-work", SimpleNamespace(uri=_repo_uri(root, unit_of_work))
+        ).uri,
         actions=tuple(actions),
     )

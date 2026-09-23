@@ -113,7 +113,7 @@ def test_start_preflight_is_idempotent(tmp_path, monkeypatch):
     assert second.actions == ()
 
 
-def test_start_preflight_repairs_pack_when_only_front_matter_formatting_changed(tmp_path, monkeypatch):
+def test_start_preflight_repairs_formatter_wrapped_method_front_matter(tmp_path, monkeypatch):
     monkeypatch.setenv("AGORA_HOME", str(tmp_path / "home"))
     project = tmp_path / "project"
     project.mkdir()
@@ -130,11 +130,37 @@ def test_start_preflight_repairs_pack_when_only_front_matter_formatting_changed(
 
     result = ensure_start_ready(project, _runtime())
 
-    assert "method.repaired" in result.actions
+    assert any(action.startswith("state.front-matter-repaired:") for action in result.actions)
     assert (
         'criterion-stages: ["elaborated", "designed", "built", "verified", "deployed", "accepted"]'
         in method.read_text(encoding="utf-8")
     )
+
+
+
+
+def test_start_preflight_repairs_formatter_wrapped_role_front_matter_without_changing_body(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setenv("AGORA_HOME", str(tmp_path / "home"))
+    project = tmp_path / "project"
+    project.mkdir()
+    _repo(project)
+    ensure_start_ready(project, _runtime())
+
+    role = project / ".agora" / "methods" / "ai-sdlc" / "roles" / "product-owner.md"
+    original = role.read_text(encoding="utf-8")
+    marker = "allowed-actions: "
+    line = next(line for line in original.splitlines() if line.startswith(marker))
+    wrapped = original.replace(line, f"allowed-actions:\n  {line.removeprefix(marker)}")
+    role.write_text(wrapped, encoding="utf-8")
+
+    result = ensure_start_ready(project, _runtime())
+
+    assert any(action.startswith("state.front-matter-repaired:") for action in result.actions)
+    repaired = role.read_text(encoding="utf-8")
+    assert "allowed-actions: [" in repaired
+    assert repaired.split("---", 2)[2].strip() == original.split("---", 2)[2].strip()
 
 
 def test_start_preflight_refuses_to_overwrite_unknown_malformed_method_customization(tmp_path, monkeypatch):

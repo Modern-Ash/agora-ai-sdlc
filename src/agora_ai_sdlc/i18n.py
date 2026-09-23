@@ -11,10 +11,13 @@ SUPPORTED_LANGUAGES = ("en", "es")
 
 _MESSAGES: dict[str, dict[str, str]] = {
     "en": {
-        "start.title": "Agora AI-SDLC | Start",
+        "start.title": "Agora Flow | Start",
         "start.project": "Project",
         "start.workspace": "Isolated workspace",
-        "start.auto_prepared": "Automatic preparation: {count} safe adjustment(s)",
+        "start.auto_prepared": "✓ Environment prepared automatically ({count} safe adjustment(s))",
+        "start.inception_ready": "INCEPTION READY",
+        "start.inception_summary": "The agent may inspect context and prepare the plan, Units and Bolts; Construction is not authorized yet.",
+        "start.details": "Technical details",
         "start.candidate_intent": "Candidate Intent",
         "start.work": "Governed Work",
         "start.branch": "Work branch",
@@ -124,10 +127,13 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "session.choose": "Choose P, R, D, C or X.",
     },
     "es": {
-        "start.title": "Agora AI-SDLC | Inicio",
+        "start.title": "Agora Flow | Inicio",
         "start.project": "Proyecto",
         "start.workspace": "Workspace aislado",
-        "start.auto_prepared": "Preparación automática: {count} ajuste(s) seguro(s)",
+        "start.auto_prepared": "✓ Entorno preparado automáticamente ({count} ajuste(s) seguro(s))",
+        "start.inception_ready": "INCEPTION LISTA",
+        "start.inception_summary": "El agente puede inspeccionar contexto y preparar plan, Units y Bolts; Construction todavía no está autorizada.",
+        "start.details": "Detalles técnicos",
         "start.candidate_intent": "Intent candidato",
         "start.work": "Work gobernado",
         "start.branch": "Rama del Work",

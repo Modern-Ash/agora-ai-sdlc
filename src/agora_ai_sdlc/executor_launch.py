@@ -11,7 +11,6 @@ from agora.markdown import read_markdown
 from agora.model import LaunchSessionInput, StartSessionInput
 from agora.workspace import AgoraWorkspace
 
-from agora_ai_sdlc.depth_profiles import asset_root
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 
 SCHEMA = "agora-ai-sdlc/executor-adapters/v1"
@@ -46,7 +45,7 @@ class InceptionExecutionResult:
 
 
 def load_executor_adapters() -> dict[str, ExecutorAdapter]:
-    path = asset_root("profiles") / "executors.yaml"
+    path = Path(__file__).with_name("executor_adapters.yaml")
     try:
         payload = yaml.safe_load(path.read_text(encoding="utf-8"))
     except (OSError, yaml.YAMLError) as error:

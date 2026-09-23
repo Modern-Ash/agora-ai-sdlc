@@ -5,17 +5,11 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TextIO, TypeVar
-
 from agora_ai_sdlc.executor_launch import executor_capable
 from agora_ai_sdlc.opencode_runner import LOCAL_FREE_PREFIXES, list_available_models
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
 
 
-T = TypeVar("T")
-
-
-@dataclass(frozen=True)
 class ExecutorRecoveryCancelled(ValueError):
     """Human declined to retry an LLM-backed step with another runtime/model."""
 
@@ -101,8 +95,8 @@ def prompt_executor_recovery(
     root: Path,
     *,
     error: str,
-    input_stream: TextIO,
-    output_stream: TextIO,
+    input_stream,
+    output_stream,
     lang: str = "en",
     discovery: Callable[[Path], tuple[RuntimeDiscovery, ...]] = discover_runtimes,
     model_lister: Callable[..., tuple[str, ...]] = list_available_models,
@@ -153,7 +147,7 @@ def prompt_executor_recovery(
 
 
 def run_with_recovery(
-    operation: Callable[[str | None, str | None], T],
+    operation: Callable[[str | None, str | None], object],
     *,
     initial_agent: str | None,
     initial_model: str | None,
@@ -162,7 +156,7 @@ def run_with_recovery(
     output_stream: TextIO,
     lang: str,
     failure_context: Callable[[BaseException], RecoveryFailureContext | None],
-) -> T:
+) -> object:
     """Run any LLM-backed step with one shared human recovery loop."""
 
     selected_agent = initial_agent

@@ -33,6 +33,7 @@ def bundle(tmp_path: Path, commands=("pnpm test",)) -> ExecutionBundle:
 
 
 def test_plan_only_never_executes_commands(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr(verification, "resolve_work_workspace", lambda root, work: tmp_path.resolve())
     monkeypatch.setattr(verification, "build_execution_bundle", lambda *args, **kwargs: bundle(tmp_path))
 
     def fail_run(*args, **kwargs):
@@ -80,6 +81,7 @@ def test_run_resolves_work_workspace_before_execution(monkeypatch, tmp_path: Pat
 
 
 def test_run_executes_allowlisted_command_and_keeps_ac_unsatisfied(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr(verification, "resolve_work_workspace", lambda root, work: tmp_path.resolve())
     monkeypatch.setattr(verification, "build_execution_bundle", lambda *args, **kwargs: bundle(tmp_path))
     observed = {}
 
@@ -126,6 +128,7 @@ def test_failed_command_renders_compact_diagnostic(monkeypatch, tmp_path: Path):
 
 
 def test_non_allowlisted_command_is_blocked_without_execution(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr(verification, "resolve_work_workspace", lambda root, work: tmp_path.resolve())
     monkeypatch.setattr(
         verification,
         "build_execution_bundle",

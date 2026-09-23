@@ -22,6 +22,7 @@ from agora.sdlc import SdlcService
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.depth_profiles import asset_root
+from agora_ai_sdlc.deterministic_inception import build_deterministic_inception
 from agora_ai_sdlc.executor_launch import (
     ExecutorLaunchError,
     InceptionExecutionResult,
@@ -85,6 +86,10 @@ class StartFlowResult:
     executor_summary_path: str | None = None
     executor_output: str | None = None
     executor_reused: bool = False
+    inception_mode: str = "prepared"
+    inception_output: str | None = None
+    deterministic_inception_path: str | None = None
+    semantic_gaps: tuple[str, ...] = ()
     status: str = "inception-prepared"
 
     def snapshot(self) -> dict:
@@ -508,6 +513,14 @@ def prepare_start(
     notify("start.intent-ready")
     pathway = _select_pathway(root, payload)
     notify("start.pathway")
+    deterministic = build_deterministic_inception(
+        root,
+        payload,
+        intent_id=intent.id,
+        work_id=work_record.id,
+        pathway=pathway,
+    )
+    deterministic_relative = Path(deterministic.path).relative_to(root.resolve()).as_posix()
     notify("start.handoff")
     handoff = write_inception_handoff(
         root,
@@ -521,11 +534,21 @@ def prepare_start(
         branch=getattr(work_record, "branch", None),
         base_branch=getattr(work_record, "base_branch", None),
         pathway=pathway,
+        deterministic_draft=deterministic_relative,
+        semantic_gaps=deterministic.semantic_gaps,
     )
 
     execution: InceptionExecutionResult | None = None
+    inception_output: str | None = None
+    inception_mode = "prepared"
     status = "inception-prepared"
-    if launch_executor:
+    if launch_executor and not deterministic.requires_llm:
+        notify("start.deterministic-inception")
+        inception_output = deterministic.output
+        inception_mode = "deterministic"
+        notify("start.deterministic-complete")
+        status = "human-review-required"
+    elif launch_executor:
         notify("start.executor-launch")
         try:
             execution = executor_launcher(
@@ -546,6 +569,8 @@ def prepare_start(
                 recoverable=error.recoverable,
             ) from error
         notify("start.executor-complete")
+        inception_output = execution.output
+        inception_mode = "llm"
         status = "human-review-required"
     else:
         notify("start.executor-skipped-launch")
@@ -577,6 +602,10 @@ def prepare_start(
         executor_summary_path=execution.summary_path if execution is not None else None,
         executor_output=execution.output if execution is not None else None,
         executor_reused=execution.reused if execution is not None else False,
+        inception_mode=inception_mode,
+        inception_output=inception_output,
+        deterministic_inception_path=deterministic.path,
+        semantic_gaps=deterministic.semantic_gaps,
         status=status,
     )
 
@@ -591,7 +620,11 @@ def render_start(result: StartFlowResult, *, lang: str = "en", details: bool = F
         f"Issue #{result.issue} · {result.issue_title}",
         f"✓ {t('start.project', lang=lang)}: {result.project}",
         f"✓ {t('start.work', lang=lang)}: {result.work_id} · {branch}",
-        f"✓ {t('start.selected_ai', lang=lang)}: {result.runtime_name}",
+        (
+            f"✓ {t('start.inception_engine', lang=lang)}: {t('start.deterministic_engine', lang=lang)}"
+            if result.inception_mode == "deterministic"
+            else f"✓ {t('start.selected_ai', lang=lang)}: {result.runtime_name}"
+        ),
         f"✓ {t('start.pathway', lang=lang)}: {result.pathway}",
     ]
     if result.workspace_isolated:
@@ -601,19 +634,22 @@ def render_start(result: StartFlowResult, *, lang: str = "en", details: bool = F
         key = "start.auto_prepared_one" if count == 1 else "start.auto_prepared_many"
         lines.append(t(key, lang=lang, count=count))
 
-    if result.executor_session_id is not None:
-        executor_state = (
-            t("start.executor_reused", lang=lang)
-            if result.executor_reused
-            else t("start.executor_completed", lang=lang)
-        )
-        lines.append(f"✓ {result.runtime_name}: {executor_state}")
+    if result.inception_output is not None:
+        if result.inception_mode == "deterministic":
+            lines.append(f"✓ {t('start.deterministic_completed', lang=lang)}")
+        else:
+            executor_state = (
+                t("start.executor_reused", lang=lang)
+                if result.executor_reused
+                else t("start.executor_completed", lang=lang)
+            )
+            lines.append(f"✓ {result.runtime_name}: {executor_state}")
         lines.extend(
             [
                 "",
                 t("start.proposal_ready", lang=lang),
                 "",
-                result.executor_output or t("start.proposal_unavailable", lang=lang),
+                result.inception_output or t("start.proposal_unavailable", lang=lang),
                 "",
                 t("start.human_decision_required", lang=lang),
                 f"  {t('start.boundary1', lang=lang)}",
@@ -644,6 +680,8 @@ def render_start(result: StartFlowResult, *, lang: str = "en", details: bool = F
                 f"  {t('start.portable_handoff', lang=lang)}: {result.handoff_path}",
                 f"  {t('start.guided_skill', lang=lang)}: {result.skill_path}",
                 f"  {t('start.base_branch', lang=lang)}: {result.base_branch or t('guided.unknown', lang=lang)}",
+                f"  {t('start.deterministic_path', lang=lang)}: {result.deterministic_inception_path}",
+                f"  {t('start.semantic_gaps', lang=lang)}: {', '.join(result.semantic_gaps) or '—'}",
             ]
         )
         if result.executor_session_id is not None:

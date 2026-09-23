@@ -367,6 +367,60 @@ def test_prepare_start_repairs_legacy_product_owner_issue_read(tmp_path):
     assert '"issue.read"' in role.read_text(encoding="utf-8")
 
 
+def test_explicit_issue_uses_deterministic_inception_without_executor(tmp_path):
+    workspace = FakeWorkspace(tmp_path)
+    workspace._has_run = True
+
+    def show_tool_run(run_id):
+        payload = {
+            "number": 14,
+            "title": "Implement deterministic canonical program interpreter",
+            "body": (
+                "## Objective\n"
+                "Execute learner programs deterministically.\n\n"
+                "## Requirements\n"
+                "- deterministic state transitions\n"
+                "- explicit execution budget\n"
+                "- stop support\n"
+                "- no eval\n\n"
+                "## Acceptance criteria\n"
+                "- tests for each operation\n"
+                "- nested repeat/if\n"
+                "- deterministic repeated run\n"
+            ),
+            "url": "https://github.com/Modern-Ash/agorix/issues/14",
+        }
+        return SimpleNamespace(result=SimpleNamespace(status="completed", stdout=json.dumps(payload), stderr=""))
+
+    workspace.show_tool_run = show_tool_run
+
+    def executor_must_not_run(*args, **kwargs):
+        raise AssertionError("explicit issue should not launch an LLM executor")
+
+    result = _prepare_start(
+        tmp_path,
+        issue=14,
+        project="Modern-Ash/agorix",
+        agent="codex",
+        workspace_factory=lambda cwd: workspace,
+        runtime_discovery=lambda root: (runtime("codex"),),
+        executor_launcher=executor_must_not_run,
+    )
+
+    assert result.status == "human-review-required"
+    assert result.inception_mode == "deterministic"
+    assert result.executor_session_id is None
+    assert result.inception_output is not None
+    assert result.semantic_gaps == ()
+    assert result.deterministic_inception_path.endswith("DETERMINISTIC_INCEPTION.md")
+
+    rendered = render_start(result, lang="es", details=True)
+    assert "Motor determinístico Python" in rendered
+    assert "sin llamada a LLM" in rendered
+    assert "PROPUESTA DE INCEPTION" in rendered
+    assert "DETERMINISTIC_INCEPTION.md" in rendered
+
+
 def test_prepare_start_forwards_explicit_opencode_model(tmp_path):
     workspace = FakeWorkspace(tmp_path)
     observed = {}

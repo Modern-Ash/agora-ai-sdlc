@@ -12,6 +12,7 @@ import math
 import os
 import re
 import stat
+import threading
 import time
 import unicodedata
 from contextlib import AbstractContextManager
@@ -99,6 +100,7 @@ _TEXT = {
         "start.pathway": "Adaptive delivery pathway selected",
         "start.handoff": "Preparing portable Inception handoff",
         "start.executor-launch": "Launching the selected executor in the governed Work workspace",
+        "start.executor-waiting": "Executor running · waiting for result",
         "start.executor-skipped-launch": "Executor launch skipped by explicit prepare-only mode",
         "start.executor-complete": "Executor completed Inception and returned a reviewable proposal",
         "start.executor-skipped-complete": "Executor completion skipped by explicit prepare-only mode",
@@ -144,6 +146,7 @@ _TEXT = {
         "start.pathway": "Pathway adaptativo de entrega seleccionado",
         "start.handoff": "Preparando el handoff portable de Inception",
         "start.executor-launch": "Iniciando el executor seleccionado en el workspace gobernado del Work",
+        "start.executor-waiting": "Executor en ejecución · esperando resultado",
         "start.executor-skipped-launch": "Inicio del executor omitido por modo prepare-only explícito",
         "start.executor-complete": "El executor completó Inception y devolvió una propuesta revisable",
         "start.executor-skipped-complete": "Finalización del executor omitida por modo prepare-only explícito",
@@ -252,6 +255,16 @@ class HumanChannel(AbstractContextManager):
         self.failed = False
         self.owns_stream = path is not None
         self.stream = stream
+        self._io_lock = threading.RLock()
+        self._spinner_stop = threading.Event()
+        self._spinner_thread: threading.Thread | None = None
+        self._spinner_visible = False
+        self._spinner_enabled = bool(
+            path is None
+            and stream is not None
+            and callable(getattr(stream, "isatty", None))
+            and stream.isatty()
+        )
         if path is not None:
             target = path.expanduser().absolute()
             if any(part in {".agora", ".git"} for part in target.parts):
@@ -270,22 +283,73 @@ class HumanChannel(AbstractContextManager):
         return self.stream is not None and not self.limited and not self.failed
 
     def write(self, message: str) -> None:
+        self.stop_spinner()
         if not self.active:
             return
         # Keep layout while sanitizing each line; do not accidentally log raw host output.
         message = _SECRET.sub("[redacted]", _ANSI.sub("", message))
         safe = "\n".join(safe_text(line, max_chars=2048) or "" for line in message.splitlines()) + "\n"
         size = len(safe.encode("utf-8"))
-        if self.used + size > MAX_UI_BYTES - 256:
-            safe = text("limit", self.lang) + "\n"
-            self.limited = True
+        with self._io_lock:
+            if self.used + size > MAX_UI_BYTES - 256:
+                safe = text("limit", self.lang) + "\n"
+                self.limited = True
+            try:
+                assert self.stream is not None
+                self.stream.write(safe)
+                self.stream.flush()
+                self.used += len(safe.encode("utf-8"))
+            except OSError:
+                # An unavailable display must not change an already performed Core operation.
+                self.failed = True
+
+    def _spinner_loop(self) -> None:
+        frames = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏"
+        index = 0
         try:
-            self.stream.write(safe)
-            self.stream.flush()
-            self.used += len(safe.encode("utf-8"))
+            while not self._spinner_stop.is_set() and self.active:
+                elapsed = time.monotonic() - self.started
+                line = f"\r[{elapsed:.1f}s] {frames[index % len(frames)]} {text('start.executor-waiting', self.lang)}"
+                with self._io_lock:
+                    if not self.active or self.stream is None:
+                        break
+                    self.stream.write(line)
+                    self.stream.flush()
+                    self._spinner_visible = True
+                index += 1
+                self._spinner_stop.wait(0.12)
         except OSError:
-            # An unavailable display must not change an already performed Core operation.
             self.failed = True
+        finally:
+            with self._io_lock:
+                if self._spinner_visible and self.stream is not None:
+                    try:
+                        self.stream.write("\r\x1b[2K")
+                        self.stream.flush()
+                    except OSError:
+                        self.failed = True
+                self._spinner_visible = False
+
+    def start_spinner(self) -> None:
+        if not self._spinner_enabled or not self.active:
+            return
+        self.stop_spinner()
+        self._spinner_stop.clear()
+        self._spinner_thread = threading.Thread(
+            target=self._spinner_loop,
+            name="agora-ai-sdlc-executor-spinner",
+            daemon=True,
+        )
+        self._spinner_thread.start()
+
+    def stop_spinner(self) -> None:
+        thread = self._spinner_thread
+        if thread is None:
+            return
+        self._spinner_stop.set()
+        if thread is not threading.current_thread():
+            thread.join(timeout=1.0)
+        self._spinner_thread = None
 
     def event(self, code: str) -> None:
         if code not in _TEXT["en"] or not code.startswith("start."):
@@ -294,8 +358,11 @@ class HumanChannel(AbstractContextManager):
         label = text(code, self.lang)
         progress = start_progress(code, label)
         self.write(f"[{elapsed:.1f}s] {progress or label}")
+        if code == "start.executor-launch":
+            self.start_spinner()
 
     def __exit__(self, *args) -> None:
+        self.stop_spinner()
         if self.owns_stream and self.stream is not None:
             self.stream.close()
 

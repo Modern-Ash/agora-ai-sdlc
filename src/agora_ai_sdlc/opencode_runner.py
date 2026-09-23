@@ -55,13 +55,13 @@ def _available_models(output: str) -> list[str]:
 
 def _free_model_rank(model: str) -> tuple[int, int | str]:
     normalized = model.casefold()
+    if normalized.startswith(LOCAL_FREE_PREFIXES):
+        return (0, normalized)
     try:
-        return (0, PREFERRED_FREE_MODELS.index(normalized))
+        return (1, PREFERRED_FREE_MODELS.index(normalized))
     except ValueError:
         pass
     if "free" in normalized:
-        return (1, normalized)
-    if normalized.startswith(LOCAL_FREE_PREFIXES):
         return (2, normalized)
     return (3, normalized)
 
@@ -92,7 +92,8 @@ def discover_free_model(*, executable: str, root: Path) -> str:
     if not free_models:
         raise RuntimeError(
             "OpenCode has no free or local model available in the current project. "
-            "Configure a free provider or Ollama and verify it with 'opencode models'."
+            "Configure Ollama/LM Studio or a free provider and verify it with 'opencode models'. "
+            "Paid Anthropic Claude and OpenAI GPT models are not selected automatically."
         )
     return min(free_models, key=_free_model_rank)
 

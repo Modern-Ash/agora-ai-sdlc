@@ -312,15 +312,6 @@ def _diagnose_issue_read_markdown(root: Path, run_id: str) -> str | None:
     return f"{path.relative_to(root)}: {detail}"
 
 
-def _diagnose_intent_markdown(root: Path) -> str | None:
-    candidates = sorted((root / ".agora" / "intents").glob("*/INTENT.md"))
-    broken = _first_invalid_governed_markdown(root, candidates)
-    if broken is None:
-        return None
-    path, detail = broken
-    return f"{path.relative_to(root)}: {detail}"
-
-
 def _issue_payload(workspace: AgoraWorkspace, run_id: str) -> dict:
     inspection = workspace.show_tool_run(run_id)
     result = inspection.result
@@ -433,13 +424,18 @@ def prepare_start(
 
     intent_id = f"issue-{number}"
     try:
-        intents = workspace.list_intents()
+        existing = workspace.get_intent(intent_id)
+    except FileNotFoundError:
+        existing = None
     except ValueError as error:
-        diagnostic = _diagnose_intent_markdown(root)
-        if diagnostic is not None:
-            raise StartFlowError(f"Intent discovery is blocked by invalid Markdown at {diagnostic}") from error
+        target = root / ".agora" / "intents" / intent_id / "INTENT.md"
+        try:
+            read_markdown(target)
+        except (OSError, ValueError) as detail:
+            raise StartFlowError(
+                f"Target Intent {intent_id} is invalid at {target.relative_to(root)}: {detail}"
+            ) from error
         raise
-    existing = next((item for item in intents if item.id == intent_id), None)
     if existing is None:
         intent = workspace.create_intent(
             CreateIntentInput(

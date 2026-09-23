@@ -69,18 +69,12 @@ def test_unrelated_nonempty_output_is_rejected(tmp_path: Path):
 def test_structured_but_unrelated_output_is_rejected_by_objective_grounding(tmp_path: Path):
     output = valid_output()
     replacements = {
-        "Implement the deterministic canonical program interpreter without generated-code execution.":
-            "Create a Flask API client for HTTP requests.",
-        "Trace interpreter operations and deterministic behavior to issue #14 acceptance criteria.":
-            "Trace HTTP status handling to API requirements.",
-        "Source fact: deterministic interpreter. AI proposal: keep interpreter execution isolated from UI.":
-            "Source fact: API endpoint. AI proposal: use Flask.",
-        "Define interpreter semantics, deterministic transitions, execution budget, stop handling, and tests.":
-            "Define API client calls and logging.",
-        "One cohesive interpreter unit plus its test coverage.":
-            "One API client unit plus tests.",
-        "No eval, no generated-code execution, no UI or AI dependency; depends on the canonical program model.":
-            "Depends on Flask and HTTP connectivity.",
+        "Implement the deterministic canonical program interpreter without generated-code execution.": "Create a Flask API client for HTTP requests.",
+        "Trace interpreter operations and deterministic behavior to issue #14 acceptance criteria.": "Trace HTTP status handling to API requirements.",
+        "Source fact: deterministic interpreter. AI proposal: keep interpreter execution isolated from UI.": "Source fact: API endpoint. AI proposal: use Flask.",
+        "Define interpreter semantics, deterministic transitions, execution budget, stop handling, and tests.": "Define API client calls and logging.",
+        "One cohesive interpreter unit plus its test coverage.": "One API client unit plus tests.",
+        "No eval, no generated-code execution, no UI or AI dependency; depends on the canonical program model.": "Depends on Flask and HTTP connectivity.",
     }
     for source, target in replacements.items():
         output = output.replace(source, target)

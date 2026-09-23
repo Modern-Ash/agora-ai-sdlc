@@ -75,6 +75,16 @@ def _git_succeeds(root: Path, *args: str) -> bool:
     return result.returncode == 0
 
 
+def _is_git_repository(root: Path) -> bool:
+    result = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "--is-inside-work-tree"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return result.returncode == 0 and result.stdout.strip() == "true"
+
+
 def _default_base_branch(root: Path) -> str:
     """Resolve a local base branch without contacting the remote."""
 
@@ -210,7 +220,7 @@ def _ensure_issue_work(
     existing = next((item for item in workspace.list_work(swarm_id=swarm) if item.id == work_id), None)
     if existing is not None:
         existing_branch = getattr(existing, "branch", None)
-        if existing_branch and (root / ".git").is_dir():
+        if existing_branch and _is_git_repository(root):
             current = _run_git(root, "branch", "--show-current")
             if current != existing_branch:
                 if _run_git(root, "status", "--porcelain"):
@@ -228,7 +238,7 @@ def _ensure_issue_work(
         "description": f"Source issue: {issue_url}",
     }
     fields = getattr(CreateWorkInput, "__dataclass_fields__", {})
-    if {"branch", "create_branch"} <= set(fields) and (root / ".git").is_dir():
+    if {"branch", "create_branch"} <= set(fields) and _is_git_repository(root):
         base_branch = _default_base_branch(root)
         local_branch = _git_succeeds(root, "show-ref", "--verify", "--quiet", f"refs/heads/{branch}")
         remote_branch = _git_succeeds(root, "show-ref", "--verify", "--quiet", f"refs/remotes/origin/{branch}")

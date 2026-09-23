@@ -7,7 +7,6 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-
 REQUIRED_SECTIONS = (
     "Intent interpretation",
     "Material clarifications",

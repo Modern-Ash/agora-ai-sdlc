@@ -325,11 +325,7 @@ def select_executor_model(
                 output_fn(downloading.format(model=requested))
                 discovered = tuple(discovery(root))
                 ollama = next(
-                    (
-                        item
-                        for item in discovered
-                        if item.id == "ollama" and item.installed and item.responsive
-                    ),
+                    (item for item in discovered if item.id == "ollama" and item.installed and item.responsive),
                     None,
                 )
                 try:

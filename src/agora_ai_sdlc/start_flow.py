@@ -443,9 +443,7 @@ def prepare_start(
         skill_path=handoff.skill,
         workspace_root=str(root),
         workspace_isolated=isolation_action is not None,
-        preflight_actions=tuple(
-            ([isolation_action] if isolation_action is not None else []) + list(prepared.actions)
-        ),
+        preflight_actions=tuple(([isolation_action] if isolation_action is not None else []) + list(prepared.actions)),
     )
 
 

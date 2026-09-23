@@ -372,12 +372,17 @@ def run_opencode(
         return 69
 
     print(f"OpenCode free model selected: {selected_model}", file=sys.stderr)
-    environment = _model_runtime_env(
-        executable=executable,
-        root=root,
-        model=selected_model,
-    )
     try:
+        if selected_model.casefold().startswith("ollama/") and not ollama_model_supports_tools(
+            root=root,
+            model=selected_model,
+        ):
+            raise RuntimeError(f"Ollama model does not support tools: {selected_model}")
+        environment = _model_runtime_env(
+            executable=executable,
+            root=root,
+            model=selected_model,
+        )
         _validate_selected_model(
             executable=executable,
             root=root,

@@ -318,11 +318,7 @@ def main(argv: list[str] | None = None) -> int:
         selected_agent = args.agent or ("opencode" if args.model else None)
         selected_model = args.model
         interactive_recovery = (
-            not args.json
-            and not args.ui_file
-            and not args.prepare_only
-            and sys.stdin.isatty()
-            and sys.stderr.isatty()
+            not args.json and not args.ui_file and not args.prepare_only and sys.stdin.isatty() and sys.stderr.isatty()
         )
 
         try:
@@ -332,6 +328,7 @@ def main(argv: list[str] | None = None) -> int:
                 lang=language,
             ) as channel:
                 options = {"progress": channel.event} if channel.active else {}
+
                 def operation(agent: str | None, model: str | None):
                     return prepare_start(
                         Path(args.root),

@@ -36,9 +36,7 @@ def _repo(root: Path) -> None:
 def _runtime(runtime_id: str = "opencode") -> RuntimeDiscovery:
     return RuntimeDiscovery(
         id=runtime_id,
-        name={"opencode": "OpenCode", "codex": "Codex", "claude": "Claude Code"}.get(
-            runtime_id, runtime_id
-        ),
+        name={"opencode": "OpenCode", "codex": "Codex", "claude": "Claude Code"}.get(runtime_id, runtime_id),
         command=runtime_id,
         installed=True,
         executable=f"/bin/{runtime_id}",
@@ -115,9 +113,7 @@ def test_start_preflight_is_idempotent(tmp_path, monkeypatch):
     assert second.actions == ()
 
 
-def test_start_preflight_repairs_pack_when_only_front_matter_formatting_changed(
-    tmp_path, monkeypatch
-):
+def test_start_preflight_repairs_pack_when_only_front_matter_formatting_changed(tmp_path, monkeypatch):
     monkeypatch.setenv("AGORA_HOME", str(tmp_path / "home"))
     project = tmp_path / "project"
     project.mkdir()
@@ -135,15 +131,12 @@ def test_start_preflight_repairs_pack_when_only_front_matter_formatting_changed(
     result = ensure_start_ready(project, _runtime())
 
     assert "method.repaired" in result.actions
-    assert (
-        'criterion-stages: ["elaborated","designed","built","verified","deployed","accepted"]'
-        in method.read_text(encoding="utf-8")
+    assert 'criterion-stages: ["elaborated","designed","built","verified","deployed","accepted"]' in method.read_text(
+        encoding="utf-8"
     )
 
 
-def test_start_preflight_refuses_to_overwrite_unknown_malformed_method_customization(
-    tmp_path, monkeypatch
-):
+def test_start_preflight_refuses_to_overwrite_unknown_malformed_method_customization(tmp_path, monkeypatch):
     monkeypatch.setenv("AGORA_HOME", str(tmp_path / "home"))
     project = tmp_path / "project"
     project.mkdir()
@@ -171,14 +164,7 @@ def test_start_preflight_restores_missing_guided_skill_resource(tmp_path, monkey
     _repo(project)
     ensure_start_ready(project, _runtime())
 
-    missing = (
-        project
-        / ".agora"
-        / "skills"
-        / "agora-ai-sdlc-guided"
-        / "references"
-        / "construction.md"
-    )
+    missing = project / ".agora" / "skills" / "agora-ai-sdlc-guided" / "references" / "construction.md"
     missing.unlink()
 
     result = ensure_start_ready(project, _runtime())

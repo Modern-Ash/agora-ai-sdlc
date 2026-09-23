@@ -46,6 +46,22 @@ The default view deliberately avoids raw `missing-artifacts=[...]` style output.
 advisory: human approvals still require explicit confirmation, and every mutation remains an Agora Core
 operation. Agora Core remains the lifecycle authority.
 
+## Local decision plane (Laya)
+
+AI-SDLC can optionally use the free, Apache-2.0 [Laya](https://github.com/NandhaKishorM/laya)
+runtime for fast typed decisions before escalating work to a generative model. Laya is advisory only;
+Agora Core remains authoritative for lifecycle state, evidence, approvals and transitions.
+
+```bash
+pip install "agora-ai-sdlc[laya]"
+aisdlc decision --root . --work issue-26 --json
+aisdlc context ./artifacts REQ-001 --laya --objective "Implement the current issue" --json
+```
+
+The Context Graph stays deterministic: Laya can prune candidates but cannot introduce unrelated
+artifacts. Low-confidence decisions fail open and remain on the normal generative/human escalation
+path. See [Local Decision Plane with Laya](docs/decision-plane-laya.md).
+
 ## Detect local AI runtimes
 
 AI-SDLC can inspect the active `PATH` without reading credential files:

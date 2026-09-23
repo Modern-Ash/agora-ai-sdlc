@@ -5,11 +5,14 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TextIO
+from typing import TextIO, TypeVar
 
 from agora_ai_sdlc.executor_launch import executor_capable
 from agora_ai_sdlc.opencode_runner import LOCAL_FREE_PREFIXES, list_available_models
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
+
+
+T = TypeVar("T")
 
 
 @dataclass(frozen=True)
@@ -82,6 +85,13 @@ def recovery_choices(
     return tuple(choices)
 
 
+@dataclass(frozen=True)
+class RecoveryFailureContext:
+    workspace_root: Path
+    message: str
+    recoverable: bool
+
+
 def prompt_executor_recovery(
     root: Path,
     *,
@@ -134,3 +144,40 @@ def prompt_executor_recovery(
             return choices[index - 1]
         print(invalid, file=output_stream)
         output_stream.flush()
+
+
+
+def run_with_recovery(
+    operation: Callable[[str | None, str | None], T],
+    *,
+    initial_agent: str | None,
+    initial_model: str | None,
+    interactive: bool,
+    input_stream: TextIO,
+    output_stream: TextIO,
+    lang: str,
+    failure_context: Callable[[BaseException], RecoveryFailureContext | None],
+) -> T:
+    """Run any LLM-backed step with one shared human recovery loop."""
+
+    selected_agent = initial_agent
+    selected_model = initial_model
+
+    while True:
+        try:
+            return operation(selected_agent, selected_model)
+        except BaseException as error:
+            context = failure_context(error)
+            if context is None or not context.recoverable or not interactive:
+                raise
+            choice = prompt_executor_recovery(
+                context.workspace_root,
+                error=context.message,
+                input_stream=input_stream,
+                output_stream=output_stream,
+                lang=lang,
+            )
+            if choice is None:
+                raise
+            selected_agent = choice.agent
+            selected_model = choice.model

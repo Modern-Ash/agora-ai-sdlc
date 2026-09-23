@@ -4,7 +4,9 @@ from agora_ai_sdlc.progress import lifecycle_progress, start_progress
 def test_start_progress_is_deterministic_and_reaches_100_percent():
     codes = (
         "start.inspect",
+        "start.workspace-ready",
         "start.runtime-ready",
+        "start.project-ready",
         "start.work-ready",
         "start.issue-read",
         "start.intent-ready",
@@ -15,8 +17,8 @@ def test_start_progress_is_deterministic_and_reaches_100_percent():
 
     rendered = [start_progress(code, code) for code in codes]
 
-    assert rendered[0] == "[█░░░░░░░░░]  12%  1/8  start.inspect"
-    assert rendered[-1] == "[██████████] 100%  8/8  start.prepared"
+    assert rendered[0] == "[█░░░░░░░░░]  10%  1/10  start.inspect"
+    assert rendered[-1] == "[██████████] 100%  10/10  start.prepared"
 
 
 def test_reused_issue_read_advances_same_progress_step():
@@ -24,8 +26,8 @@ def test_reused_issue_read_advances_same_progress_step():
     reused = start_progress("start.issue-reused", "reused")
 
     assert fresh is not None and reused is not None
-    assert "4/8" in fresh
-    assert "4/8" in reused
+    assert "6/10" in fresh
+    assert "6/10" in reused
 
 
 def test_lifecycle_progress_represents_durable_stage_position_only():

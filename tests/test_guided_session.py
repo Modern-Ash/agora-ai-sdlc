@@ -166,7 +166,6 @@ def test_prepare_with_no_runtime_returns_to_menu(monkeypatch):
     assert "No responsive AI CLI runtime was detected." in outputs
 
 
-
 def test_prepare_in_construction_launches_governed_executor(monkeypatch):
     outputs = []
     answers = iter(["p", "2", "1", "x"])

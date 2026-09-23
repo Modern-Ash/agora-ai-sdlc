@@ -287,7 +287,88 @@ def test_failed_inception_gets_a_new_governed_retry_session(tmp_path):
 
     assert workspace.started[0].id == "ai-sdlc-inception-issue-14-retry-2"
     assert workspace.started[0].retry_of == "ai-sdlc-inception-issue-14"
+    assert workspace.started[0].timeout_seconds == 300
     assert result.retry_of == "ai-sdlc-inception-issue-14"
+
+
+def test_failed_timeout_retry_uses_extended_timeout(tmp_path):
+    failed_path = tmp_path / ".agora" / "sessions" / "ai-sdlc-inception-issue-14"
+    failed_path.mkdir(parents=True)
+    (failed_path / "SUMMARY.md").write_text("# timeout\n", encoding="utf-8")
+    failed = SimpleNamespace(
+        id="ai-sdlc-inception-issue-14",
+        status="failed",
+        path=str(failed_path),
+        retry_of=None,
+        exit_code=124,
+        created_at="2026-09-23T00:00:00Z",
+    )
+    workspace = Workspace(tmp_path, [failed])
+
+    result = launch_inception_executor(
+        tmp_path,
+        runtime=runtime("opencode"),
+        handoff_path=handoff(tmp_path),
+        swarm_id="delivery",
+        work_id="issue-14",
+        workspace_factory=lambda cwd: workspace,
+    )
+
+    assert workspace.started[0].id == "ai-sdlc-inception-issue-14-retry-2"
+    assert workspace.started[0].retry_of == "ai-sdlc-inception-issue-14"
+    assert workspace.started[0].timeout_seconds == 600
+    assert result.status == "completed"
+
+
+def test_timeout_failure_is_recoverable_and_hides_unrelated_stderr(tmp_path):
+    class TimeoutWorkspace(Workspace):
+        def start_session(self, data):
+            self.started.append(data)
+            path = self.cwd / ".agora" / "sessions" / data.id
+            path.mkdir(parents=True, exist_ok=True)
+            result = render_markdown(
+                MarkdownDocument(
+                    attributes={
+                        "schema": "agora/session-result/v1",
+                        "session": data.id,
+                        "status": "failed",
+                        "exit-code": 124,
+                    },
+                    body=(
+                        f"# Session result {data.id}\n\n"
+                        "## Standard output\n\n    (empty)\n\n"
+                        "## Standard error\n\n"
+                        "    noisy unrelated GitHub JSON that should not be surfaced"
+                    ),
+                )
+            )
+            (path / "RESULT.md").write_text(result, encoding="utf-8")
+            (path / "SUMMARY.md").write_text("# timeout\n", encoding="utf-8")
+            record = SimpleNamespace(
+                id=data.id,
+                status="failed",
+                path=str(path),
+                retry_of=getattr(data, "retry_of", None),
+                exit_code=124,
+                created_at="2026-09-23T00:00:00Z",
+            )
+            self.sessions.append(record)
+            raise RuntimeError(f"Session runner exited with code 124: {data.id} (timeout)")
+
+    workspace = TimeoutWorkspace(tmp_path)
+
+    with pytest.raises(ExecutorLaunchError, match="next governed retry will use 600 seconds") as captured:
+        launch_inception_executor(
+            tmp_path,
+            runtime=runtime("opencode"),
+            handoff_path=handoff(tmp_path),
+            swarm_id="delivery",
+            work_id="issue-14",
+            workspace_factory=lambda cwd: workspace,
+        )
+
+    assert captured.value.recoverable is True
+    assert "noisy unrelated GitHub JSON" not in str(captured.value)
 
 
 def test_newly_completed_irrelevant_output_is_recoverable_contract_failure(tmp_path):

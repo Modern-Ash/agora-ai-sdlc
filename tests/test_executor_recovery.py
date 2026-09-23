@@ -7,6 +7,7 @@ from agora_ai_sdlc.executor_recovery import (
     RecoveryFailureContext,
     prompt_executor_recovery,
     recovery_choices,
+    recovery_groups,
     run_with_recovery,
 )
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
@@ -28,6 +29,7 @@ def runtime(runtime_id: str, name: str) -> RuntimeDiscovery:
 def discoveries(_root: Path) -> tuple[RuntimeDiscovery, ...]:
     return (
         runtime("opencode", "OpenCode"),
+        runtime("ollama", "Ollama"),
         runtime("claude", "Claude Code"),
         runtime("codex", "Codex"),
     )
@@ -37,52 +39,93 @@ def models(**_kwargs) -> tuple[str, ...]:
     return (
         "openai/gpt-5.5",
         "opencode/nemotron-3-ultra-free",
-        "ollama/claude",
-        "ollama/gpt-oss",
+        "opencode/big-pickle",
     )
 
 
-def test_recovery_choices_prioritize_local_then_free_then_external_models(tmp_path: Path):
+def ollama_models(**_kwargs) -> tuple[str, ...]:
+    return (
+        "ollama/claude:latest",
+        "ollama/gpt-oss:20b",
+        "ollama/qwen2.5-coder:7b",
+    )
+
+
+def test_recovery_groups_split_provider_from_model_and_include_all_ollama(tmp_path: Path):
+    groups = recovery_groups(
+        tmp_path,
+        discovery=discoveries,
+        model_lister=models,
+        ollama_model_lister=ollama_models,
+    )
+
+    assert [group.id for group in groups] == [
+        "ollama",
+        "opencode",
+        "openai",
+        "claude",
+        "codex",
+    ]
+    assert groups[0].models == (
+        "ollama/claude:latest",
+        "ollama/gpt-oss:20b",
+        "ollama/qwen2.5-coder:7b",
+    )
+    assert groups[1].models == (
+        "opencode/nemotron-3-ultra-free",
+        "opencode/big-pickle",
+    )
+
+
+def test_recovery_choices_still_expose_final_agent_model_pairs(tmp_path: Path):
     choices = recovery_choices(
         tmp_path,
         discovery=discoveries,
         model_lister=models,
+        ollama_model_lister=ollama_models,
     )
 
-    assert [(item.agent, item.model) for item in choices[:4]] == [
-        ("opencode", "ollama/claude"),
-        ("opencode", "ollama/gpt-oss"),
-        ("opencode", "opencode/nemotron-3-ultra-free"),
-        ("opencode", "openai/gpt-5.5"),
-    ]
-    assert ("claude", None) in [(item.agent, item.model) for item in choices]
-    assert ("codex", None) in [(item.agent, item.model) for item in choices]
+    pairs = [(item.agent, item.model) for item in choices]
+    assert ("opencode", "ollama/claude:latest") in pairs
+    assert ("opencode", "ollama/gpt-oss:20b") in pairs
+    assert ("opencode", "ollama/qwen2.5-coder:7b") in pairs
+    assert ("opencode", "opencode/nemotron-3-ultra-free") in pairs
+    assert ("opencode", "openai/gpt-5.5") in pairs
+    assert ("claude", None) in pairs
+    assert ("codex", None) in pairs
 
 
-def test_prompt_returns_selected_llm_and_model(tmp_path: Path):
+def test_prompt_selects_llm_first_and_model_second(tmp_path: Path):
     output = io.StringIO()
     choice = prompt_executor_recovery(
         tmp_path,
         error="usage limit reached",
-        input_stream=io.StringIO("2\n"),
+        input_stream=io.StringIO("1\n2\n"),
         output_stream=output,
         lang="es",
         discovery=discoveries,
         model_lister=models,
+        ollama_model_lister=ollama_models,
     )
 
     assert choice == ExecutorRecoveryChoice(
         agent="opencode",
-        model="ollama/gpt-oss",
-        label="OpenCode · ollama/gpt-oss [local]",
+        model="ollama/gpt-oss:20b",
+        label="Ollama (local) · ollama/gpt-oss:20b [local]",
     )
     rendered = output.getvalue()
-    assert "Elegí otro LLM/modelo" in rendered
-    assert "ollama/claude [local]" in rendered
-    assert "openai/gpt-5.5 [external]" in rendered
+    assert "Paso 1/2: elegí el LLM/proveedor:" in rendered
+    assert "1) Ollama (local)" in rendered
+    assert "2) OpenCode" in rendered
+    assert "3) OpenAI" in rendered
+    assert "Paso 2/2: elegí el modelo para Ollama (local):" in rendered
+    assert "claude:latest [local]" in rendered
+    assert "gpt-oss:20b [local]" in rendered
+    assert "qwen2.5-coder:7b [local]" in rendered
+    assert "gpt-5.5" not in rendered
 
 
-def test_prompt_zero_cancels_recovery(tmp_path: Path):
+def test_prompt_zero_cancels_at_provider_step(tmp_path: Path):
     assert (
         prompt_executor_recovery(
             tmp_path,
@@ -92,6 +135,7 @@ def test_prompt_zero_cancels_recovery(tmp_path: Path):
             lang="es",
             discovery=discoveries,
             model_lister=models,
+            ollama_model_lister=ollama_models,
         )
         is None
     )
@@ -114,8 +158,8 @@ def test_shared_recovery_loop_retries_any_llm_backed_operation(monkeypatch, tmp_
         "prompt_executor_recovery",
         lambda *args, **kwargs: ExecutorRecoveryChoice(
             agent="opencode",
-            model="ollama/claude",
-            label="OpenCode · ollama/claude [local]",
+            model="ollama/claude:latest",
+            label="Ollama (local) · ollama/claude:latest [local]",
         ),
     )
 
@@ -137,5 +181,5 @@ def test_shared_recovery_loop_retries_any_llm_backed_operation(monkeypatch, tmp_
     assert result == "completed"
     assert calls == [
         ("opencode", "openai/gpt-5.5"),
-        ("opencode", "ollama/claude"),
+        ("opencode", "ollama/claude:latest"),
     ]

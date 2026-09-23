@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import queue
+import shutil
 import subprocess
 import sys
 import threading
@@ -71,8 +72,49 @@ def list_available_models(*, executable: str, root: Path) -> tuple[str, ...]:
     return tuple(_available_models(result.stdout))
 
 
+def list_ollama_models(
+    *,
+    root: Path,
+    executable: str | None = None,
+) -> tuple[str, ...]:
+    command = executable or shutil.which("ollama")
+    if not command:
+        return ()
+    try:
+        result = subprocess.run(
+            [command, "list"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=MODEL_DISCOVERY_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise RuntimeError(f"Cannot list Ollama models: {error}") from error
+
+    if result.returncode != 0:
+        detail = _normalize_diagnostic(result.stderr or result.stdout)
+        raise RuntimeError(f"Cannot list Ollama models: {detail or 'unknown error'}")
+
+    models: list[str] = []
+    for raw in result.stdout.splitlines():
+        value = raw.strip()
+        if not value:
+            continue
+        name = value.split()[0]
+        if name.casefold() == "name":
+            continue
+        models.append(f"ollama/{name}")
+    return tuple(dict.fromkeys(models))
+
+
 def discover_free_model(*, executable: str, root: Path) -> str:
-    models = list_available_models(executable=executable, root=root)
+    models = list(list_available_models(executable=executable, root=root))
+    try:
+        models.extend(list_ollama_models(root=root))
+    except RuntimeError:
+        pass
+    models = list(dict.fromkeys(models))
     free_models = [
         model for model in models if "free" in model.casefold() or model.casefold().startswith(LOCAL_FREE_PREFIXES)
     ]

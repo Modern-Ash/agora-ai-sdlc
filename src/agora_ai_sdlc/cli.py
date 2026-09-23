@@ -102,7 +102,14 @@ def main(argv: list[str] | None = None) -> int:
     guided.add_argument("--work", help="Limit to one work item")
     guided.add_argument("--expert", action="store_true", help="Include raw Agora Core governance blockers")
     guided.add_argument("--commands", action="store_true", help="Show the underlying grouped Agora Core command bundle")
-    guided.add_argument("--json", action="store_true", help="Print the structured guided decision as JSON")
+    guided.add_argument(
+        "--run",
+        action="store_true",
+        help="Launch the assigned governed Construction executor when the Work is in Construction",
+    )
+    guided.add_argument("--agent", help="Override the assigned Construction executor runtime")
+    guided.add_argument("--model", help="Optional model override for runtimes that support explicit model selection")
+    guided.add_argument("--json", action="store_true", help="Print structured guided decision or execution result as JSON")
     guided.add_argument("--skill", action="store_true", help="Print the packaged guided-agent skill path")
     guided.add_argument("--non-interactive", action="store_true", help="Force one-shot output even on a terminal")
     guided.add_argument("--lang", choices=SUPPORTED_LANGUAGES, help="Presentation language")
@@ -422,6 +429,48 @@ def main(argv: list[str] | None = None) -> int:
             print(skill_path())
             return 0
         root = Path(args.root).expanduser()
+        if args.run:
+            from agora_ai_sdlc.construction_executor import launch_construction_executor
+
+            try:
+                language = resolve_language(args.lang)
+                decision = (
+                    inspect_next(root, swarm=args.swarm, work=args.work)
+                    if language == "en"
+                    else inspect_next(root, swarm=args.swarm, work=args.work, lang=language)
+                )
+                if decision is None:
+                    raise ValueError("No governed Construction action currently needs execution.")
+                if decision.state != "construction":
+                    raise ValueError(
+                        f"--run requires Work state 'construction', found {decision.state!r}."
+                    )
+                if not decision.actor:
+                    raise ValueError("Construction has no assigned responsible actor.")
+                result = launch_construction_executor(
+                    root,
+                    swarm_id=decision.swarm,
+                    work_id=decision.work,
+                    actor_reference=decision.actor,
+                    runtime_id=args.agent,
+                    model=args.model,
+                )
+            except (OSError, ValueError) as error:
+                print(error, file=sys.stderr)
+                return 2
+            if args.json:
+                print(json.dumps(result.snapshot(), sort_keys=True))
+            else:
+                print("Agora AI-SDLC | Construction executor")
+                print(f"Session: {result.session_id}")
+                print(f"Status: {result.status}")
+                if result.output:
+                    print("")
+                    print(result.output)
+                print("")
+                print(f"Durable result: {result.result_path}")
+            return 0
+
         interactive = (
             not args.non_interactive
             and not args.json

@@ -55,18 +55,14 @@ def runtime_for_actor(
     for runtime in discover_runtimes(root):
         if runtime.id == runtime_id and runtime.installed and runtime.responsive:
             return runtime
-    raise ExecutorLaunchError(
-        f"Construction runtime {runtime_id!r} is not installed and responsive."
-    )
+    raise ExecutorLaunchError(f"Construction runtime {runtime_id!r} is not installed and responsive.")
 
 
 def _construction_prompt(root: Path, bundle_path: Path, swarm_id: str, work_id: str) -> str:
     try:
         bundle = bundle_path.resolve().relative_to(root.resolve())
     except ValueError as error:
-        raise ExecutorLaunchError(
-            f"Construction bundle is outside the governed project root: {bundle_path}"
-        ) from error
+        raise ExecutorLaunchError(f"Construction bundle is outside the governed project root: {bundle_path}") from error
 
     return (
         "Run Agora Flow Construction for the current governed Work. "
@@ -118,9 +114,7 @@ def launch_construction_executor(
     root = resolve_work_workspace(root.resolve(), work_id)
     bundle = build_execution_bundle(root, swarm=swarm_id, work=work_id, persist=True)
     if bundle.stage != "construction":
-        raise ExecutorLaunchError(
-            f"Construction executor requires Work state 'construction', found {bundle.stage!r}."
-        )
+        raise ExecutorLaunchError(f"Construction executor requires Work state 'construction', found {bundle.stage!r}.")
     if bundle.json_path is None:
         raise ExecutorLaunchError("Construction execution bundle was not persisted.")
 
@@ -135,9 +129,7 @@ def launch_construction_executor(
     if latest is not None and latest.status == "completed":
         return _result(latest, reused=True)
     if latest is not None and latest.status == "running":
-        raise ExecutorLaunchError(
-            f"Construction executor session {latest.id} is already running."
-        )
+        raise ExecutorLaunchError(f"Construction executor session {latest.id} is already running.")
 
     session_id = base_id
     retry_of = None
@@ -181,7 +173,6 @@ def launch_construction_executor(
 
     if completed.status != "completed":
         raise ExecutorLaunchError(
-            f"Construction executor {runtime.name} ended with unexpected session status "
-            f"{completed.status!r}"
+            f"Construction executor {runtime.name} ended with unexpected session status {completed.status!r}"
         )
     return _result(completed, reused=False)

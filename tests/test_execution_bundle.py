@@ -82,6 +82,41 @@ def _status():
     )
 
 
+def test_execution_bundle_resolves_issue_worktree_before_inspection(monkeypatch, tmp_path: Path):
+    primary = tmp_path / "primary"
+    primary.mkdir()
+    _git(primary, "init", "-b", "main")
+    _git(primary, "config", "user.email", "bundle@example.test")
+    _git(primary, "config", "user.name", "Bundle Test")
+    (primary / "package.json").write_text('{"scripts":{"test":"vitest"}}\n', encoding="utf-8")
+    _git(primary, "add", ".")
+    _git(primary, "commit", "-m", "base")
+
+    worktree = tmp_path / "issue-14"
+    _git(primary, "worktree", "add", "-b", "ai-sdlc/issue-14", str(worktree), "main")
+    _inception(worktree)
+
+    observed = {}
+
+    def inspect(root, **kwargs):
+        observed["root"] = root
+        return _status()
+
+    monkeypatch.setattr(execution_bundle, "inspect_iteration", inspect)
+
+    bundle = build_execution_bundle(
+        primary,
+        swarm="delivery",
+        work="issue-14",
+        persist=False,
+    )
+
+    assert observed["root"] == worktree.resolve()
+    assert bundle.branch == "ai-sdlc/issue-14"
+    assert bundle.objective == "Execute learner programs with an interpreter and explicit execution budget."
+    assert bundle.acceptance_criteria == ("execution budget path", "stop outcome explicit")
+
+
 def test_execution_bundle_collects_git_repo_and_inception_facts(monkeypatch, tmp_path: Path):
     _repo(tmp_path)
     _inception(tmp_path)

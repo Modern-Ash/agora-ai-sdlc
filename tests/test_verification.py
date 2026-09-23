@@ -33,6 +33,7 @@ def bundle(tmp_path: Path, commands=("pnpm test",)) -> ExecutionBundle:
 
 
 def test_plan_only_never_executes_commands(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr(verification, "resolve_work_workspace", lambda root, work: tmp_path.resolve())
     monkeypatch.setattr(verification, "build_execution_bundle", lambda *args, **kwargs: bundle(tmp_path))
 
     def fail_run(*args, **kwargs):
@@ -49,7 +50,38 @@ def test_plan_only_never_executes_commands(monkeypatch, tmp_path: Path):
     assert report.acceptance_coverage[0].mechanically_satisfied is False
 
 
+def test_run_resolves_work_workspace_before_execution(monkeypatch, tmp_path: Path):
+    primary = tmp_path / "primary"
+    worktree = tmp_path / "issue-14"
+    primary.mkdir()
+    worktree.mkdir()
+
+    monkeypatch.setattr(
+        verification,
+        "resolve_work_workspace",
+        lambda root, work: worktree.resolve(),
+    )
+    monkeypatch.setattr(
+        verification,
+        "build_execution_bundle",
+        lambda root, **kwargs: bundle(worktree),
+    )
+    observed = {}
+
+    def fake_run(argv, **kwargs):
+        observed["cwd"] = kwargs["cwd"]
+        return SimpleNamespace(returncode=0, stdout="ok", stderr="")
+
+    monkeypatch.setattr(verification.subprocess, "run", fake_run)
+
+    report = build_verification_report(primary, work="issue-14", run=True, persist=False)
+
+    assert observed["cwd"] == worktree.resolve()
+    assert report.commands[0].status == "passed"
+
+
 def test_run_executes_allowlisted_command_and_keeps_ac_unsatisfied(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr(verification, "resolve_work_workspace", lambda root, work: tmp_path.resolve())
     monkeypatch.setattr(verification, "build_execution_bundle", lambda *args, **kwargs: bundle(tmp_path))
     observed = {}
 
@@ -70,7 +102,33 @@ def test_run_executes_allowlisted_command_and_keeps_ac_unsatisfied(monkeypatch, 
     assert report.acceptance_coverage[0].mechanically_satisfied is False
 
 
+def test_failed_command_renders_compact_diagnostic(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr(
+        verification,
+        "resolve_work_workspace",
+        lambda root, work: tmp_path.resolve(),
+    )
+    monkeypatch.setattr(verification, "build_execution_bundle", lambda *args, **kwargs: bundle(tmp_path))
+
+    def fake_run(argv, **kwargs):
+        return SimpleNamespace(
+            returncode=1,
+            stdout="",
+            stderr="ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL interpreter tests failed",
+        )
+
+    monkeypatch.setattr(verification.subprocess, "run", fake_run)
+
+    report = build_verification_report(tmp_path, work="issue-14", run=True, persist=False)
+    rendered = verification.render_verification(report)
+
+    assert "[failed] pnpm test" in rendered
+    assert "exit=1" in rendered
+    assert "diagnostic: ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL interpreter tests failed" in rendered
+
+
 def test_non_allowlisted_command_is_blocked_without_execution(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr(verification, "resolve_work_workspace", lambda root, work: tmp_path.resolve())
     monkeypatch.setattr(
         verification,
         "build_execution_bundle",

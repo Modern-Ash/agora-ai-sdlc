@@ -9,7 +9,7 @@ import subprocess
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 
-from agora_ai_sdlc.execution_bundle import ExecutionBundle, build_execution_bundle
+from agora_ai_sdlc.execution_bundle import ExecutionBundle, build_execution_bundle, resolve_work_workspace
 
 SCHEMA = "agora-ai-sdlc/verification-report/v1"
 MAX_OUTPUT_CHARS = 16000
@@ -237,7 +237,7 @@ def build_verification_report(
     if timeout_seconds < 1:
         raise VerificationError("verification.timeout: timeout must be positive")
 
-    root = root.expanduser().resolve()
+    root = resolve_work_workspace(root, work)
     bundle = build_execution_bundle(root, swarm=swarm, work=work, persist=False)
     commands = tuple(
         _run(root, command, timeout_seconds) if run else _planned(command) for command in bundle.verification_commands
@@ -265,6 +265,14 @@ def build_verification_report(
     return persisted
 
 
+def _compact_human_diagnostic(command: VerificationCommand, max_chars: int = 1200) -> str:
+    source = command.stderr or command.stdout
+    value = " ".join(source.split())
+    if len(value) <= max_chars:
+        return value
+    return "… " + value[-(max_chars - 2) :]
+
+
 def render_verification(report: VerificationReport) -> str:
     lines = [
         "Agora AI-SDLC | Deterministic Verification",
@@ -281,6 +289,10 @@ def render_verification(report: VerificationReport) -> str:
         lines.append(f"  - [{command.status}] {command.command}")
         if command.exit_code is not None:
             lines.append(f"    exit={command.exit_code} elapsed={command.elapsed_seconds}s")
+        if command.status in {"failed", "timeout", "unavailable", "blocked"}:
+            diagnostic = _compact_human_diagnostic(command)
+            if diagnostic:
+                lines.append(f"    diagnostic: {diagnostic}")
 
     lines.extend(["", "Acceptance criteria"])
     if not report.acceptance_coverage:

@@ -5,10 +5,9 @@ import pytest
 from test_observation import snapshot
 from test_start_flow import FakeWorkspace, runtime
 
-from agora_ai_sdlc.start_preflight import StartPreparationResult
-
 from agora_ai_sdlc.cli import main
 from agora_ai_sdlc.observation import agent_summary
+from agora_ai_sdlc.start_preflight import StartPreparationResult
 
 
 def test_cli_json_does_not_include_ui_even_if_both_streams_are_captured(tmp_path, monkeypatch, capsys):

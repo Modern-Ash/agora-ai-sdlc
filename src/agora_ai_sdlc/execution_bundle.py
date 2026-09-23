@@ -114,6 +114,38 @@ def _git_lines(root: Path, *args: str) -> tuple[str, ...]:
     return tuple(line for line in stdout.splitlines() if line.strip())
 
 
+def _worktree_branch_map(root: Path) -> dict[str, Path]:
+    code, stdout, _ = _git(root, "worktree", "list", "--porcelain")
+    if code != 0 or not stdout:
+        return {}
+
+    found: dict[str, Path] = {}
+    path: Path | None = None
+    for line in stdout.splitlines():
+        if line.startswith("worktree "):
+            path = Path(line.removeprefix("worktree ").strip()).resolve()
+        elif line.startswith("branch refs/heads/") and path is not None:
+            found[line.removeprefix("branch refs/heads/").strip()] = path
+    return found
+
+
+def resolve_work_workspace(root: Path, work: str | None) -> Path:
+    root = root.expanduser().resolve()
+    if not work:
+        return root
+
+    expected_branch = f"ai-sdlc/{work}"
+    branch_map = _worktree_branch_map(root)
+    resolved = branch_map.get(expected_branch)
+    if resolved is not None:
+        return resolved
+
+    code, current, _ = _git(root, "branch", "--show-current")
+    if code == 0 and current == expected_branch:
+        return root
+    return root
+
+
 def _head(root: Path) -> str | None:
     code, stdout, _ = _git(root, "rev-parse", "HEAD")
     return stdout if code == 0 and stdout else None
@@ -340,7 +372,7 @@ def build_execution_bundle(
     work: str | None = None,
     persist: bool = True,
 ) -> ExecutionBundle:
-    root = root.expanduser().resolve()
+    root = resolve_work_workspace(root, work)
     status = inspect_iteration(root, swarm=swarm, work=work)
     repository = inspect_repository(root)
 

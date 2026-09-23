@@ -465,9 +465,9 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"Session: {result.session_id}")
                 print(f"Status: {result.status}")
                 if result.output:
-                    print("")
+                    print()
                     print(result.output)
-                print("")
+                print()
                 print(f"Durable result: {result.result_path}")
             return 0
 

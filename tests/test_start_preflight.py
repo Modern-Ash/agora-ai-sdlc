@@ -123,7 +123,7 @@ def test_start_preflight_repairs_pack_when_only_front_matter_formatting_changed(
     method = project / ".agora" / "methods" / "ai-sdlc" / "METHOD.md"
     text = method.read_text(encoding="utf-8")
     text = text.replace(
-        'criterion-stages: ["elaborated","designed","built","verified","deployed","accepted"]',
+        'criterion-stages: ["elaborated", "designed", "built", "verified", "deployed", "accepted"]',
         'criterion-stages:\n  ["elaborated", "designed", "built", "verified", "deployed", "accepted"]',
     )
     method.write_text(text, encoding="utf-8")
@@ -131,7 +131,7 @@ def test_start_preflight_repairs_pack_when_only_front_matter_formatting_changed(
     result = ensure_start_ready(project, _runtime())
 
     assert "method.repaired" in result.actions
-    assert 'criterion-stages: ["elaborated","designed","built","verified","deployed","accepted"]' in method.read_text(
+    assert 'criterion-stages: ["elaborated", "designed", "built", "verified", "deployed", "accepted"]' in method.read_text(
         encoding="utf-8"
     )
 
@@ -146,7 +146,7 @@ def test_start_preflight_refuses_to_overwrite_unknown_malformed_method_customiza
     method = project / ".agora" / "methods" / "ai-sdlc" / "METHOD.md"
     method.write_text(
         method.read_text(encoding="utf-8").replace(
-            'criterion-stages: ["elaborated","designed","built","verified","deployed","accepted"]',
+            'criterion-stages: ["elaborated", "designed", "built", "verified", "deployed", "accepted"]',
             'criterion-stages: ["custom", }',
         )
         + "\nLocal governance customization.\n",

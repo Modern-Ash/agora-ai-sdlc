@@ -29,9 +29,7 @@ class FakeProcess:
 
 
 def test_terminal_provider_error_classification():
-    assert opencode_runner.terminal_provider_error(
-        'error.error="AI_APICallError: The usage limit has been reached"'
-    )
+    assert opencode_runner.terminal_provider_error('error.error="AI_APICallError: The usage limit has been reached"')
     assert opencode_runner.terminal_provider_error("Monthly usage limit reached")
     assert not opencode_runner.terminal_provider_error("temporary network timeout")
 
@@ -39,8 +37,7 @@ def test_terminal_provider_error_classification():
 def test_run_opencode_fails_fast_on_terminal_provider_error(monkeypatch, tmp_path: Path):
     process = FakeProcess(
         "",
-        'level=ERROR message="stream error" '
-        'error.error="AI_APICallError: The usage limit has been reached"\n',
+        'level=ERROR message="stream error" error.error="AI_APICallError: The usage limit has been reached"\n',
     )
     monkeypatch.setattr(opencode_runner.subprocess, "Popen", lambda *args, **kwargs: process)
 

@@ -53,6 +53,16 @@ class InstallerError(ValueError):
         self.code = code
 
 
+def _is_git_work_tree(target: Path) -> bool:
+    result = subprocess.run(
+        ["git", "-C", str(target), "rev-parse", "--is-inside-work-tree"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return result.returncode == 0 and result.stdout.strip() == "true"
+
+
 def _slug(value: object, field: str) -> str:
     text = str(value or "").strip()
     if SLUG.fullmatch(text) is None:
@@ -297,7 +307,7 @@ def preview(config: dict, target: Path) -> dict:
     return {
         "schema": "agora-ai-sdlc/install-preview/v1",
         "target": str(target.resolve()),
-        "existing_repository": (target / ".git").is_dir(),
+        "existing_repository": _is_git_work_tree(target),
         "core": core,
         "project": normalized["project"],
         "profile": normalized["profile"],
@@ -355,7 +365,7 @@ def apply(config: dict, target: Path, home: Path) -> dict:
     normalized = validate_config(config)
     core = core_preflight()
     target.mkdir(parents=True, exist_ok=True)
-    if not (target / ".git").is_dir():
+    if not _is_git_work_tree(target):
         subprocess.run(["git", "init", "-q", str(target)], check=True)
 
     os.environ["AGORA_HOME"] = str(home.resolve())
@@ -517,7 +527,7 @@ def wizard(
     input_fn=input,
     output_fn=print,
 ) -> dict:
-    existing = (target / ".git").is_dir()
+    existing = _is_git_work_tree(target)
     project_id = _ask(
         input_fn,
         "Project id",

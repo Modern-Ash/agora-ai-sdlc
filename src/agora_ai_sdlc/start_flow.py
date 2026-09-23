@@ -23,6 +23,11 @@ from agora_ai_sdlc.depth_profiles import asset_root
 from agora_ai_sdlc.i18n import t
 from agora_ai_sdlc.inception_handoff import write_inception_handoff
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
+from agora_ai_sdlc.start_preflight import (
+    StartPreparationResult,
+    ensure_start_ready,
+    isolate_dirty_work,
+)
 
 
 class StartFlowError(ValueError):
@@ -47,6 +52,9 @@ class StartFlowResult:
     tool_run_id: str
     handoff_path: str
     skill_path: str
+    workspace_root: str
+    workspace_isolated: bool
+    preflight_actions: tuple[str, ...]
     status: str = "human-review-required"
 
     def snapshot(self) -> dict:
@@ -301,6 +309,8 @@ def prepare_start(
     actor: str = "product-owner",
     workspace_factory: Callable[..., AgoraWorkspace] = AgoraWorkspace,
     runtime_discovery: Callable[[Path], tuple[RuntimeDiscovery, ...]] = discover_runtimes,
+    preflight: Callable[..., StartPreparationResult] = ensure_start_ready,
+    isolation: Callable[[Path, int], tuple[Path, str | None]] = isolate_dirty_work,
     progress: Callable[[str], None] | None = None,
 ) -> StartFlowResult:
     """Read one issue through Core, persist a draft Intent, and stop for human review."""
@@ -313,10 +323,19 @@ def prepare_start(
                 pass  # Human presentation cannot invalidate an already performed Core operation.
 
     notify("start.inspect")
-    root = root.expanduser().resolve()
+    root, isolation_action = isolation(root, issue)
+    notify("start.workspace-ready")
     project = project or infer_project(root)
     runtime = _select_runtime(root, agent, discovery=runtime_discovery)
     notify("start.runtime-ready")
+    prepared = preflight(
+        root,
+        runtime,
+        swarm_id=swarm,
+        workspace_factory=workspace_factory,
+    )
+    root = prepared.root
+    notify("start.project-ready")
     workspace = workspace_factory(cwd=root)
 
     issue_url = f"https://github.com/{project}/issues/{issue}"
@@ -422,44 +441,58 @@ def prepare_start(
         tool_run_id=run_id,
         handoff_path=handoff.path,
         skill_path=handoff.skill,
+        workspace_root=str(root),
+        workspace_isolated=isolation_action is not None,
+        preflight_actions=tuple(([isolation_action] if isolation_action is not None else []) + list(prepared.actions)),
     )
 
 
-def render_start(result: StartFlowResult, *, lang: str = "en") -> str:
-    """Render the localized AI-led handoff without changing persisted semantics."""
+def render_start(result: StartFlowResult, *, lang: str = "en", details: bool = False) -> str:
+    """Render a concise human Start card; durable internals remain available on demand."""
 
-    return "\n".join(
+    branch = result.branch or t("guided.unknown", lang=lang)
+    lines = [
+        t("start.title", lang=lang),
+        "",
+        f"Issue #{result.issue} · {result.issue_title}",
+        f"✓ {t('start.project', lang=lang)}: {result.project}",
+        f"✓ {t('start.work', lang=lang)}: {result.work_id} · {branch}",
+        f"✓ {t('start.selected_ai', lang=lang)}: {result.runtime_name}",
+        f"✓ {t('start.pathway', lang=lang)}: {result.pathway}",
+    ]
+    if result.workspace_isolated:
+        lines.append(f"✓ {t('start.workspace', lang=lang)}: {result.workspace_root}")
+    if result.preflight_actions:
+        lines.append(t("start.auto_prepared", lang=lang, count=len(result.preflight_actions)))
+
+    lines.extend(
         [
-            t("start.title", lang=lang),
             "",
-            f"Issue: #{result.issue} {result.issue_title}",
-            f"{t('start.project', lang=lang)}: {result.project}",
-            f"{t('start.candidate_intent', lang=lang)}: {result.intent_id} ({t('common.draft', lang=lang)})",
-            f"{t('start.work', lang=lang)}: {result.work_id}",
-            f"{t('start.branch', lang=lang)}: {result.branch or 'unknown'}"
-            + (f" ({t('start.base_branch', lang=lang)}: {result.base_branch})" if result.base_branch else ""),
-            f"{t('start.pathway', lang=lang)}: {result.pathway}",
-            f"{t('start.selected_ai', lang=lang)}: {result.runtime_name}",
-            "",
-            t("start.ai_next_move", lang=lang),
-            f"  1. {t('start.step1', lang=lang)}",
-            f"  2. {t('start.step2', lang=lang)}",
-            f"  3. {t('start.step3', lang=lang)}",
-            f"  4. {t('start.step4', lang=lang)}",
+            t("start.inception_ready", lang=lang),
+            f"  {t('start.inception_summary', lang=lang)}",
             "",
             t("start.human_boundary", lang=lang),
             f"  {t('start.boundary1', lang=lang)}",
             f"  {t('start.boundary2', lang=lang)}",
             "",
-            f"{t('start.governed_issue_read', lang=lang)}: {result.tool_run_id}",
-            f"{t('start.durable_intent', lang=lang)}: {result.intent_path}",
-            f"{t('start.portable_handoff', lang=lang)}: {result.handoff_path}",
-            f"{t('start.guided_skill', lang=lang)}: {result.skill_path}",
-            "",
             t("start.next_executor", lang=lang),
             f"  {t('start.launch_executor', lang=lang, runtime=result.runtime_name)}",
             f"  {t('start.no_prompt', lang=lang)}",
-            "",
-            f"{t('start.status', lang=lang)}: {result.status}",
         ]
     )
+
+    if details:
+        lines.extend(
+            [
+                "",
+                t("start.details", lang=lang),
+                f"  {t('start.governed_issue_read', lang=lang)}: {result.tool_run_id}",
+                f"  {t('start.durable_intent', lang=lang)}: {result.intent_path}",
+                f"  {t('start.portable_handoff', lang=lang)}: {result.handoff_path}",
+                f"  {t('start.guided_skill', lang=lang)}: {result.skill_path}",
+                f"  {t('start.base_branch', lang=lang)}: {result.base_branch or t('guided.unknown', lang=lang)}",
+            ]
+        )
+
+    lines.extend(["", f"{t('start.status', lang=lang)}: {result.status}"])
+    return "\n".join(lines)

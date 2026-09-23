@@ -7,6 +7,7 @@ from test_start_flow import FakeWorkspace, runtime
 
 from agora_ai_sdlc.cli import main
 from agora_ai_sdlc.observation import agent_summary
+from agora_ai_sdlc.start_preflight import StartPreparationResult
 
 
 def test_cli_json_does_not_include_ui_even_if_both_streams_are_captured(tmp_path, monkeypatch, capsys):
@@ -88,10 +89,23 @@ def test_start_progress_never_changes_result_or_handoff(tmp_path):
         "workspace_factory": lambda cwd: workspace,
         "runtime_discovery": lambda root: (runtime(),),
     }
-    baseline = prepare_start(tmp_path, **options)
+    no_isolation = lambda root, issue: (root.resolve(), None)
+    no_preflight = lambda root, runtime, **kwargs: StartPreparationResult(root.resolve(), ())
+    baseline = prepare_start(
+        tmp_path,
+        **options,
+        isolation=no_isolation,
+        preflight=no_preflight,
+    )
     content = Path(baseline.handoff_path).read_bytes()
     events = []
-    observed = prepare_start(tmp_path, **options, progress=events.append)
+    observed = prepare_start(
+        tmp_path,
+        **options,
+        isolation=no_isolation,
+        preflight=no_preflight,
+        progress=events.append,
+    )
     assert observed.snapshot() == baseline.snapshot()
     assert Path(observed.handoff_path).read_bytes() == content
     assert "start.issue-reused" in events
@@ -107,7 +121,12 @@ def test_start_json_uses_explicit_file_for_progress(tmp_path, monkeypatch, capsy
 
     def prepared(root, **options):
         return original(
-            root, **options, workspace_factory=lambda cwd: workspace, runtime_discovery=lambda r: (runtime(),)
+            root,
+            **options,
+            workspace_factory=lambda cwd: workspace,
+            runtime_discovery=lambda r: (runtime(),),
+            isolation=lambda candidate, issue: (candidate.resolve(), None),
+            preflight=lambda candidate, runtime, **kwargs: StartPreparationResult(candidate.resolve(), ()),
         )
 
     monkeypatch.setattr(start_flow, "prepare_start", prepared)
@@ -137,7 +156,7 @@ def test_start_json_uses_explicit_file_for_progress(tmp_path, monkeypatch, capsy
     human = file.read_text()
     assert "Start no lanzó el executor" in human
     assert "Leyendo el issue" in human
-    assert "100% 8/8" in human
+    assert "100% 10/10" in human
     assert "Work gobernado y rama del issue resueltos" in human
     assert "[" not in out.out.split("intent_id")[0]  # no progress prefix
 

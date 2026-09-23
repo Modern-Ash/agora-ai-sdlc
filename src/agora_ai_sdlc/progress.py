@@ -8,7 +8,9 @@ from __future__ import annotations
 
 START_STEPS = (
     "start.inspect",
+    "start.workspace-ready",
     "start.runtime-ready",
+    "start.project-ready",
     "start.work-ready",
     "start.issue-read",
     "start.intent-ready",

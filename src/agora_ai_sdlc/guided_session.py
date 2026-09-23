@@ -8,6 +8,7 @@ from pathlib import Path
 
 from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice, select_executor_model
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next, render
+from agora_ai_sdlc.guided_execution import execute_guided_preparation
 from agora_ai_sdlc.i18n import t
 from agora_ai_sdlc.opencode_runner import list_available_models, list_ollama_agent_models
 from agora_ai_sdlc.runtime_discovery import discover_runtimes
@@ -175,24 +176,22 @@ def run_interactive(
                 continue
             _render_prepare_handoff(decision, selected_runtime, output_fn, lang=lang)
             output_fn("")
-            output_fn(t("session.followup", lang=lang))
-            follow_up = input_fn(t("session.select", lang=lang)).strip().casefold()
-            if follow_up in {"x", "q", "exit"}:
-                return GuidedSessionResult(
-                    "exit",
-                    selected_runtime.agent,
-                    selected_runtime.model,
-                )
-            if follow_up in {"c", "change"}:
-                selected_runtime = _select_runtime(
+            output_fn(t("session.executing", lang=lang, runtime=selected_runtime.label))
+            try:
+                result = execute_guided_preparation(
                     root,
-                    input_fn=input_fn,
-                    output_fn=output_fn,
-                    current=selected_runtime,
-                    lang=lang,
+                    decision,
+                    runtime_id=selected_runtime.agent,
+                    model=selected_runtime.model,
                 )
-            elif follow_up in {"r", "review"}:
-                _render_review(decision, output_fn, lang=lang)
+            except (OSError, RuntimeError, ValueError) as error:
+                output_fn(t("session.execution_failed", lang=lang, error=str(error)))
+                output_fn(t("session.execution_recovery", lang=lang))
+                continue
+            output_fn(t("session.execution_complete", lang=lang, runtime=result.runtime))
+            output_fn(t("session.reinspect", lang=lang))
+            # Re-enter the loop immediately: Core state is authoritative and may
+            # now expose a different recommended action.
             continue
 
         output_fn(t("session.choose", lang=lang))

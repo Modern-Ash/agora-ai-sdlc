@@ -50,7 +50,7 @@ def graph():
     for path, text in [
         ("req.md", doc("requirements", "REQ-001")),
         ("arc.md", doc("architecture", "ARC-001", ["REQ-001"])),
-        ("tst.md", doc("test-plan", "TST-001", ["REQ-001"])),
+        ("tst.md", doc("test-strategy", "TST-001", ["REQ-001"])),
     ]:
         docs.append((Path(path), text, parse_artifact(text)))
     return build_graph(docs)

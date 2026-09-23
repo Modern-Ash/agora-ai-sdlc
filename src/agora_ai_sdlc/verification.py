@@ -6,7 +6,7 @@ import json
 import re
 import shlex
 import subprocess
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 
 from agora_ai_sdlc.execution_bundle import ExecutionBundle, build_execution_bundle
@@ -260,7 +260,7 @@ def build_verification_report(
 
     target = root / ".agora" / "ai-sdlc" / "verification" / (bundle.work or "unscoped") / "VERIFICATION.json"
     target.parent.mkdir(parents=True, exist_ok=True)
-    persisted = VerificationReport(**{**report.snapshot(), "report_path": str(target)})
+    persisted = replace(report, report_path=str(target))
     target.write_text(json.dumps(persisted.snapshot(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return persisted
 

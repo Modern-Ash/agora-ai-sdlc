@@ -1,0 +1,101 @@
+from pathlib import Path
+
+from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice
+from agora_ai_sdlc.guided import GuidedDecision
+from agora_ai_sdlc.workflow_advisor import advise_workflow
+
+
+def decision(**changes):
+    values = dict(
+        swarm="delivery",
+        work="issue-26",
+        title="Deliver issue",
+        method="ai-sdlc",
+        actor="project:developer",
+        role="developer",
+        state="construction",
+        target="operations",
+        gate="construction-complete",
+        blockers=("blocked",),
+        messages=("Prepare missing work.",),
+        missing_artifacts=("implementation-plan",),
+        missing_evidence=(),
+        missing_approvals=(),
+        unsatisfied_criteria=(),
+        git_issues=(),
+        clarification_issues=(),
+        ready_for_human_approval=False,
+        ready_to_transition=False,
+    )
+    values.update(changes)
+    return GuidedDecision(**values)
+
+
+def test_human_approval_never_uses_laya(monkeypatch):
+    monkeypatch.setattr(
+        "agora_ai_sdlc.workflow_advisor.build_execution_bundle",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("must not call Laya path")),
+    )
+    advice = advise_workflow(
+        Path("."),
+        decision(
+            ready_for_human_approval=True,
+            missing_approvals=("product-owner",),
+        ),
+    )
+    assert advice.action == "review"
+    assert advice.source == "deterministic"
+    assert not advice.needs_runtime
+
+
+def test_low_cost_work_preselects_local_free_runtime(monkeypatch):
+    class Answer:
+        value = "local"
+        confidence = 0.97
+
+    class Result:
+        answers = {"reasoning_tier": Answer()}
+
+    class Evaluation:
+        result = Result()
+        escalated = ()
+
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.build_execution_bundle", lambda *args, **kwargs: object())
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.advise_execution", lambda *args, **kwargs: Evaluation())
+    monkeypatch.setattr(
+        "agora_ai_sdlc.workflow_advisor._free_runtime",
+        lambda root: ExecutorRecoveryChoice("opencode", "ollama/qwen3:8b", "Ollama · qwen3:8b [local]"),
+    )
+
+    advice = advise_workflow(Path("."), decision())
+    assert advice.action == "prepare"
+    assert advice.source == "laya"
+    assert advice.reasoning_tier == "local"
+    assert advice.confidence == 0.97
+    assert advice.recommended_runtime is not None
+    assert "[local]" in advice.recommended_runtime.label
+
+
+def test_uncertain_laya_never_suppresses_normal_escalation(monkeypatch):
+    class Answer:
+        value = "local"
+        confidence = 0.51
+
+    class Result:
+        answers = {"reasoning_tier": Answer()}
+
+    class Evaluation:
+        result = Result()
+        escalated = ("reasoning_tier",)
+
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.build_execution_bundle", lambda *args, **kwargs: object())
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.advise_execution", lambda *args, **kwargs: Evaluation())
+    monkeypatch.setattr(
+        "agora_ai_sdlc.workflow_advisor._free_runtime",
+        lambda root: (_ for _ in ()).throw(AssertionError("uncertain result must not auto-select")),
+    )
+
+    advice = advise_workflow(Path("."), decision())
+    assert advice.action == "prepare"
+    assert advice.escalation_required
+    assert advice.recommended_runtime is None

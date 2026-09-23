@@ -8,9 +8,7 @@ def test_quota_and_token_failures_are_recoverable():
 
 
 def test_model_without_tool_support_is_recoverable():
-    assert recoverable_llm_failure(
-        "registry.ollama.ai/library/qwen2.5-coder:1.5b-base does not support tools"
-    )
+    assert recoverable_llm_failure("registry.ollama.ai/library/qwen2.5-coder:1.5b-base does not support tools")
 
 
 def test_transient_provider_outages_are_recoverable():

@@ -497,6 +497,52 @@ def test_prepare_start_rejects_unavailable_requested_runtime(tmp_path):
         )
 
 
+def test_existing_legacy_work_without_branch_uses_observed_git_branch(tmp_path):
+    _git_repo(tmp_path)
+    _git(tmp_path, "switch", "-c", "ai-sdlc/issue-14")
+    workspace = FakeWorkspace(tmp_path)
+    workspace._has_run = True
+    workspace._works = [
+        SimpleNamespace(
+            id="issue-14",
+            swarm_id="delivery",
+            title="Deliver GitHub issue #14",
+            path=str(tmp_path / ".agora" / "swarms" / "delivery" / "work" / "issue-14" / "WORK.md"),
+            base_branch="main",
+            branch=None,
+        )
+    ]
+
+    def show_tool_run(run_id):
+        payload = {
+            "number": 14,
+            "title": "Implement deterministic canonical program interpreter",
+            "body": (
+                "## Objective\nExecute learner programs deterministically.\n\n"
+                "## Acceptance\n- deterministic repeated run\n"
+            ),
+            "url": "https://github.com/Modern-Ash/agorix/issues/14",
+        }
+        return SimpleNamespace(result=SimpleNamespace(status="completed", stdout=json.dumps(payload), stderr=""))
+
+    workspace.show_tool_run = show_tool_run
+
+    result = _prepare_start(
+        tmp_path,
+        issue=14,
+        project="Modern-Ash/agorix",
+        workspace_factory=lambda cwd: workspace,
+        runtime_discovery=lambda root: (runtime("codex"),),
+    )
+
+    assert result.branch == "ai-sdlc/issue-14"
+    assert 'branch: "ai-sdlc/issue-14"' in Path(result.handoff_path).read_text(encoding="utf-8")
+    rendered = render_start(result, lang="es")
+    assert "Work gobernado: issue-14 · ai-sdlc/issue-14" in rendered
+    assert "propuesta de la IA" not in rendered
+    assert "propuesta de Inception" in rendered
+
+
 def test_prepare_start_reuses_existing_durable_issue_read_and_intent(tmp_path):
     workspace = FakeWorkspace(tmp_path)
     workspace._has_run = True

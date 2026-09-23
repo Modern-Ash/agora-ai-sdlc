@@ -84,7 +84,8 @@ def run_doctor(root: Path) -> tuple[tuple[DoctorCheck, ...], tuple[RuntimeDiscov
                 )
             )
         except (OSError, ValueError) as error:
-            checks.append(DoctorCheck("project", False, error.__class__.__name__))
+            detail = " ".join(str(error).split()) or error.__class__.__name__
+            checks.append(DoctorCheck("project", False, detail[:320]))
 
     skill = root / ".agora" / "skills" / "agora-ai-sdlc-guided" / "SKILL.md"
     checks.append(

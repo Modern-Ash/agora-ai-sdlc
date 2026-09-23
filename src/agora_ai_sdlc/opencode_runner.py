@@ -92,9 +92,7 @@ def run_opencode(
                     process.kill()
                 break
     finally:
-        if fatal is not None:
-            process.wait()
-        elif process.poll() is None and len(closed) == 2:
+        if fatal is not None or (process.poll() is None and len(closed) == 2):
             process.wait()
 
     if fatal is not None:

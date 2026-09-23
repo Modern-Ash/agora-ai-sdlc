@@ -100,7 +100,7 @@ def test_executor_registry_distinguishes_agent_host_from_model_provider():
 def test_opencode_runner_is_non_interactive_and_binds_handoff_and_root(tmp_path):
     runner = build_executor_runner(runtime("opencode"), tmp_path, handoff(tmp_path))
 
-    assert runner.startswith("/usr/bin/opencode run --auto --dir ")
+    assert runner.startswith("/usr/bin/opencode run --auto --model opencode/deepseek-v4-flash-free --dir ")
     assert f"--dir {tmp_path.resolve()}" in runner
     assert "INCEPTION_HANDOFF.md" in runner
     assert str(tmp_path.resolve()) in runner
@@ -133,7 +133,7 @@ def test_launch_uses_governed_core_session_in_exact_workspace(tmp_path):
     assert started.executor_id == "ai-opencode"
     assert started.launch is True
     assert started.timeout_seconds == 300
-    assert started.runner.startswith("/usr/bin/opencode run --auto ")
+    assert "--model opencode/deepseek-v4-flash-free" in started.runner
     assert result.status == "completed"
     assert result.reused is False
     assert "Plan ready." in result.output

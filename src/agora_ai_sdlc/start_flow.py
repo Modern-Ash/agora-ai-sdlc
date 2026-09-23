@@ -422,9 +422,7 @@ def prepare_start(
         except ValueError as error:
             diagnostic = _diagnose_issue_read_markdown(root, run_id)
             if diagnostic is not None:
-                raise StartFlowError(
-                    f"Governed issue read is blocked by invalid Markdown at {diagnostic}"
-                ) from error
+                raise StartFlowError(f"Governed issue read is blocked by invalid Markdown at {diagnostic}") from error
             raise
 
     payload = _issue_payload(workspace, run_id)
@@ -439,9 +437,7 @@ def prepare_start(
     except ValueError as error:
         diagnostic = _diagnose_intent_markdown(root)
         if diagnostic is not None:
-            raise StartFlowError(
-                f"Intent discovery is blocked by invalid Markdown at {diagnostic}"
-            ) from error
+            raise StartFlowError(f"Intent discovery is blocked by invalid Markdown at {diagnostic}") from error
         raise
     existing = next((item for item in intents if item.id == intent_id), None)
     if existing is None:

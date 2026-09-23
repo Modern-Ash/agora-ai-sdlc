@@ -137,8 +137,6 @@ def test_start_preflight_repairs_formatter_wrapped_method_front_matter(tmp_path,
     )
 
 
-
-
 def test_start_preflight_repairs_formatter_wrapped_role_front_matter_without_changing_body(tmp_path, monkeypatch):
     monkeypatch.setenv("AGORA_HOME", str(tmp_path / "home"))
     project = tmp_path / "project"

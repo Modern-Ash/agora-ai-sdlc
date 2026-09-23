@@ -284,10 +284,16 @@ def test_executor_spinner_is_tty_only_and_stops_on_next_event():
         )
         channel.event("start.executor-launch")
         for _ in range(50):
-            if "Inception · issue #14 · intento 2 · OpenCode · opencode/big-pickle · esperando resultado" in stream.getvalue():
+            if (
+                "Inception · issue #14 · intento 2 · OpenCode · opencode/big-pickle · esperando resultado"
+                in stream.getvalue()
+            ):
                 break
             time.sleep(0.01)
-        assert "Inception · issue #14 · intento 2 · OpenCode · opencode/big-pickle · esperando resultado" in stream.getvalue()
+        assert (
+            "Inception · issue #14 · intento 2 · OpenCode · opencode/big-pickle · esperando resultado"
+            in stream.getvalue()
+        )
         assert channel._spinner_thread is not None
 
         channel.event("start.executor-complete")

@@ -48,6 +48,4 @@ def record_zero_question_clarification(
     questions = result.get("questions") if isinstance(result, dict) else None
     if questions != []:
         raise ValueError("deterministic zero-question clarification returned unexpected questions")
-    return DeterministicClarificationResult(
-        actions=("clarification.resolved:deterministic-zero-question",)
-    )
+    return DeterministicClarificationResult(actions=("clarification.resolved:deterministic-zero-question",))

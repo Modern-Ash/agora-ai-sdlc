@@ -137,11 +137,7 @@ def _coverage(bundle: ExecutionBundle) -> tuple[AcceptanceCoverage, ...]:
     coverage = []
     for criterion in bundle.acceptance_criteria:
         terms = _criterion_terms(criterion)
-        candidates = tuple(
-            path
-            for path in test_paths
-            if any(term in path.casefold() for term in terms)
-        )
+        candidates = tuple(path for path in test_paths if any(term in path.casefold() for term in terms))
         coverage.append(
             AcceptanceCoverage(
                 criterion=criterion,
@@ -244,15 +240,10 @@ def build_verification_report(
     root = root.expanduser().resolve()
     bundle = build_execution_bundle(root, swarm=swarm, work=work, persist=False)
     commands = tuple(
-        _run(root, command, timeout_seconds) if run else _planned(command)
-        for command in bundle.verification_commands
+        _run(root, command, timeout_seconds) if run else _planned(command) for command in bundle.verification_commands
     )
     executed_commands = tuple(command for command in commands if command.status != "planned")
-    passed = (
-        all(command.status == "passed" for command in executed_commands)
-        if run and executed_commands
-        else None
-    )
+    passed = all(command.status == "passed" for command in executed_commands) if run and executed_commands else None
 
     report = VerificationReport(
         schema=SCHEMA,

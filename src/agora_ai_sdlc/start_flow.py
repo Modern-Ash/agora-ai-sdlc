@@ -10,6 +10,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import yaml
+from agora.markdown import read_markdown
 from agora.model import (
     CreateIntentInput,
     CreateWorkInput,
@@ -283,6 +284,43 @@ def _ensure_issue_work(
     return workspace.create_work(CreateWorkInput(**common))
 
 
+def _first_invalid_governed_markdown(root: Path, paths: list[Path]) -> tuple[Path, str] | None:
+    for path in paths:
+        if not path.is_file():
+            continue
+        try:
+            read_markdown(path)
+        except (OSError, ValueError) as error:
+            return path, str(error)
+    return None
+
+
+def _diagnose_issue_read_markdown(root: Path, run_id: str) -> str | None:
+    candidates = [
+        root / ".agora" / "project.md",
+        root / ".agora" / "methods" / "ai-sdlc" / "roles" / "product-owner.md",
+        root / ".agora" / "tools" / "github-issues" / "TOOL.md",
+        root / ".agora" / "tools" / "github-issues" / "operations" / "view.md",
+        root / ".agora" / "actors" / "product-owner.md",
+        root / ".agora" / "tool-runs" / run_id / "RUN.md",
+        root / ".agora" / "tool-runs" / run_id / "RESULT.md",
+    ]
+    broken = _first_invalid_governed_markdown(root, candidates)
+    if broken is None:
+        return None
+    path, detail = broken
+    return f"{path.relative_to(root)}: {detail}"
+
+
+def _diagnose_intent_markdown(root: Path) -> str | None:
+    candidates = sorted((root / ".agora" / "intents").glob("*/INTENT.md"))
+    broken = _first_invalid_governed_markdown(root, candidates)
+    if broken is None:
+        return None
+    path, detail = broken
+    return f"{path.relative_to(root)}: {detail}"
+
+
 def _issue_payload(workspace: AgoraWorkspace, run_id: str) -> dict:
     inspection = workspace.show_tool_run(run_id)
     result = inspection.result
@@ -369,17 +407,23 @@ def prepare_start(
                 raise StartFlowError("GitHub issue adapter is unavailable") from error
         _ensure_issue_read_capability(workspace, root)
         notify("start.issue-read")
-        workspace.invoke_tool(
-            InvokeToolInput(
-                id=run_id,
-                tool_id="github-issues",
-                operation_id="view",
-                actor_id=actor,
-                swarm_id=swarm,
-                inputs={"issue": issue_url},
-                launch=True,
+        try:
+            workspace.invoke_tool(
+                InvokeToolInput(
+                    id=run_id,
+                    tool_id="github-issues",
+                    operation_id="view",
+                    actor_id=actor,
+                    swarm_id=swarm,
+                    inputs={"issue": issue_url},
+                    launch=True,
+                )
             )
-        )
+        except ValueError as error:
+            diagnostic = _diagnose_issue_read_markdown(root, run_id)
+            if diagnostic is not None:
+                raise StartFlowError(f"Governed issue read is blocked by invalid Markdown at {diagnostic}") from error
+            raise
 
     payload = _issue_payload(workspace, run_id)
     number = int(payload.get("number") or issue)
@@ -388,7 +432,14 @@ def prepare_start(
         raise StartFlowError("GitHub issue has no title")
 
     intent_id = f"issue-{number}"
-    existing = next((item for item in workspace.list_intents() if item.id == intent_id), None)
+    try:
+        intents = workspace.list_intents()
+    except ValueError as error:
+        diagnostic = _diagnose_intent_markdown(root)
+        if diagnostic is not None:
+            raise StartFlowError(f"Intent discovery is blocked by invalid Markdown at {diagnostic}") from error
+        raise
+    existing = next((item for item in intents if item.id == intent_id), None)
     if existing is None:
         intent = workspace.create_intent(
             CreateIntentInput(

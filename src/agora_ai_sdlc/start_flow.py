@@ -449,51 +449,52 @@ def prepare_start(
     )
 
 
-def render_start(result: StartFlowResult, *, lang: str = "en") -> str:
-    """Render the localized AI-led handoff without changing persisted semantics."""
+def render_start(result: StartFlowResult, *, lang: str = "en", details: bool = False) -> str:
+    """Render a concise human Start card; durable internals remain available on demand."""
 
-    return "\n".join(
+    branch = result.branch or t("guided.unknown", lang=lang)
+    lines = [
+        t("start.title", lang=lang),
+        "",
+        f"Issue #{result.issue} · {result.issue_title}",
+        f"✓ {t('start.project', lang=lang)}: {result.project}",
+        f"✓ {t('start.work', lang=lang)}: {result.work_id} · {branch}",
+        f"✓ {t('start.selected_ai', lang=lang)}: {result.runtime_name}",
+        f"✓ {t('start.pathway', lang=lang)}: {result.pathway}",
+    ]
+    if result.workspace_isolated:
+        lines.append(f"✓ {t('start.workspace', lang=lang)}: {result.workspace_root}")
+    if result.preflight_actions:
+        lines.append(t("start.auto_prepared", lang=lang, count=len(result.preflight_actions)))
+
+    lines.extend(
         [
-            t("start.title", lang=lang),
             "",
-            f"Issue: #{result.issue} {result.issue_title}",
-            f"{t('start.project', lang=lang)}: {result.project}",
-            *(
-                [f"{t('start.workspace', lang=lang)}: {result.workspace_root}"]
-                if result.workspace_isolated
-                else []
-            ),
-            *(
-                [t("start.auto_prepared", lang=lang, count=len(result.preflight_actions))]
-                if result.preflight_actions
-                else []
-            ),
-            f"{t('start.candidate_intent', lang=lang)}: {result.intent_id} ({t('common.draft', lang=lang)})",
-            f"{t('start.work', lang=lang)}: {result.work_id}",
-            f"{t('start.branch', lang=lang)}: {result.branch or 'unknown'}"
-            + (f" ({t('start.base_branch', lang=lang)}: {result.base_branch})" if result.base_branch else ""),
-            f"{t('start.pathway', lang=lang)}: {result.pathway}",
-            f"{t('start.selected_ai', lang=lang)}: {result.runtime_name}",
-            "",
-            t("start.ai_next_move", lang=lang),
-            f"  1. {t('start.step1', lang=lang)}",
-            f"  2. {t('start.step2', lang=lang)}",
-            f"  3. {t('start.step3', lang=lang)}",
-            f"  4. {t('start.step4', lang=lang)}",
+            t("start.inception_ready", lang=lang),
+            f"  {t('start.inception_summary', lang=lang)}",
             "",
             t("start.human_boundary", lang=lang),
             f"  {t('start.boundary1', lang=lang)}",
             f"  {t('start.boundary2', lang=lang)}",
             "",
-            f"{t('start.governed_issue_read', lang=lang)}: {result.tool_run_id}",
-            f"{t('start.durable_intent', lang=lang)}: {result.intent_path}",
-            f"{t('start.portable_handoff', lang=lang)}: {result.handoff_path}",
-            f"{t('start.guided_skill', lang=lang)}: {result.skill_path}",
-            "",
             t("start.next_executor", lang=lang),
             f"  {t('start.launch_executor', lang=lang, runtime=result.runtime_name)}",
             f"  {t('start.no_prompt', lang=lang)}",
-            "",
-            f"{t('start.status', lang=lang)}: {result.status}",
         ]
     )
+
+    if details:
+        lines.extend(
+            [
+                "",
+                t("start.details", lang=lang),
+                f"  {t('start.governed_issue_read', lang=lang)}: {result.tool_run_id}",
+                f"  {t('start.durable_intent', lang=lang)}: {result.intent_path}",
+                f"  {t('start.portable_handoff', lang=lang)}: {result.handoff_path}",
+                f"  {t('start.guided_skill', lang=lang)}: {result.skill_path}",
+                f"  {t('start.base_branch', lang=lang)}: {result.base_branch or t('guided.unknown', lang=lang)}",
+            ]
+        )
+
+    lines.extend(["", f"{t('start.status', lang=lang)}: {result.status}"])
+    return "\n".join(lines)

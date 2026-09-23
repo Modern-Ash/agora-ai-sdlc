@@ -225,8 +225,6 @@ def test_prepare_start_reads_issue_through_governed_tool_and_creates_draft_inten
     assert "Do not fabricate or infer human approval." in handoff
 
 
-
-
 def test_prepare_start_ignores_unrelated_malformed_intent(tmp_path):
     workspace = FakeWorkspace(tmp_path)
     broken = tmp_path / ".agora" / "intents" / "issue-28" / "INTENT.md"

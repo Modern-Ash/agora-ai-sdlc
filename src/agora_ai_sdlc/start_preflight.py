@@ -282,14 +282,10 @@ def _body_only_equivalent(installed: Path, packaged: Path) -> bool:
 
 def _repair_bundled_adapter(target: Path, source: Path) -> bool:
     source_files = {
-        path.relative_to(source): path
-        for path in source.rglob("*")
-        if path.is_file() and not path.is_symlink()
+        path.relative_to(source): path for path in source.rglob("*") if path.is_file() and not path.is_symlink()
     }
     target_files = {
-        path.relative_to(target): path
-        for path in target.rglob("*")
-        if path.is_file() and not path.is_symlink()
+        path.relative_to(target): path for path in target.rglob("*") if path.is_file() and not path.is_symlink()
     }
 
     extra = sorted(set(target_files) - set(source_files))

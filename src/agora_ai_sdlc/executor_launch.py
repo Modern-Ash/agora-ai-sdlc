@@ -115,7 +115,7 @@ def build_executor_runner(runtime: RuntimeDiscovery, root: Path, handoff_path: P
     adapter = _adapter(runtime.id)
     executable = runtime.executable or runtime.command
     prompt = _inception_prompt(root, handoff_path)
-    values = {"executable": executable, "prompt": prompt}
+    values = {"executable": executable, "root": str(root.resolve()), "prompt": prompt}
     try:
         argv = [part.format(**values) for part in adapter.argv]
     except KeyError as error:

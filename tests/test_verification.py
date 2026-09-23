@@ -89,6 +89,17 @@ def test_non_allowlisted_command_is_blocked_without_execution(monkeypatch, tmp_p
     assert report.all_executed_commands_passed is False
 
 
+def test_persisted_report_remains_renderable_with_typed_commands(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr(verification, "build_execution_bundle", lambda *args, **kwargs: bundle(tmp_path))
+
+    report = build_verification_report(tmp_path, work="issue-14", run=False, persist=True)
+    rendered = verification.render_verification(report)
+
+    assert report.commands[0].status == "planned"
+    assert report.acceptance_coverage[0].criterion == "interpreter stop outcome explicit"
+    assert "[planned] pnpm test" in rendered
+
+
 def test_report_is_persisted_as_durable_bounded_json(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(verification, "build_execution_bundle", lambda *args, **kwargs: bundle(tmp_path))
 

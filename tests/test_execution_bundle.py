@@ -140,6 +140,33 @@ def test_execution_bundle_no_write_is_read_only_for_bundle_paths(monkeypatch, tm
     assert not (tmp_path / ".agora" / "ai-sdlc" / "bundles").exists()
 
 
+def test_framework_generated_paths_are_excluded_from_execution_context(monkeypatch, tmp_path: Path):
+    _repo(tmp_path)
+    _inception(tmp_path)
+
+    generated = tmp_path / ".agora-corrupted" / "sessions" / "old" / "RESULT.md"
+    generated.parent.mkdir(parents=True)
+    generated.write_text("old transcript\n", encoding="utf-8")
+
+    skill = tmp_path / ".agents" / "skills" / "agora-review" / "SKILL.md"
+    skill.parent.mkdir(parents=True)
+    skill.write_text("generated skill\n", encoding="utf-8")
+
+    config = tmp_path / "ai-sdlc" / "project.yaml"
+    config.parent.mkdir(parents=True)
+    config.write_text("schema: generated\n", encoding="utf-8")
+
+    monkeypatch.setattr(execution_bundle, "inspect_iteration", lambda *args, **kwargs: _status())
+
+    bundle = build_execution_bundle(tmp_path, work="issue-14", persist=False)
+
+    assert not any(path.startswith(".agora-corrupted/") for path in bundle.dirty_paths)
+    assert not any(path.startswith(".agents/skills/agora-") for path in bundle.dirty_paths)
+    assert not any(path.startswith("ai-sdlc/") for path in bundle.dirty_paths)
+    assert not any(path.startswith(".agora-corrupted/") for path in bundle.related_paths)
+    assert "README.md" in bundle.dirty_paths
+
+
 def test_related_files_use_bounded_issue_terms_not_full_repo_replay(monkeypatch, tmp_path: Path):
     _repo(tmp_path)
     _inception(tmp_path)

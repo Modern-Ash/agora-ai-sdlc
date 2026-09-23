@@ -17,7 +17,7 @@ from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 SCHEMA = "agora-ai-sdlc/executor-adapters/v1"
 MAX_PRESENTATION_CHARS = 6000
 INCEPTION_TIMEOUT_SECONDS = 300
-OPENCODE_FREE_MODEL = "opencode/deepseek-v4-flash-free"
+MAX_PROVIDER_DIAGNOSTIC_CHARS = 1600
 
 
 class ExecutorLaunchError(ValueError):
@@ -122,7 +122,6 @@ def build_executor_runner(runtime: RuntimeDiscovery, root: Path, handoff_path: P
         "executable": executable,
         "python": sys.executable,
         "root": str(root.resolve()),
-        "model": OPENCODE_FREE_MODEL if runtime.id == "opencode" else "",
         "prompt": prompt,
     }
     try:
@@ -179,6 +178,13 @@ def _session_stderr(path: Path) -> str:
     if not value or value == "(empty)":
         return ""
     return _bounded_output(value)
+
+
+def _compact_diagnostic(text: str) -> str:
+    value = " ".join(text.split())
+    if len(value) <= MAX_PROVIDER_DIAGNOSTIC_CHARS:
+        return value
+    return "… " + value[-(MAX_PROVIDER_DIAGNOSTIC_CHARS - 2) :]
 
 
 def _result(record, *, reused: bool) -> InceptionExecutionResult:
@@ -300,15 +306,16 @@ def launch_inception_executor(
     except (OSError, RuntimeError, ValueError) as error:
         latest_after = _matching_sessions(workspace, root, base_id)
         durable = latest_after[-1] if latest_after else None
+        error_text = str(error)
         suffix = ""
         if durable is not None:
             durable_path = Path(durable.path)
             provider_error = _session_stderr(durable_path)
             if provider_error:
-                provider_line = provider_error.splitlines()[-1]
-                suffix += f" Provider error: {provider_line}."
-            suffix += f" Durable diagnostics: {durable_path / 'SUMMARY.md'}."
-        raise ExecutorLaunchError(f"Inception executor {runtime.name} failed: {error}.{suffix}") from error
+                suffix += f" Provider error: {_compact_diagnostic(provider_error)}."
+            if "Durable diagnostics:" not in error_text:
+                suffix += f" Durable diagnostics: {durable_path / 'SUMMARY.md'}."
+        raise ExecutorLaunchError(f"Inception executor {runtime.name} failed: {error_text}.{suffix}") from error
 
     if completed.status != "completed":
         raise ExecutorLaunchError(

@@ -10,6 +10,13 @@ import threading
 from pathlib import Path
 from typing import TextIO
 
+MODEL_DISCOVERY_TIMEOUT_SECONDS = 15
+PREFERRED_FREE_MODELS = (
+    "opencode/nemotron-3-ultra-free",
+    "opencode/deepseek-v4-flash-free",
+    "opencode/mimo-v2.5-free",
+)
+LOCAL_FREE_PREFIXES = ("ollama/", "lmstudio/")
 TERMINAL_PROVIDER_ERRORS = (
     "usage limit has been reached",
     "usage limit reached",
@@ -18,14 +25,75 @@ TERMINAL_PROVIDER_ERRORS = (
     "quota exceeded",
     "quota has been reached",
     "invalid api key",
+    "api key is missing",
     "authentication failed",
     "unauthorized",
+    "forbidden",
+    "provider not found",
+    "model not found",
+    "provider is not configured",
 )
 
 
 def terminal_provider_error(line: str) -> bool:
     normalized = line.casefold()
     return any(marker in normalized for marker in TERMINAL_PROVIDER_ERRORS)
+
+
+def _normalize_diagnostic(text: str) -> str:
+    return " ".join(text.split())
+
+
+def _available_models(output: str) -> list[str]:
+    models = []
+    for raw in output.splitlines():
+        value = raw.strip()
+        if "/" in value and not any(character.isspace() for character in value):
+            models.append(value)
+    return models
+
+
+def _free_model_rank(model: str) -> tuple[int, int | str]:
+    normalized = model.casefold()
+    if normalized.startswith(LOCAL_FREE_PREFIXES):
+        return (0, normalized)
+    try:
+        return (1, PREFERRED_FREE_MODELS.index(normalized))
+    except ValueError:
+        pass
+    if "free" in normalized:
+        return (2, normalized)
+    return (3, normalized)
+
+
+def discover_free_model(*, executable: str, root: Path) -> str:
+    try:
+        result = subprocess.run(
+            [executable, "models"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=MODEL_DISCOVERY_TIMEOUT_SECONDS,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        raise RuntimeError(f"Cannot list OpenCode models: {error}") from error
+
+    if result.returncode != 0:
+        detail = _normalize_diagnostic(result.stderr or result.stdout)
+        raise RuntimeError(f"Cannot list OpenCode models: {detail or 'unknown error'}")
+
+    models = _available_models(result.stdout)
+    free_models = [
+        model for model in models if "free" in model.casefold() or model.casefold().startswith(LOCAL_FREE_PREFIXES)
+    ]
+    if not free_models:
+        raise RuntimeError(
+            "OpenCode has no free or local model available in the current project. "
+            "Configure Ollama/LM Studio or a free provider and verify it with 'opencode models'. "
+            "Paid Anthropic Claude and OpenAI GPT models are not selected automatically."
+        )
+    return min(free_models, key=_free_model_rank)
 
 
 def _pump(stream: TextIO, name: str, events: queue.Queue[tuple[str, str | None]]) -> None:
@@ -40,9 +108,16 @@ def run_opencode(
     *,
     executable: str,
     root: Path,
-    model: str,
     prompt: str,
+    model: str | None = None,
 ) -> int:
+    try:
+        selected_model = model or discover_free_model(executable=executable, root=root)
+    except RuntimeError as error:
+        print(f"OpenCode free model selection failed: {error}", file=sys.stderr)
+        return 69
+
+    print(f"OpenCode free model selected: {selected_model}", file=sys.stderr)
     command = [
         executable,
         "--print-logs",
@@ -51,7 +126,7 @@ def run_opencode(
         "run",
         "--auto",
         "--model",
-        model,
+        selected_model,
         "--dir",
         str(root.resolve()),
         prompt,
@@ -87,7 +162,7 @@ def run_opencode(
             target.write(line)
             target.flush()
             if name == "stderr" and terminal_provider_error(line):
-                fatal = " ".join(line.split())
+                fatal = _normalize_diagnostic(line)
                 if process.poll() is None:
                     process.kill()
                 break
@@ -105,7 +180,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--executable", required=True)
     parser.add_argument("--root", required=True)
-    parser.add_argument("--model", required=True)
+    parser.add_argument("--model")
     parser.add_argument("--prompt", required=True)
     args = parser.parse_args(argv)
     return run_opencode(

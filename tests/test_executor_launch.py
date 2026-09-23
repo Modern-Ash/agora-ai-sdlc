@@ -133,7 +133,7 @@ def test_launch_uses_governed_core_session_in_exact_workspace(tmp_path):
     assert started.executor_id == "ai-opencode"
     assert started.launch is True
     assert started.timeout_seconds == 300
-    assert "--model opencode/deepseek-v4-flash-free" in started.runner
+    assert "--model" not in started.runner
     assert result.status == "completed"
     assert result.reused is False
     assert "Plan ready." in result.output
@@ -262,8 +262,11 @@ def test_failed_executor_surfaces_provider_stderr(tmp_path):
                         f"# Session result {data.id}\n\n"
                         "## Standard output\n\n    (empty)\n\n"
                         "## Standard error\n\n"
-                        "    OpenCode terminal provider error: "
-                        "AI_APICallError: The usage limit has been reached"
+                        "    {\n"
+                        '      "type": "ProviderModelNotFoundError",\n'
+                        '      "message": "Model not found",\n'
+                        '      "model": "opencode/deepseek-v4-flash-free"\n'
+                        "    }"
                     ),
                 )
             )
@@ -282,7 +285,7 @@ def test_failed_executor_surfaces_provider_stderr(tmp_path):
 
     workspace = FailingWorkspace(tmp_path)
 
-    with pytest.raises(ExecutorLaunchError, match="usage limit has been reached"):
+    with pytest.raises(ExecutorLaunchError, match="Model not found") as captured:
         launch_inception_executor(
             tmp_path,
             runtime=runtime("opencode"),
@@ -291,3 +294,5 @@ def test_failed_executor_surfaces_provider_stderr(tmp_path):
             work_id="issue-14",
             workspace_factory=lambda cwd: workspace,
         )
+
+    assert "Provider error: }" not in str(captured.value)

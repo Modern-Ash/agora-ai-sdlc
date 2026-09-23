@@ -201,7 +201,14 @@ def _ensure_method(workspace: AgoraWorkspace, root: Path, actions: list[str]) ->
                 "version. Automatic repair was refused to preserve possible local customizations. "
                 "Use aisdlc doctor for diagnostics."
             ) from error
-    workspace.install_method(InstallMethodInput(source=str(source), scope="project", force=True))
+    for packaged in source.rglob("*"):
+        if not packaged.is_file():
+            continue
+        relative = packaged.relative_to(source)
+        destination = target / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(packaged.read_bytes())
+    load_method_contract(target)
     actions.append("method.repaired")
 
 

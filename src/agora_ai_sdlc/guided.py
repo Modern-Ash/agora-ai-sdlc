@@ -217,10 +217,7 @@ def command_plan(decision: GuidedDecision) -> tuple[tuple[str, str], ...]:
     if construction_needs_executor:
         commands.append(
             (
-                (
-                    "aisdlc continue "
-                    f"--swarm {decision.swarm} --work {decision.work} --run"
-                ),
+                (f"aisdlc continue --swarm {decision.swarm} --work {decision.work} --run"),
                 (
                     "Launch the assigned governed Construction executor with the deterministic "
                     "execution bundle; it must stop before approval or lifecycle transition."
@@ -267,9 +264,7 @@ def command_plan(decision: GuidedDecision) -> tuple[tuple[str, str], ...]:
             )
         )
 
-    if decision.target and not (
-        construction_needs_executor and decision.target == "inception"
-    ):
+    if decision.target and not (construction_needs_executor and decision.target == "inception"):
         commands.append(
             (
                 (

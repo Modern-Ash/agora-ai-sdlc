@@ -131,10 +131,14 @@ def test_start_preflight_repairs_formatter_wrapped_method_front_matter(tmp_path,
     result = ensure_start_ready(project, _runtime())
 
     assert any(action.startswith("state.front-matter-repaired:") for action in result.actions)
-    assert (
-        'criterion-stages: ["elaborated", "designed", "built", "verified", "deployed", "accepted"]'
-        in method.read_text(encoding="utf-8")
-    )
+    assert read_markdown(method).attributes["criterion-stages"] == [
+        "elaborated",
+        "designed",
+        "built",
+        "verified",
+        "deployed",
+        "accepted",
+    ]
 
 
 def test_start_preflight_repairs_formatter_wrapped_role_front_matter_without_changing_body(tmp_path, monkeypatch):

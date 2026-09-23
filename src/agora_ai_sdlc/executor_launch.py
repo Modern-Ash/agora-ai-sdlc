@@ -19,6 +19,7 @@ from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 SCHEMA = "agora-ai-sdlc/executor-adapters/v1"
 MAX_PRESENTATION_CHARS = 6000
 INCEPTION_TIMEOUT_SECONDS = 300
+INCEPTION_RETRY_TIMEOUT_SECONDS = 600
 MAX_PROVIDER_DIAGNOSTIC_CHARS = 1600
 
 
@@ -326,9 +327,12 @@ def launch_inception_executor(
 
     session_id = base_id
     retry_of = None
+    timeout_seconds = INCEPTION_TIMEOUT_SECONDS
     if latest is not None and latest.status == "failed":
         session_id = _retry_id(base_id, sessions)
         retry_of = latest.id
+        if getattr(latest, "exit_code", None) == 124:
+            timeout_seconds = INCEPTION_RETRY_TIMEOUT_SECONDS
     elif latest is not None and completed_but_invalid:
         session_id = _retry_id(base_id, sessions)
 
@@ -342,7 +346,7 @@ def launch_inception_executor(
         "launch": True,
     }
     if "timeout_seconds" in fields:
-        kwargs["timeout_seconds"] = INCEPTION_TIMEOUT_SECONDS
+        kwargs["timeout_seconds"] = timeout_seconds
     if "executor_id" in fields:
         kwargs["executor_id"] = executor_id
     if "retry_of" in fields and retry_of is not None:
@@ -357,17 +361,24 @@ def launch_inception_executor(
         durable = latest_after[-1] if latest_after else None
         error_text = str(error)
         suffix = ""
+        timed_out = durable is not None and getattr(durable, "exit_code", None) == 124
         if durable is not None:
             durable_path = Path(durable.path)
-            provider_error = _session_stderr(durable_path)
-            if provider_error:
-                suffix += f" Provider error: {_compact_diagnostic(provider_error)}."
+            if timed_out:
+                suffix += (
+                    f" Executor timed out after {INCEPTION_TIMEOUT_SECONDS} seconds; "
+                    f"the next governed retry will use {INCEPTION_RETRY_TIMEOUT_SECONDS} seconds."
+                )
+            else:
+                provider_error = _session_stderr(durable_path)
+                if provider_error:
+                    suffix += f" Provider error: {_compact_diagnostic(provider_error)}."
             if "Durable diagnostics:" not in error_text:
                 suffix += f" Durable diagnostics: {durable_path / 'SUMMARY.md'}."
         message = f"Inception executor {runtime.name} failed: {error_text}.{suffix}"
         raise ExecutorLaunchError(
             message,
-            recoverable=recoverable_llm_failure(message),
+            recoverable=timed_out or recoverable_llm_failure(message),
         ) from error
 
     if completed.status != "completed":

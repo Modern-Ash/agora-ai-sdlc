@@ -114,7 +114,7 @@ def test_opencode_selection_chooses_provider_then_model_and_includes_ollama(monk
         ),
     )
     monkeypatch.setattr(
-        "agora_ai_sdlc.guided_session.list_ollama_models",
+        "agora_ai_sdlc.guided_session.list_ollama_agent_models",
         lambda **kwargs: (
             "ollama/claude:latest",
             "ollama/gpt-oss:20b",

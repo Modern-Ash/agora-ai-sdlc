@@ -20,6 +20,7 @@ PREFERRED_FREE_MODELS = (
 )
 LOCAL_FREE_PREFIXES = ("ollama/", "lmstudio/")
 
+
 def terminal_provider_error(line: str) -> bool:
     return recoverable_llm_failure(line)
 

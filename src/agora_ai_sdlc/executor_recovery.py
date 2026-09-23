@@ -98,11 +98,7 @@ def recovery_groups(
     ollama_model_lister: Callable[..., tuple[str, ...]] = list_ollama_models,
 ) -> tuple[ExecutorModelGroup, ...]:
     discovered = tuple(discovery(root))
-    executors = [
-        item
-        for item in discovered
-        if item.installed and item.responsive and executor_capable(item.id)
-    ]
+    executors = [item for item in discovered if item.installed and item.responsive and executor_capable(item.id)]
     groups: list[ExecutorModelGroup] = []
 
     opencode = next((item for item in executors if item.id == "opencode"), None)
@@ -119,11 +115,7 @@ def recovery_groups(
             pass
 
         ollama = next(
-            (
-                item
-                for item in discovered
-                if item.id == "ollama" and item.installed and item.responsive
-            ),
+            (item for item in discovered if item.id == "ollama" and item.installed and item.responsive),
             None,
         )
         try:

@@ -11,7 +11,6 @@ from pathlib import Path
 
 import yaml
 from agora.markdown import read_markdown
-from agora.sdlc import SdlcService
 from agora.model import (
     CreateIntentInput,
     CreateWorkInput,
@@ -19,6 +18,7 @@ from agora.model import (
     InstallToolAdapterInput,
     InvokeToolInput,
 )
+from agora.sdlc import SdlcService
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.depth_profiles import asset_root

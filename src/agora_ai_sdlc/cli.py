@@ -80,6 +80,10 @@ def main(argv: list[str] | None = None) -> int:
     start.add_argument(
         "--agent", choices=["codex", "claude", "opencode", "ollama"], help="AI runtime for Level 1 Plan preparation"
     )
+    start.add_argument(
+        "--model",
+        help="Explicit provider/model id for OpenCode, for example ollama/claude or openai/gpt-5.5",
+    )
     start.add_argument("--swarm", default="delivery", help="Agora delivery swarm used for the governed issue read")
     start.add_argument("--actor", default="product-owner", help="Agora actor used for the governed issue read")
     start.add_argument("--root", default=".", help="Project root")
@@ -297,32 +301,73 @@ def main(argv: list[str] | None = None) -> int:
             )
         return 0
     if args.command == "start":
+        from agora_ai_sdlc.executor_recovery import prompt_executor_recovery
         from agora_ai_sdlc.observation_ui import HumanChannel, safe_text
-        from agora_ai_sdlc.start_flow import StartFlowError, prepare_start, render_start
+        from agora_ai_sdlc.start_flow import (
+            StartExecutorError,
+            StartFlowError,
+            prepare_start,
+            render_start,
+        )
+
+        if args.model and args.agent not in {None, "opencode"}:
+            print("--model can only be used with --agent opencode", file=sys.stderr)
+            return 2
+
+        language = resolve_language(args.lang)
+        selected_agent = args.agent or ("opencode" if args.model else None)
+        selected_model = args.model
+        interactive_recovery = (
+            not args.json
+            and not args.ui_file
+            and not args.prepare_only
+            and sys.stdin.isatty()
+            and sys.stderr.isatty()
+        )
 
         try:
             with HumanChannel(
                 path=Path(args.ui_file) if args.ui_file else None,
                 stream=sys.stderr if not args.json and not args.ui_file and sys.stderr.isatty() else None,
-                lang=resolve_language(args.lang),
+                lang=language,
             ) as channel:
                 options = {"progress": channel.event} if channel.active else {}
-                result = prepare_start(
-                    Path(args.root),
-                    issue=args.issue,
-                    project=args.project,
-                    agent=args.agent,
-                    swarm=args.swarm,
-                    actor=args.actor,
-                    launch_executor=not args.prepare_only,
-                    **options,
-                )
+                while True:
+                    try:
+                        result = prepare_start(
+                            Path(args.root),
+                            issue=args.issue,
+                            project=args.project,
+                            agent=selected_agent,
+                            model=selected_model,
+                            swarm=args.swarm,
+                            actor=args.actor,
+                            launch_executor=not args.prepare_only,
+                            **options,
+                        )
+                        break
+                    except StartExecutorError as error:
+                        if not interactive_recovery or not error.recoverable:
+                            raise
+                        choice = prompt_executor_recovery(
+                            Path(error.workspace_root),
+                            error=safe_text(str(error), max_chars=1024),
+                            input_stream=sys.stdin,
+                            output_stream=sys.stderr,
+                            lang=language,
+                        )
+                        if choice is None:
+                            print("Executor recovery cancelled.", file=sys.stderr)
+                            return 2
+                        selected_agent = choice.agent
+                        selected_model = choice.model
+
                 if args.json:
                     print(json.dumps(result.snapshot(), sort_keys=True))
                 elif args.ui_file:
-                    channel.write(render_start(result, lang=resolve_language(args.lang), details=args.details))
+                    channel.write(render_start(result, lang=language, details=args.details))
                 else:
-                    print(render_start(result, lang=resolve_language(args.lang), details=args.details))
+                    print(render_start(result, lang=language, details=args.details))
         except KeyboardInterrupt:
             print("Start cancelled by user.", file=sys.stderr)
             return 130

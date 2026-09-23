@@ -146,7 +146,7 @@ def test_ollama_model_without_tools_is_not_agent_capable(monkeypatch, tmp_path: 
 def test_list_ollama_agent_models_filters_non_tool_models(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(
         opencode_runner,
-        "list_ollama_agent_models",
+        "list_ollama_models",
         lambda **kwargs: (
             "ollama/qwen3:8b",
             "ollama/qwen2.5-coder:1.5b-base",

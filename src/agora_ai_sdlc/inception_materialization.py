@@ -192,15 +192,16 @@ def materialize_deterministic_inception(
     existing = workspace.list_work_artifacts(swarm_id, work_id)
     existing_by_kind = {record.kind: record for record in existing}
 
-    if "requirements" not in existing_by_kind:
-        if _write_generated(requirements, _requirements_document(issue)):
-            actions.append("artifact.generated:requirements")
-    if "unit-of-work" not in existing_by_kind:
-        if _write_generated(
-            unit_of_work,
-            _unit_of_work_document(issue, work_id=work_id, pathway=pathway),
-        ):
-            actions.append("artifact.generated:unit-of-work")
+    if "requirements" not in existing_by_kind and _write_generated(
+        requirements,
+        _requirements_document(issue),
+    ):
+        actions.append("artifact.generated:requirements")
+    if "unit-of-work" not in existing_by_kind and _write_generated(
+        unit_of_work,
+        _unit_of_work_document(issue, work_id=work_id, pathway=pathway),
+    ):
+        actions.append("artifact.generated:unit-of-work")
 
     if "intent" not in existing_by_kind:
         _ensure_artifact(

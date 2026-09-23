@@ -350,6 +350,7 @@ def test_preview_treats_linked_git_worktree_as_existing_repository(tmp_path):
     (primary / "README.md").write_text("# demo\n", encoding="utf-8")
     subprocess.run(["git", "add", "README.md"], cwd=primary, check=True)
     subprocess.run(["git", "commit", "-m", "initial"], cwd=primary, check=True, capture_output=True)
+    subprocess.run(["git", "switch", "-c", "feature/primary"], cwd=primary, check=True, capture_output=True)
 
     linked = tmp_path / "linked"
     subprocess.run(["git", "worktree", "add", str(linked), "main"], cwd=primary, check=True, capture_output=True)

@@ -113,7 +113,11 @@ def main(argv: list[str] | None = None) -> int:
     verification.add_argument("--root", default=".", help="Project root")
     verification.add_argument("--swarm", help="Limit to one delivery swarm")
     verification.add_argument("--work", help="Limit to one work item")
-    verification.add_argument("--run", action="store_true", help="Execute only allowlisted deterministic verification commands")
+    verification.add_argument(
+        "--run",
+        action="store_true",
+        help="Execute only allowlisted deterministic verification commands",
+    )
     verification.add_argument("--timeout", type=int, default=300, help="Per-command timeout in seconds")
     verification.add_argument("--json", action="store_true", help="Print machine-readable verification report")
     verification.add_argument("--no-write", action="store_true", help="Do not persist VERIFICATION.json under .agora")

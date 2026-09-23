@@ -47,11 +47,7 @@ def recovery_choices(
     model_lister: Callable[..., tuple[str, ...]] = list_available_models,
 ) -> tuple[ExecutorRecoveryChoice, ...]:
     choices: list[ExecutorRecoveryChoice] = []
-    runtimes = [
-        item
-        for item in discovery(root)
-        if item.installed and item.responsive and executor_capable(item.id)
-    ]
+    runtimes = [item for item in discovery(root) if item.installed and item.responsive and executor_capable(item.id)]
 
     opencode = next((item for item in runtimes if item.id == "opencode"), None)
     if opencode is not None:

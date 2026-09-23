@@ -13,6 +13,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
     "en": {
         "start.title": "Agora AI-SDLC | Start",
         "start.project": "Project",
+        "start.workspace": "Isolated workspace",
+        "start.auto_prepared": "Automatic preparation: {count} safe adjustment(s)",
         "start.candidate_intent": "Candidate Intent",
         "start.work": "Governed Work",
         "start.branch": "Work branch",
@@ -124,6 +126,8 @@ _MESSAGES: dict[str, dict[str, str]] = {
     "es": {
         "start.title": "Agora AI-SDLC | Inicio",
         "start.project": "Proyecto",
+        "start.workspace": "Workspace aislado",
+        "start.auto_prepared": "Preparación automática: {count} ajuste(s) seguro(s)",
         "start.candidate_intent": "Intent candidato",
         "start.work": "Work gobernado",
         "start.branch": "Rama del Work",

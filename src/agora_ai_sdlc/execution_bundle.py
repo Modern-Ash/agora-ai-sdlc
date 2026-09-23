@@ -32,6 +32,9 @@ STOP_WORDS = {
     "this",
     "with",
 }
+FRAMEWORK_EXACT_PATHS = {
+    "agora/PACKS.lock.md",
+}
 FRAMEWORK_PATH_PREFIXES = (
     ".agora/",
     ".agora-corrupted/",
@@ -43,7 +46,9 @@ FRAMEWORK_PATH_PREFIXES = (
 
 def _is_framework_path(path: str) -> bool:
     normalized = path.replace("\\", "/").removeprefix("./")
-    return any(normalized.startswith(prefix) for prefix in FRAMEWORK_PATH_PREFIXES)
+    return normalized in FRAMEWORK_EXACT_PATHS or any(
+        normalized.startswith(prefix) for prefix in FRAMEWORK_PATH_PREFIXES
+    )
 
 
 RISK_PATTERNS = (
@@ -144,6 +149,20 @@ def resolve_work_workspace(root: Path, work: str | None) -> Path:
     if code == 0 and current == expected_branch:
         return root
     return root
+
+
+def _infer_base_branch(root: Path, current_branch: str | None) -> str | None:
+    code, remote_head, _ = _git(root, "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD")
+    if code == 0 and remote_head.startswith("origin/"):
+        candidate = remote_head.removeprefix("origin/")
+        if candidate != current_branch:
+            return candidate
+
+    for candidate in ("main", "master"):
+        code, _, _ = _git(root, "show-ref", "--verify", "--quiet", f"refs/heads/{candidate}")
+        if code == 0 and candidate != current_branch:
+            return candidate
+    return None
 
 
 def _head(root: Path) -> str | None:
@@ -377,7 +396,9 @@ def build_execution_bundle(
     repository = inspect_repository(root)
 
     objective, acceptance, inception_path = _inception_facts(root, status.work or work)
-    changed = _changed_paths(root, status.base_branch)
+    branch = status.work_branch or status.current_branch
+    base_branch = status.base_branch or _infer_base_branch(root, branch)
+    changed = _changed_paths(root, base_branch)
     dirty = _status_paths(root)
     keywords = _keywords(objective, acceptance)
     related = _related_paths(
@@ -408,8 +429,8 @@ def build_execution_bundle(
         work=status.work or work,
         stage=status.state,
         next_action=status.agent_context()["next_action"],
-        branch=status.work_branch or status.current_branch,
-        base_branch=status.base_branch,
+        branch=branch,
+        base_branch=base_branch,
         head=_head(root),
         objective=objective,
         acceptance_criteria=acceptance,

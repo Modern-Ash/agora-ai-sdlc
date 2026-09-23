@@ -117,6 +117,19 @@ def test_execution_bundle_resolves_issue_worktree_before_inspection(monkeypatch,
     assert bundle.acceptance_criteria == ("execution budget path", "stop outcome explicit")
 
 
+def test_execution_bundle_infers_main_as_base_for_legacy_work(monkeypatch, tmp_path: Path):
+    _repo(tmp_path)
+    _inception(tmp_path)
+    status = _status()
+    status.base_branch = None
+    monkeypatch.setattr(execution_bundle, "inspect_iteration", lambda *args, **kwargs: status)
+
+    bundle = build_execution_bundle(tmp_path, work="issue-14", persist=False)
+
+    assert bundle.branch == "ai-sdlc/issue-14"
+    assert bundle.base_branch == "main"
+
+
 def test_execution_bundle_collects_git_repo_and_inception_facts(monkeypatch, tmp_path: Path):
     _repo(tmp_path)
     _inception(tmp_path)
@@ -173,6 +186,22 @@ def test_execution_bundle_no_write_is_read_only_for_bundle_paths(monkeypatch, tm
     assert bundle.json_path is None
     assert bundle.markdown_path is None
     assert not (tmp_path / ".agora" / "ai-sdlc" / "bundles").exists()
+
+
+def test_top_level_generated_agora_pack_lock_is_excluded(monkeypatch, tmp_path: Path):
+    _repo(tmp_path)
+    _inception(tmp_path)
+
+    generated = tmp_path / "agora" / "PACKS.lock.md"
+    generated.parent.mkdir(parents=True)
+    generated.write_text("generated lock\n", encoding="utf-8")
+
+    monkeypatch.setattr(execution_bundle, "inspect_iteration", lambda *args, **kwargs: _status())
+
+    bundle = build_execution_bundle(tmp_path, work="issue-14", persist=False)
+
+    assert "agora/PACKS.lock.md" not in bundle.dirty_paths
+    assert "agora/PACKS.lock.md" not in bundle.related_paths
 
 
 def test_framework_generated_paths_are_excluded_from_execution_context(monkeypatch, tmp_path: Path):

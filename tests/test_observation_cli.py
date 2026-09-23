@@ -96,6 +96,7 @@ def test_start_progress_never_changes_result_or_handoff(tmp_path):
         **options,
         isolation=no_isolation,
         preflight=no_preflight,
+        launch_executor=False,
     )
     content = Path(baseline.handoff_path).read_bytes()
     events = []
@@ -104,6 +105,7 @@ def test_start_progress_never_changes_result_or_handoff(tmp_path):
         **options,
         isolation=no_isolation,
         preflight=no_preflight,
+        launch_executor=False,
         progress=events.append,
     )
     assert observed.snapshot() == baseline.snapshot()
@@ -120,6 +122,7 @@ def test_start_json_uses_explicit_file_for_progress(tmp_path, monkeypatch, capsy
     workspace = FakeWorkspace(tmp_path)
 
     def prepared(root, **options):
+        options["launch_executor"] = False
         return original(
             root,
             **options,
@@ -154,9 +157,9 @@ def test_start_json_uses_explicit_file_for_progress(tmp_path, monkeypatch, capsy
     assert out.err == ""
     assert json.loads(out.out)["intent_id"] == "issue-11"
     human = file.read_text()
-    assert "Start no lanzó el executor" in human
+    assert "Inicio del executor omitido por modo prepare-only explícito" in human
     assert "Leyendo el issue" in human
-    assert "100% 10/10" in human
+    assert "100% 12/12" in human
     assert "Work gobernado y rama del issue resueltos" in human
     assert "[" not in out.out.split("intent_id")[0]  # no progress prefix
 

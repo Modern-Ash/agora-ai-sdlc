@@ -19,6 +19,7 @@ class InceptionHandoff:
     branch: str | None
     base_branch: str | None
     pathway: str
+    project_root: str
     path: str
     skill: str
 
@@ -39,6 +40,7 @@ def write_inception_handoff(
 ) -> InceptionHandoff:
     """Persist the portable Start -> Inception contract for any compatible agent."""
 
+    root = root.resolve()
     target = root / ".agora" / "ai-sdlc" / "handoffs" / intent_id / "INCEPTION_HANDOFF.md"
     target.parent.mkdir(parents=True, exist_ok=True)
     skill = skill_path()
@@ -56,6 +58,7 @@ def write_inception_handoff(
                 f'branch: "{branch or ""}"',
                 f'base-branch: "{base_branch or ""}"',
                 f'pathway: "{pathway}"',
+                f'project-root: "{root}"',
                 'status: "prepared"',
                 "---",
                 "",
@@ -74,6 +77,8 @@ def write_inception_handoff(
                 "",
                 "## Required inputs",
                 "",
+                f"- Project root: `{root}`",
+                "- Executor must verify its current working directory resolves exactly to this project root before changing files.",
                 f"- Durable Intent: `.agora/intents/{intent_id}/INTENT.md`",
                 f"- Governed Work: `{swarm_id}/{work_id}`",
                 f"- Work branch: `{branch or 'unbound'}` (base: `{base_branch or 'unknown'}`)",
@@ -125,6 +130,7 @@ def write_inception_handoff(
         branch=branch,
         base_branch=base_branch,
         pathway=pathway,
+        project_root=str(root),
         path=str(target),
         skill=str(skill),
     )

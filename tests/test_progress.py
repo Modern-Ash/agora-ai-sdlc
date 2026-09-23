@@ -12,13 +12,15 @@ def test_start_progress_is_deterministic_and_reaches_100_percent():
         "start.intent-ready",
         "start.pathway",
         "start.handoff",
+        "start.executor-launch",
+        "start.executor-complete",
         "start.prepared",
     )
 
     rendered = [start_progress(code, code) for code in codes]
 
-    assert rendered[0] == "[█░░░░░░░░░]  10%  1/10  start.inspect"
-    assert rendered[-1] == "[██████████] 100%  10/10  start.prepared"
+    assert rendered[0] == "[█░░░░░░░░░]   8%  1/12  start.inspect"
+    assert rendered[-1] == "[██████████] 100%  12/12  start.prepared"
 
 
 def test_reused_issue_read_advances_same_progress_step():
@@ -26,8 +28,8 @@ def test_reused_issue_read_advances_same_progress_step():
     reused = start_progress("start.issue-reused", "reused")
 
     assert fresh is not None and reused is not None
-    assert "6/10" in fresh
-    assert "6/10" in reused
+    assert "6/12" in fresh
+    assert "6/12" in reused
 
 
 def test_lifecycle_progress_represents_durable_stage_position_only():

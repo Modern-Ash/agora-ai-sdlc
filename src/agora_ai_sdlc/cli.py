@@ -85,6 +85,11 @@ def main(argv: list[str] | None = None) -> int:
     start.add_argument("--root", default=".", help="Project root")
     start.add_argument("--json", action="store_true", help="Print machine-readable start handoff")
     start.add_argument("--details", action="store_true", help="Show durable paths and governed read identifiers")
+    start.add_argument(
+        "--prepare-only",
+        action="store_true",
+        help="Prepare the portable Inception handoff without launching the selected executor",
+    )
     start.add_argument("--lang", choices=SUPPORTED_LANGUAGES, help="Presentation language")
     start.add_argument("--ui-file", help="Write human progress to a new file, separate from agent output")
     guided = sub.add_parser("continue", help="Show the next governed decision in human-friendly AI-SDLC language")
@@ -309,6 +314,7 @@ def main(argv: list[str] | None = None) -> int:
                     agent=args.agent,
                     swarm=args.swarm,
                     actor=args.actor,
+                    launch_executor=not args.prepare_only,
                     **options,
                 )
                 if args.json:

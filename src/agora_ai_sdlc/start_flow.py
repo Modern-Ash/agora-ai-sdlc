@@ -22,6 +22,12 @@ from agora.sdlc import SdlcService
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.depth_profiles import asset_root
+from agora_ai_sdlc.executor_launch import (
+    ExecutorLaunchError,
+    InceptionExecutionResult,
+    executor_capable,
+    launch_inception_executor,
+)
 from agora_ai_sdlc.i18n import t
 from agora_ai_sdlc.inception_handoff import write_inception_handoff
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
@@ -57,7 +63,12 @@ class StartFlowResult:
     workspace_root: str
     workspace_isolated: bool
     preflight_actions: tuple[str, ...]
-    status: str = "human-review-required"
+    executor_session_id: str | None = None
+    executor_result_path: str | None = None
+    executor_summary_path: str | None = None
+    executor_output: str | None = None
+    executor_reused: bool = False
+    status: str = "inception-prepared"
 
     def snapshot(self) -> dict:
         return asdict(self)
@@ -148,14 +159,24 @@ def _select_runtime(
     if requested:
         for item in available:
             if item.id == requested:
+                if not executor_capable(item.id):
+                    raise StartFlowError(
+                        f"Requested runtime {requested!r} is not a repository executor. "
+                        "Use an agent host such as OpenCode and configure its model provider separately."
+                    )
                 return item
         raise StartFlowError(f"Requested AI runtime {requested!r} is not installed and responsive")
+    available = [item for item in available if executor_capable(item.id)]
     configured = [item for item in available if item.configured]
     if configured:
         return configured[0]
     if available:
         return available[0]
-    raise StartFlowError("No responsive AI CLI runtime was detected")
+    raise StartFlowError(
+        "No responsive repository-capable AI executor was detected. "
+        "Install or configure OpenCode, Codex, or Claude Code. "
+        "Ollama alone is a model provider, not the repository executor."
+    )
 
 
 _LEGACY_PRODUCT_OWNER_TOOL_CAPABILITIES = (
@@ -350,6 +371,8 @@ def prepare_start(
     runtime_discovery: Callable[[Path], tuple[RuntimeDiscovery, ...]] = discover_runtimes,
     preflight: Callable[..., StartPreparationResult] = ensure_start_ready,
     isolation: Callable[[Path, int], tuple[Path, str | None]] = isolate_dirty_work,
+    executor_launcher: Callable[..., InceptionExecutionResult] = launch_inception_executor,
+    launch_executor: bool = True,
     progress: Callable[[str], None] | None = None,
 ) -> StartFlowResult:
     """Read one issue through Core, persist a draft Intent, and stop for human review."""
@@ -480,6 +503,28 @@ def prepare_start(
         pathway=pathway,
     )
 
+    execution: InceptionExecutionResult | None = None
+    status = "inception-prepared"
+    if launch_executor:
+        notify("start.executor-launch")
+        try:
+            execution = executor_launcher(
+                root,
+                runtime=runtime,
+                handoff_path=Path(handoff.path),
+                swarm_id=swarm,
+                work_id=work_record.id,
+                responsible_actor=actor,
+                workspace_factory=workspace_factory,
+            )
+        except ExecutorLaunchError as error:
+            raise StartFlowError(str(error)) from error
+        notify("start.executor-complete")
+        status = "human-review-required"
+    else:
+        notify("start.executor-skipped-launch")
+        notify("start.executor-skipped-complete")
+
     notify("start.prepared")
     return StartFlowResult(
         project=project,
@@ -501,11 +546,17 @@ def prepare_start(
         workspace_root=str(root),
         workspace_isolated=isolation_action is not None,
         preflight_actions=tuple(([isolation_action] if isolation_action is not None else []) + list(prepared.actions)),
+        executor_session_id=execution.session_id if execution is not None else None,
+        executor_result_path=execution.result_path if execution is not None else None,
+        executor_summary_path=execution.summary_path if execution is not None else None,
+        executor_output=execution.output if execution is not None else None,
+        executor_reused=execution.reused if execution is not None else False,
+        status=status,
     )
 
 
 def render_start(result: StartFlowResult, *, lang: str = "en", details: bool = False) -> str:
-    """Render a concise human Start card; durable internals remain available on demand."""
+    """Render the human Start outcome after automatic Inception execution when enabled."""
 
     branch = result.branch or t("guided.unknown", lang=lang)
     lines = [
@@ -518,31 +569,50 @@ def render_start(result: StartFlowResult, *, lang: str = "en", details: bool = F
         f"✓ {t('start.pathway', lang=lang)}: {result.pathway}",
     ]
     if result.workspace_isolated:
-        lines.append(f"✓ {t('start.workspace', lang=lang)}: {result.workspace_root}")
+        lines.append(f"✓ {t('start.workspace_ready', lang=lang)}")
     if result.preflight_actions:
-        lines.append(t("start.auto_prepared", lang=lang, count=len(result.preflight_actions)))
+        count = len(result.preflight_actions)
+        key = "start.auto_prepared_one" if count == 1 else "start.auto_prepared_many"
+        lines.append(t(key, lang=lang, count=count))
 
-    lines.extend(
-        [
-            "",
-            t("start.inception_ready", lang=lang),
-            f"  {t('start.inception_summary', lang=lang)}",
-            "",
-            t("start.human_boundary", lang=lang),
-            f"  {t('start.boundary1', lang=lang)}",
-            f"  {t('start.boundary2', lang=lang)}",
-            "",
-            t("start.next_executor", lang=lang),
-            f"  {t('start.launch_executor', lang=lang, runtime=result.runtime_name)}",
-            f"  {t('start.no_prompt', lang=lang)}",
-        ]
-    )
+    if result.executor_session_id is not None:
+        executor_state = (
+            t("start.executor_reused", lang=lang)
+            if result.executor_reused
+            else t("start.executor_completed", lang=lang)
+        )
+        lines.append(f"✓ {result.runtime_name}: {executor_state}")
+        lines.extend(
+            [
+                "",
+                t("start.proposal_ready", lang=lang),
+                "",
+                result.executor_output or t("start.proposal_unavailable", lang=lang),
+                "",
+                t("start.human_decision_required", lang=lang),
+                f"  {t('start.boundary1', lang=lang)}",
+                f"  {t('start.boundary2', lang=lang)}",
+            ]
+        )
+    else:
+        lines.extend(
+            [
+                "",
+                t("start.inception_ready", lang=lang),
+                f"  {t('start.inception_summary', lang=lang)}",
+                "",
+                t("start.next_executor", lang=lang),
+                f"  {t('start.launch_executor', lang=lang, runtime=result.runtime_name)}",
+                f"  {t('start.no_prompt', lang=lang)}",
+            ]
+        )
 
     if details:
         lines.extend(
             [
                 "",
                 t("start.details", lang=lang),
+                f"  {t('start.workspace', lang=lang)}: {result.workspace_root}",
                 f"  {t('start.governed_issue_read', lang=lang)}: {result.tool_run_id}",
                 f"  {t('start.durable_intent', lang=lang)}: {result.intent_path}",
                 f"  {t('start.portable_handoff', lang=lang)}: {result.handoff_path}",
@@ -550,6 +620,14 @@ def render_start(result: StartFlowResult, *, lang: str = "en", details: bool = F
                 f"  {t('start.base_branch', lang=lang)}: {result.base_branch or t('guided.unknown', lang=lang)}",
             ]
         )
+        if result.executor_session_id is not None:
+            lines.extend(
+                [
+                    f"  {t('start.executor_session', lang=lang)}: {result.executor_session_id}",
+                    f"  {t('start.executor_result', lang=lang)}: {result.executor_result_path}",
+                    f"  {t('start.executor_summary', lang=lang)}: {result.executor_summary_path}",
+                ]
+            )
 
     lines.extend(["", f"{t('start.status', lang=lang)}: {result.status}"])
     return "\n".join(lines)

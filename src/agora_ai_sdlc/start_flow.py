@@ -50,10 +50,12 @@ class StartExecutorError(StartFlowError):
         message: str,
         *,
         runtime_id: str,
+        workspace_root: str,
         recoverable: bool,
     ) -> None:
         super().__init__(message)
         self.runtime_id = runtime_id
+        self.workspace_root = workspace_root
         self.recoverable = recoverable
 
 
@@ -540,6 +542,7 @@ def prepare_start(
             raise StartExecutorError(
                 str(error),
                 runtime_id=runtime.id,
+                workspace_root=str(root),
                 recoverable=error.recoverable,
             ) from error
         notify("start.executor-complete")

@@ -30,13 +30,16 @@ LANGUAGE_EXTENSIONS = {
     ".rs": "Rust",
 }
 BUILD_MARKERS = {
-    "pom.xml": ("Maven", "mvn test"),
-    "build.gradle": ("Gradle", "./gradlew test"),
-    "build.gradle.kts": ("Gradle", "./gradlew test"),
-    "package.json": ("Node", "npm test"),
-    "pnpm-workspace.yaml": ("pnpm", "pnpm test"),
-    "pyproject.toml": ("Python", "pytest"),
-    "requirements.txt": ("Python", "pytest"),
+    "pom.xml": "Maven",
+    "build.gradle": "Gradle",
+    "build.gradle.kts": "Gradle",
+    "package.json": "Node",
+    "pnpm-workspace.yaml": "pnpm",
+    "pnpm-lock.yaml": "pnpm",
+    "yarn.lock": "Yarn",
+    "package-lock.json": "npm",
+    "pyproject.toml": "Python",
+    "requirements.txt": "Python",
 }
 SECTION_ALIASES = {
     "objective": ("objective", "objetivo"),
@@ -107,6 +110,7 @@ def _section_values(sections: dict[str, list[str]], aliases: tuple[str, ...]) ->
         line = re.sub(r"^[-*+]\s+", "", line)
         line = re.sub(r"^\d+[.)]\s+", "", line)
         line = re.sub(r"^\[[ xX]\]\s*", "", line)
+        line = line.rstrip(";").strip()
         if line and not line.startswith("#"):
             values.append(line)
     return tuple(dict.fromkeys(values))
@@ -151,6 +155,38 @@ def normalize_issue(payload: dict) -> IssueFacts:
     )
 
 
+def _is_test_file(path: Path) -> bool:
+    lowered = path.as_posix().casefold()
+    name = path.name.casefold()
+    stem = path.stem.casefold()
+    return (
+        "/test/" in lowered
+        or "/tests/" in lowered
+        or "/__tests__/" in lowered
+        or name.startswith("test_")
+        or stem.endswith((".test", ".spec", "_test", "test"))
+        or name.endswith(("test.java", "tests.java", "test.kt", "tests.kt"))
+    )
+
+
+def _verification_commands(root: Path, build_systems: tuple[str, ...]) -> tuple[str, ...]:
+    commands: list[str] = []
+    systems = set(build_systems)
+    if "Maven" in systems:
+        commands.append("mvn test")
+    if "Gradle" in systems:
+        commands.append("./gradlew test")
+    if "pnpm" in systems:
+        commands.append("pnpm test")
+    elif "Yarn" in systems:
+        commands.append("yarn test")
+    elif "npm" in systems or "Node" in systems:
+        commands.append("npm test")
+    if "Python" in systems:
+        commands.append("pytest")
+    return tuple(dict.fromkeys(commands))
+
+
 def inspect_repository(root: Path, *, max_files: int = 5000) -> RepositoryFacts:
     root = root.resolve()
     languages: Counter[str] = Counter()
@@ -167,10 +203,9 @@ def inspect_repository(root: Path, *, max_files: int = 5000) -> RepositoryFacts:
     except OSError:
         top_level = []
 
-    for marker, (build_system, test_command) in BUILD_MARKERS.items():
+    for marker, build_system in BUILD_MARKERS.items():
         if (root / marker).is_file():
             build_systems.append(build_system)
-            test_commands.append(test_command)
 
     stop = False
     for current, directories, filenames in os.walk(root):
@@ -187,16 +222,17 @@ def inspect_repository(root: Path, *, max_files: int = 5000) -> RepositoryFacts:
             language = LANGUAGE_EXTENSIONS.get(path.suffix.casefold())
             if language:
                 languages[language] += 1
-            lowered = path.as_posix().casefold()
-            if "/test/" in lowered or "/tests/" in lowered or path.name.casefold().startswith("test_"):
+            if _is_test_file(path):
                 test_files += 1
         if stop:
             break
 
+    systems = tuple(dict.fromkeys(build_systems))
+    test_commands = list(_verification_commands(root, systems))
     return RepositoryFacts(
         languages=tuple(name for name, _ in languages.most_common()),
-        build_systems=tuple(dict.fromkeys(build_systems)),
-        test_commands=tuple(dict.fromkeys(test_commands)),
+        build_systems=systems,
+        test_commands=tuple(test_commands),
         top_level=tuple(top_level),
         files_scanned=files_scanned,
         test_files=test_files,

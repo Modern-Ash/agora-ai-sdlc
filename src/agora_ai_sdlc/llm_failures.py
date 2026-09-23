@@ -21,6 +21,8 @@ RECOVERABLE_LLM_MARKERS = (
     "model not found",
     "provider is not configured",
     "free model selection failed",
+    "ollama pull failed",
+    "cannot pull ollama model",
     "service temporarily overloaded",
     "service overloaded",
     "service unavailable",

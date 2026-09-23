@@ -72,9 +72,17 @@ def _ollama_runtime_env(*, executable: str, root: Path, model: str) -> dict[str,
         patch = {
             "providers": {
                 "ollama": {
+                    "name": "Ollama (local)",
+                    "package": "aisdk:@ai-sdk/openai-compatible",
                     "settings": {
                         "baseURL": "http://127.0.0.1:11434/v1",
-                    }
+                    },
+                    "models": {
+                        model_id: {
+                            "modelID": model_id,
+                            "name": model_id,
+                        }
+                    },
                 }
             }
         }

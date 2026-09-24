@@ -328,7 +328,4 @@ def test_adjusted_runtime_is_explicit_at_confirmation_boundary(monkeypatch):
 
     assert result.reason == "clear"
     assert calls == {"inspect": 2, "advice": 1, "execute": 1}
-    assert any(
-        "[Enter] Confirm and run with Claude Code · configured model" in line
-        for line in outputs
-    )
+    assert any("[Enter] Confirm and run with Claude Code · configured model" in line for line in outputs)

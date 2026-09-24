@@ -203,8 +203,7 @@ def inspect_next(
         observed_artifacts = tuple(getattr(work_record, "artifact_kinds", ()) or ())
         raw_statuses = getattr(work_record, "criterion_statuses", {}) or {}
         criterion_statuses = tuple(
-            (str(key), tuple(str(stage) for stage in stages))
-            for key, stages in sorted(raw_statuses.items())
+            (str(key), tuple(str(stage) for stage in stages)) for key, stages in sorted(raw_statuses.items())
         )
     except (AttributeError, OSError, ValueError, FileNotFoundError):
         observed_artifacts = ()

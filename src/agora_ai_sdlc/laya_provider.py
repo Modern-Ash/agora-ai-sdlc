@@ -33,7 +33,7 @@ class LayaDecisionProvider:
             from laya import Router
         except ImportError as error:
             raise LayaUnavailable(
-                "Laya decision capability is not installed. Install the full distribution with: pip install \"agora-ai-sdlc[full]\""
+                'Laya decision capability is not installed. Install the full distribution with: pip install "agora-ai-sdlc[full]"'
             ) from error
         try:
             self._router = Router()
@@ -104,15 +104,9 @@ class LayaDecisionProvider:
             if hasattr(router, "predict_batch"):
                 raw_results = router.predict_batch(payloads)
             else:
-                raw_results = [
-                    router.predict(item["state"], item["questions"], model=self.model)
-                    for item in payloads
-                ]
+                raw_results = [router.predict(item["state"], item["questions"], model=self.model) for item in payloads]
         except TypeError:
-            raw_results = [
-                router.predict(item["state"], item["questions"])
-                for item in payloads
-            ]
+            raw_results = [router.predict(item["state"], item["questions"]) for item in payloads]
         except Exception as error:
             raise DecisionPlaneError("decision.laya_predict_batch", str(error)) from error
         elapsed_ms = (time.perf_counter() - started) * 1000.0

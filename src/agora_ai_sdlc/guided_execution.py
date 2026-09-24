@@ -72,8 +72,8 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
             "Use existing Agora/Core commands and repository conventions instead of inventing lifecycle state.",
             (
                 "When AGORA_SESSION_ID and AGORA_EXECUTOR are available, report only concise observable milestones "
-                "after major outcomes with: agora session progress --session \"$AGORA_SESSION_ID\" "
-                "--by \"$AGORA_EXECUTOR\" --summary \"<milestone>\". "
+                'after major outcomes with: agora session progress --session "$AGORA_SESSION_ID" '
+                '--by "$AGORA_EXECUTOR" --summary "<milestone>". '
                 "Good milestones describe facts such as context inspected, artifact persisted, or verification completed; "
                 "never report chain-of-thought, private reasoning, prompts, secrets, or raw provider output."
             ),

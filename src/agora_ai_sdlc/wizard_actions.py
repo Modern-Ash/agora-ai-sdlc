@@ -29,6 +29,28 @@ def next_in_session_action(decision: GuidedDecision) -> str:
     """Return the action Enter should perform at a non-generative node."""
 
     criterion_statuses = dict(decision.criterion_statuses)
+    pending_deployment = tuple(
+        item
+        for item in decision.unsatisfied_criteria
+        if "deployed" not in criterion_statuses.get(item, ())
+    )
+    if (
+        decision.state == "operations"
+        and decision.target == "completed"
+        and decision.gate == "completion"
+        and pending_deployment
+        and all("verified" in criterion_statuses.get(item, ()) for item in pending_deployment)
+        and decision.developer_actor
+        and decision.developer_actor_kind == "ai-agent"
+        and not (
+            decision.missing_artifacts
+            or decision.missing_evidence
+            or decision.clarification_issues
+            or decision.git_issues
+        )
+    ):
+        return "mark-deployed"
+
     if (
         decision.state == "operations"
         and decision.target == "completed"
@@ -90,6 +112,30 @@ def execute_in_session_action(
         return WizardActionResult("verification_ok")
 
     workspace = workspace_factory(cwd=root)
+
+    if action == "mark-deployed":
+        pending = tuple(
+            item
+            for item in decision.unsatisfied_criteria
+            if "deployed" not in dict(decision.criterion_statuses).get(item, ())
+        )
+        actor = decision.developer_actor
+        if not actor or decision.developer_actor_kind != "ai-agent":
+            raise ValueError("The deployed criterion stage requires the assigned AI developer actor")
+        for criterion in pending:
+            workspace.satisfy_criterion(
+                WorkActorInput(
+                    swarm_id=decision.swarm,
+                    work_id=decision.work,
+                    actor_id=actor,
+                ),
+                criterion,
+                stage="deployed",
+            )
+        return WizardActionResult(
+            "criteria_deployed",
+            (("count", len(pending)), ("actor", actor)),
+        )
 
     if action == "accept-criteria":
         actor = _actor_id(decision)

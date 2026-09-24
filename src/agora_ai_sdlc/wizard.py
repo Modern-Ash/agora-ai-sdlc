@@ -506,11 +506,19 @@ def render_wizard(view: WizardView, *, lang: str = "en") -> str:
         )
     if view.gaps:
         lines.extend(
-            ["", t("wizard.open_gaps", lang=lang), *[f"  ! {_localized_dynamic(item, lang=lang)}" for item in view.gaps]]
+            [
+                "",
+                t("wizard.open_gaps", lang=lang),
+                *[f"  ! {_localized_dynamic(item, lang=lang)}" for item in view.gaps],
+            ]
         )
     if view.evidence:
         lines.extend(
-            ["", t("wizard.evidence", lang=lang), *[f"  ✓ {_localized_dynamic(item, lang=lang)}" for item in view.evidence]]
+            [
+                "",
+                t("wizard.evidence", lang=lang),
+                *[f"  ✓ {_localized_dynamic(item, lang=lang)}" for item in view.evidence],
+            ]
         )
 
     if view.level_1_plan_preview:

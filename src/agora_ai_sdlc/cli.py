@@ -85,7 +85,7 @@ def main(argv: list[str] | None = None) -> int:
     install.add_argument("--config", help="Read a reproducible YAML/JSON install config")
     install.add_argument("--write-config", help="Write the resolved install config without applying")
     install.add_argument("--yes", action="store_true", help="Apply without interactive confirmation")
-    start = sub.add_parser("start", help="Start AI-DLC work and enter the continuous Agora Flow wizard")
+    start = sub.add_parser("start", help="Start AI-SDLC work and enter the continuous Agora Flow wizard")
     start.add_argument("--issue", type=int, required=True, help="Issue number to use as the candidate Intent source")
     start.add_argument("--project", help="GitHub owner/repository; inferred from origin when omitted")
     start.add_argument(

@@ -54,7 +54,9 @@ def main(argv: list[str] | None = None) -> int:
     context.add_argument("--strict", action="store_true")
     context.add_argument("--content", action="store_true", help="include document text")
     context.add_argument("--json", action="store_true")
-    context.add_argument("--laya", action="store_true", help="semantically prune deterministic candidates with local Laya")
+    context.add_argument(
+        "--laya", action="store_true", help="semantically prune deterministic candidates with local Laya"
+    )
     context.add_argument("--objective", help="task objective supplied to Laya relevance decisions")
     context.add_argument("--acceptance", action="append", default=[], help="acceptance criterion; may be repeated")
     context.add_argument(
@@ -105,7 +107,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     start.add_argument("--lang", choices=SUPPORTED_LANGUAGES, help="Presentation language")
     start.add_argument("--ui-file", help="Write human progress to a new file, separate from agent output")
-    start.add_argument("--no-wizard", action="store_true", help="Stop after Start/Inception instead of entering the interactive wizard")
+    start.add_argument(
+        "--no-wizard", action="store_true", help="Stop after Start/Inception instead of entering the interactive wizard"
+    )
     guided = sub.add_parser("continue", help="Show the next governed decision in human-friendly AI-SDLC language")
     guided.add_argument("--root", default=".", help="Project root")
     guided.add_argument("--swarm", help="Limit to one delivery swarm")

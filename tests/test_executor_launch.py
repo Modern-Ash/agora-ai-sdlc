@@ -154,6 +154,22 @@ def test_opencode_runner_accepts_explicit_model_override(tmp_path):
     assert "--model ollama/claude" in runner
 
 
+def test_claude_runner_preauthorizes_only_bounded_headless_tools(tmp_path):
+    runner = build_executor_runner(runtime("claude"), tmp_path, handoff(tmp_path))
+
+    assert "--print" in runner
+    assert "--permission-mode acceptEdits" in runner
+    assert "--allowedTools" in runner
+    assert "Bash(aisdlc verify:*)" in runner
+    assert "Bash(agora artifact add:*)" in runner
+    assert "Bash(agora evidence add:*)" in runner
+    assert "Bash(agora work readiness:*)" in runner
+    assert "Bash(agora work criterion-satisfy:*)" in runner
+    assert "Bash(agora approval add:*)" not in runner
+    assert "Bash(agora work transition:*)" not in runner
+    assert "--dangerously-skip-permissions" not in runner
+
+
 def test_provider_only_runtime_fails_with_actionable_guidance(tmp_path):
     with pytest.raises(ExecutorLaunchError, match="not a repository executor"):
         build_executor_runner(runtime("ollama"), tmp_path, handoff(tmp_path))

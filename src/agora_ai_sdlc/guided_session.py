@@ -101,6 +101,7 @@ def run_interactive(
     """Run one continuous, transparent delivery wizard over authoritative Core state."""
 
     selected_runtime: ExecutorRecoveryChoice | None = None
+    failed_runtimes: set[tuple[str, str | None]] = set()
 
     while True:
         decision = inspect_next(root, swarm=swarm, work=work, lang=lang)
@@ -152,7 +153,9 @@ def run_interactive(
 
         advice = advise_workflow(root, decision)
         if selected_runtime is None and advice.recommended_runtime is not None:
-            selected_runtime = advice.recommended_runtime
+            recommended_key = (advice.recommended_runtime.agent, advice.recommended_runtime.model)
+            if recommended_key not in failed_runtimes:
+                selected_runtime = advice.recommended_runtime
 
         output_fn("")
         output_fn(render_decision_card(build_decision_card(decision, advice, lang=lang), lang=lang))
@@ -224,8 +227,10 @@ def run_interactive(
                 model=selected_runtime.model,
             )
         except (OSError, RuntimeError, ValueError) as error:
+            failed_runtimes.add((selected_runtime.agent, selected_runtime.model))
             output_fn(t("session.execution_failed", lang=lang, error=str(error)))
             output_fn(t("session.execution_recovery", lang=lang))
+            selected_runtime = None
             continue
         output_fn(t("session.execution_complete", lang=lang, runtime=result.runtime))
         output_fn(t("session.reinspect", lang=lang))

@@ -296,3 +296,36 @@ def test_successful_executor_without_core_progress_stops_instead_of_looping(monk
     assert calls == {"inspect": 2, "advice": 1, "execute": 1}
     assert any("no governed progress" in line for line in outputs)
     assert any("/tmp/RESULT.md" in line for line in outputs)
+
+
+def test_adjusted_runtime_is_explicit_at_confirmation_boundary(monkeypatch):
+    outputs = []
+    calls = {"inspect": 0, "advice": 0, "execute": 0}
+    claude = SimpleNamespace(agent="claude", model=None, label="Claude Code · configured model")
+
+    def inspect(*args, **kwargs):
+        calls["inspect"] += 1
+        return decision() if calls["inspect"] == 1 else None
+
+    def advise_once(*args, **kwargs):
+        calls["advice"] += 1
+        return advice()
+
+    def execute(*args, **kwargs):
+        calls["execute"] += 1
+        assert kwargs["runtime_id"] == "claude"
+        assert kwargs["model"] is None
+        return SimpleNamespace(runtime="Claude Code", result_path="/tmp/RESULT.md")
+
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.inspect_next", inspect)
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.build_wizard_view", lambda *args, **kwargs: view())
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.advise_workflow", advise_once)
+    monkeypatch.setattr("agora_ai_sdlc.guided_session._select_runtime", lambda *args, **kwargs: claude)
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.execute_guided_preparation", execute)
+
+    answers = iter(["a", ""])
+    result = run_interactive(Path("."), input_fn=lambda prompt: next(answers), output_fn=outputs.append)
+
+    assert result.reason == "clear"
+    assert calls == {"inspect": 2, "advice": 1, "execute": 1}
+    assert any("[Enter] Confirm and run with Claude Code · configured model" in line for line in outputs)

@@ -279,7 +279,7 @@ def _observed_artifact_kinds(root: Path, work: str) -> set[str]:
 
 def _method_outputs(root: Path, decision: GuidedDecision, phase: str) -> tuple[MethodOutput, ...]:
     missing = set(decision.missing_artifacts)
-    observed = _observed_artifact_kinds(root, decision.work)
+    observed = set(decision.observed_artifacts) | _observed_artifact_kinds(root, decision.work)
     outputs = []
     for label, kind in METHOD_OUTPUTS[phase]:
         if kind in observed:

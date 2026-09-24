@@ -11,6 +11,7 @@ from pathlib import Path
 
 from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice, recovery_choices
 from agora_ai_sdlc.execution_bundle import build_execution_bundle
+from agora_ai_sdlc.execution_context import select_execution_context
 from agora_ai_sdlc.execution_decisions import advise_execution
 from agora_ai_sdlc.guided import GuidedDecision
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
@@ -26,6 +27,13 @@ class WorkflowAdvice:
     source: str = "deterministic"
     recommended_runtime: ExecutorRecoveryChoice | None = None
     escalation_required: bool = False
+    context_candidates: int = 0
+    context_selected: int = 0
+    context_tokens_before: int = 0
+    context_tokens_after: int = 0
+    context_tokens_saved: int = 0
+    context_reduction_ratio: float = 0.0
+    context_escalated: tuple[str, ...] = ()
 
     def snapshot(self) -> dict:
         data = asdict(self)
@@ -95,6 +103,14 @@ def advise_workflow(
     confidence = None
     source = "deterministic"
     escalation = False
+    context_candidates = 0
+    context_selected = 0
+    context_tokens_before = 0
+    context_tokens_after = 0
+    context_tokens_saved = 0
+    context_reduction_ratio = 0.0
+    context_escalated: tuple[str, ...] = ()
+
     try:
         bundle = build_execution_bundle(
             root,
@@ -102,9 +118,10 @@ def advise_workflow(
             work=decision.work,
             persist=False,
         )
+        provider = LayaDecisionProvider()
         evaluated = advise_execution(
             bundle,
-            provider=LayaDecisionProvider(),
+            provider=provider,
             confidence_threshold=confidence_threshold,
         )
         answer = evaluated.result.answers.get("reasoning_tier")
@@ -113,6 +130,20 @@ def advise_workflow(
             confidence = answer.confidence
             source = "laya"
             escalation = "reasoning_tier" in evaluated.escalated
+
+        selected = select_execution_context(
+            root,
+            bundle,
+            provider=provider,
+            confidence_threshold=confidence_threshold,
+        )
+        context_candidates = len(selected.candidate_paths)
+        context_selected = len(selected.selected_paths)
+        context_tokens_before = selected.candidate_tokens
+        context_tokens_after = selected.selected_tokens
+        context_tokens_saved = selected.saved_tokens
+        context_reduction_ratio = selected.reduction_ratio
+        context_escalated = selected.escalated_paths
     except (LayaUnavailable, OSError, RuntimeError, ValueError):
         pass
 
@@ -130,6 +161,13 @@ def advise_workflow(
             reasoning_tier=tier,
             confidence=confidence,
             source=source,
+            context_candidates=context_candidates,
+            context_selected=context_selected,
+            context_tokens_before=context_tokens_before,
+            context_tokens_after=context_tokens_after,
+            context_tokens_saved=context_tokens_saved,
+            context_reduction_ratio=context_reduction_ratio,
+            context_escalated=context_escalated,
         )
 
     if escalation:
@@ -148,4 +186,11 @@ def advise_workflow(
         source=source,
         recommended_runtime=recommended,
         escalation_required=escalation,
+        context_candidates=context_candidates,
+        context_selected=context_selected,
+        context_tokens_before=context_tokens_before,
+        context_tokens_after=context_tokens_after,
+        context_tokens_saved=context_tokens_saved,
+        context_reduction_ratio=context_reduction_ratio,
+        context_escalated=context_escalated,
     )

@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from agora_ai_sdlc.artifacts import PREFIX, check_traceability, parse_artifact, parse_template
@@ -18,7 +19,7 @@ NEW_AI_DLC_KINDS = {
 
 
 def artifact(kind, artifact_id, traces=(), *, criteria=(), covers=()):
-    return parse_artifact(
+    text = (
         "---\n"
         'schema: "agora-ai-sdlc/artifact/v1"\n'
         f'kind: "{kind}"\n'
@@ -26,12 +27,13 @@ def artifact(kind, artifact_id, traces=(), *, criteria=(), covers=()):
         f'id: "{artifact_id}"\n'
         'work: "w"\n'
         "revision: 1\n"
-        f"traces-to: {list(traces)!r}\n".replace("'", '"')
-        f"criteria: {list(criteria)!r}\n".replace("'", '"')
-        f"covers-criteria: {list(covers)!r}\n".replace("'", '"')
+        f"traces-to: {json.dumps(list(traces))}\n"
+        f"criteria: {json.dumps(list(criteria))}\n"
+        f"covers-criteria: {json.dumps(list(covers))}\n"
         'required-sections: ["S"]\n'
         "---\n\n# Artifact\n\n## S\n\ncontent\n"
     )
+    return parse_artifact(text)
 
 
 def test_ai_dlc_artifact_templates_are_first_class_and_parseable():

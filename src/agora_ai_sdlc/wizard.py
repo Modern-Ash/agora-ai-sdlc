@@ -440,6 +440,9 @@ def _render_step_bar(view: WizardView, *, lang: str) -> str:
 
 
 def _localized_dynamic(item: str, *, lang: str) -> str:
+    if item.startswith(("Work: ", "Decision gate: ")):
+        return item
+
     prefixes = {
         "Intent / objective: ": "wizard.fact.intent",
         "Work: ": "wizard.fact.work",

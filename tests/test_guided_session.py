@@ -133,7 +133,7 @@ def test_enter_confirms_recommended_action_executes_and_rechecks_core(monkeypatc
 
     assert result.reason == "clear"
     assert calls == {"inspect": 2, "execute": 1}
-    assert any("What Agora will do" in line for line in outputs)
+    assert any("If confirmed, Agora will" in line for line in outputs)
     assert any("Re-reading Agora Core state" in line for line in outputs)
 
 

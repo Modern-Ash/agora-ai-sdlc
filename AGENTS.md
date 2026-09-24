@@ -43,6 +43,7 @@ Do not decide architecture, contracts or scope implicitly. Record a `CLARIFICATI
 ## 7. Verification
 
 - During development run focused checks for the touched area; run the full validation before opening the PR ([testing](docs/development/testing.md)).
+- Before every commit, run `uv run python scripts/verify_commit.py`. Before every push, run `uv run python scripts/verify_all.py`. Repository Git hooks installed by `uv run python scripts/install_git_hooks.py` enforce the same rule for humans and agents.
 - Record exact commands, results, omitted checks and reasons in `TESTS.md`.
 - Validation command: `uv run python scripts/verify_all.py` (single entry point; see [CONTRIBUTING.md](CONTRIBUTING.md)). It runs lint, format, tests, links, manifest, packs, samples and a wheel smoke test. The packs phase installs registry Method Packs into a throwaway project and runs `agora validate`; the samples phase runs every `samples/*` scenario via `agora-ai-sdlc run-sample` (also from the built wheel). Do not claim other checks that were not executed.
 - Add failure-path tests for behavior that must fail closed.
@@ -53,7 +54,7 @@ Least privilege; fail closed when required metadata is missing; never infer prov
 
 ## 9. Commits and pull requests
 
-Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`), one issue per branch/PR, branch `<type>/<issue>-<slug>`. PR body links the issue, lists acceptance criteria status, tests and remaining risks ([pull-requests](docs/development/pull-requests.md)). No force-push, no self-merge.
+Conventional Commits (`feat:`, `fix:`, `docs:`, `test:`, `chore:`), one issue per branch/PR, branch `<type>/<issue>-<slug>`. A coding agent must not create a commit after a failed `scripts/verify_commit.py`, and must not push after a failed `scripts/verify_all.py`. PR body links the issue, lists acceptance criteria status, tests and remaining risks ([pull-requests](docs/development/pull-requests.md)). No force-push, no self-merge.
 
 ## 10. Review
 

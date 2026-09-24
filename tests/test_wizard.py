@@ -87,3 +87,29 @@ def test_wizard_spanish_labels_do_not_hide_underlying_facts(tmp_path):
     assert "Qué sabe Agora" in rendered
     assert "Work: delivery/issue-26" in rendered
     assert "Decision gate: inception-approved" in rendered
+
+
+def test_wizard_shows_level_1_plan_preview_and_validation_checkpoint(tmp_path):
+    handoff = tmp_path / ".agora/ai-sdlc/handoffs/issue-26/DETERMINISTIC_INCEPTION.md"
+    handoff.parent.mkdir(parents=True)
+    handoff.write_text(
+        "## Material clarifications\n\n- No material clarification detected from the explicit issue.\n\n"
+        "## Level 1 Plan\n\n"
+        "- clarify scope: execute — validate intent\n"
+        "- model domain: execute — define business model\n"
+        "- implement: execute — generate bounded code\n"
+        "- verify: execute — collect evidence\n",
+        encoding="utf-8",
+    )
+
+    view = build_wizard_view(tmp_path, decision(clarification_issues=()))
+    assert view.level_1_plan_preview[:2] == (
+        "clarify scope: execute — validate intent",
+        "model domain: execute — define business model",
+    )
+    assert view.validation_checkpoint is not None
+
+    rendered = render_wizard(view, lang="en")
+    assert "Level 1 Plan · current proposal" in rendered
+    assert "Human validation checkpoint" in rendered
+    assert "implement: execute" in rendered

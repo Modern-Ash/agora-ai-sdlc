@@ -37,10 +37,10 @@ Participants do not need to author methodology prompts. Agora Flow exposes:
 - inline explanation of the method concept;
 - one bounded clarification question at a time;
 - observed method outputs and missing obligations;
-- the exact next proposed action;
+- the exact next proposed action through a transparent Decision Card;
 - executor/model/decision provenance;
-- human authority boundaries;
-- optional Context Economy measurements when the Laya capability is installed.
+- human authority boundaries and the next validation checkpoint;
+- Context Economy measurements from the built-in local Laya decision layer.
 
 The working controls remain the same throughout the engagement:
 

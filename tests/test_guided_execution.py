@@ -23,6 +23,7 @@ def decision() -> GuidedDecision:
 
 def test_runtime_switch_does_not_invent_executor_actor(monkeypatch, tmp_path):
     captured = {}
+    progress = []
 
     runtime = SimpleNamespace(
         id="claude",
@@ -65,6 +66,7 @@ def test_runtime_switch_does_not_invent_executor_actor(monkeypatch, tmp_path):
         decision(),
         runtime_id="claude",
         workspace_factory=Workspace,
+        progress_fn=progress.append,
     )
 
     data = captured["data"]
@@ -72,3 +74,4 @@ def test_runtime_switch_does_not_invent_executor_actor(monkeypatch, tmp_path):
     assert data.executor_id == "ai-codex"
     assert "claude" in data.runner
     assert result.runtime == "Claude Code"
+    assert progress == ["context", "executor"]

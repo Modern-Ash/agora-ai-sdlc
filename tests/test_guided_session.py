@@ -149,3 +149,37 @@ def test_details_keep_full_governance_visible(monkeypatch):
     assert result.reason == "exit"
     assert any("Structured decision" in line for line in outputs)
     assert any("Underlying command bundle" in line for line in outputs)
+
+
+def test_failed_runtime_is_not_reselected_automatically(monkeypatch):
+    outputs = []
+    calls = {"inspect": 0, "select": 0, "execute": 0}
+    runtime = SimpleNamespace(agent="claude", model=None, label="Claude Code · configured model")
+
+    def inspect(*args, **kwargs):
+        calls["inspect"] += 1
+        return decision() if calls["inspect"] < 4 else None
+
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.inspect_next", inspect)
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.build_wizard_view", lambda *args, **kwargs: view())
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.advise_workflow", lambda *args, **kwargs: advice(runtime))
+
+    def execute(*args, **kwargs):
+        calls["execute"] += 1
+        raise ValueError("Actor not found: ai-claude")
+
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.execute_guided_preparation", execute)
+
+    def select(*args, **kwargs):
+        calls["select"] += 1
+        return None
+
+    monkeypatch.setattr("agora_ai_sdlc.guided_session._select_runtime", select)
+
+    answers = iter(["", "", "x"])
+    result = run_interactive(Path("."), input_fn=lambda prompt: next(answers), output_fn=outputs.append)
+
+    assert result.reason == "exit"
+    assert calls["execute"] == 1
+    assert calls["select"] == 1
+    assert any("Actor not found: ai-claude" in line for line in outputs)

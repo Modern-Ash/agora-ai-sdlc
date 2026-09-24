@@ -34,6 +34,28 @@ EXECUTION_QUESTIONS = (
             "normal": "normal verification is sufficient based on the observed change",
         },
     ),
+    DecisionQuestion(
+        id="change_risk",
+        type="choice",
+        instructions="Classify the implementation risk for the next bounded change.",
+        criteria={
+            "low": "localized change with clear acceptance criteria, existing patterns and direct verification",
+            "moderate": "cross-file or integration change with manageable trade-offs and verification",
+            "high": "architectural, data, security, infrastructure or irreversible change with material uncertainty",
+        },
+    ),
+    DecisionQuestion(
+        id="validation_focus",
+        type="choice",
+        instructions="Choose the primary validation focus that should be highlighted to the developer.",
+        criteria={
+            "functional": "correct behavior and acceptance criteria are the primary concern",
+            "security": "trust, permissions, authentication, secrets or attack surface are primary",
+            "performance": "latency, throughput, scaling or resource use are primary",
+            "architecture": "coupling, boundaries, integration contracts or structural design are primary",
+            "operations": "deployment, rollback, observability or production readiness are primary",
+        },
+    ),
 )
 
 

@@ -125,7 +125,7 @@ def test_enter_confirms_recommended_action_executes_and_rechecks_core(monkeypatc
         calls["execute"] += 1
         assert kwargs["runtime_id"] == "opencode"
         assert kwargs["model"] == "ollama/qwen3:8b"
-        return SimpleNamespace(runtime="OpenCode/Ollama")
+        return SimpleNamespace(runtime="OpenCode/Ollama", result_path="/tmp/RESULT.md")
 
     monkeypatch.setattr("agora_ai_sdlc.guided_session.execute_guided_preparation", execute)
 

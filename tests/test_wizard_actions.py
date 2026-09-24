@@ -25,6 +25,9 @@ def final_acceptance_decision() -> GuidedDecision:
         clarification_issues=(),
         ready_for_human_approval=False,
         ready_to_transition=False,
+        criterion_statuses=(
+            ("source-issue", ("elaborated", "designed", "built", "verified", "deployed")),
+        ),
     )
 
 

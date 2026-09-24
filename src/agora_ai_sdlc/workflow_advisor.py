@@ -77,8 +77,8 @@ def advise_workflow(
     # Authority-bearing decisions never go through Laya.
     if decision.ready_for_human_approval and decision.missing_approvals:
         return WorkflowAdvice(
-            action="review",
-            summary="Review the completed evidence and make the required human approval decision.",
+            action="approve",
+            summary="Review the completed evidence and explicitly confirm the required human approval in this wizard.",
             needs_runtime=False,
         )
 
@@ -87,8 +87,8 @@ def advise_workflow(
         decision.missing_artifacts or decision.clarification_issues or decision.unsatisfied_criteria
     ):
         return WorkflowAdvice(
-            action="review",
-            summary="Run or inspect deterministic verification before spending tokens on another agent.",
+            action="verify",
+            summary="Run deterministic verification now, persist the evidence, then re-read Core automatically.",
             needs_runtime=False,
         )
 
@@ -99,9 +99,15 @@ def advise_workflow(
         or decision.blocked
     )
     if not needs_preparation:
+        if decision.ready_to_transition and decision.target and not decision.blockers:
+            return WorkflowAdvice(
+                action="transition",
+                summary=f"Advance the Work to {decision.target} and continue from the next Core node.",
+                needs_runtime=False,
+            )
         return WorkflowAdvice(
             action="review",
-            summary="The governed step is ready for the responsible actor; review before the transition.",
+            summary="The governed step is ready for the responsible actor; inspect the evidence at this node.",
             needs_runtime=False,
         )
 
@@ -180,7 +186,7 @@ def advise_workflow(
     if tier == "human" and not escalation:
         return WorkflowAdvice(
             action="review",
-            summary="The next step needs human judgement rather than another generative call.",
+            summary="The next step needs human judgement; stay in this wizard and inspect the evidence/options.",
             needs_runtime=False,
             reasoning_tier=tier,
             confidence=confidence,

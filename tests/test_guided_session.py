@@ -65,7 +65,7 @@ def test_wizard_shows_progress_information_and_single_confirmation(monkeypatch):
     result = run_interactive(Path("."), input_fn=lambda prompt: "x", output_fn=outputs.append)
 
     assert result.reason == "exit"
-    assert any("Agora Flow · AI-DLC delivery" in line for line in outputs)
+    assert any("Agora Flow · AI-SDLC delivery" in line for line in outputs)
     assert any("What Agora knows" in line for line in outputs)
     assert "[Enter] Confirm  [A] Adjust  [D] Details  [X] Exit" in outputs
 

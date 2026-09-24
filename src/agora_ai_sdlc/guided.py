@@ -14,6 +14,7 @@ from agora_ai_sdlc.depth_profiles import asset_root
 from agora_ai_sdlc.i18n import t
 
 _BLOCKER_LIST = re.compile(r"(?P<name>[a-z-]+)=\[(?P<items>[^\]]*)\]")
+_LIFECYCLE_ORDER = ("readiness", "intent", "inception", "construction", "operations", "completed")
 
 
 @dataclass(frozen=True)
@@ -101,6 +102,28 @@ def _humanize(
     return tuple(messages)
 
 
+def _preferred_target(state: str | None, target_states: list[str] | tuple[str, ...]) -> str | None:
+    """Prefer forward lifecycle progress over optional rework transitions."""
+
+    targets = tuple(str(item) for item in target_states if item)
+    if not targets:
+        return None
+    normalized_state = (state or "").casefold()
+    try:
+        current_index = _LIFECYCLE_ORDER.index(normalized_state)
+    except ValueError:
+        return targets[0]
+
+    forward = [
+        target
+        for target in targets
+        if target.casefold() in _LIFECYCLE_ORDER and _LIFECYCLE_ORDER.index(target.casefold()) > current_index
+    ]
+    if not forward:
+        return targets[0]
+    return min(forward, key=lambda item: _LIFECYCLE_ORDER.index(item.casefold()))
+
+
 def _transition_details(
     workspace: AgoraWorkspace,
     swarm: str,
@@ -163,7 +186,7 @@ def inspect_next(
     task = tasks[0]
     blockers = tuple(task.blockers)
     parsed = _combined_blocker_details(blockers)
-    target = task.target_states[0] if task.target_states else None
+    target = _preferred_target(task.state, task.target_states)
     details = _transition_details(workspace, str(task.swarm_id or ""), str(task.work_id or ""), target)
     gate = details.get("gate") or {}
 

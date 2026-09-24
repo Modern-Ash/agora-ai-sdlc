@@ -156,3 +156,59 @@ def test_construction_command_bundle_launches_executor_instead_of_rollback():
 
     assert "aisdlc continue --swarm issue-26-demo --work issue-26 --run" in command_text
     assert "--to inception" not in command_text
+
+
+def test_guided_projection_prefers_forward_transition_over_rework(monkeypatch, tmp_path):
+    class MultiTargetWorkspace(FakeWorkspace):
+        def next_actions(self, *, swarm_id=None, human_only=False, limit=1000):
+            return [
+                SimpleNamespace(
+                    swarm_id="delivery",
+                    work_id="first-work",
+                    actor="project:developer",
+                    role="developer",
+                    state="construction",
+                    target_states=["inception", "operations"],
+                    blockers=[],
+                )
+            ]
+
+        def next_gate_readiness(self, swarm_id, work_id):
+            return {
+                "swarm_id": swarm_id,
+                "work_id": work_id,
+                "state": "construction",
+                "transitions": [
+                    {
+                        "title": "Rework design",
+                        "method": "ai-sdlc",
+                        "state": "construction",
+                        "target_state": "inception",
+                        "gate": {},
+                        "ready_for_human_approval": False,
+                        "ready_to_complete": True,
+                    },
+                    {
+                        "title": "Advance to operations",
+                        "method": "ai-sdlc",
+                        "state": "construction",
+                        "target_state": "operations",
+                        "gate": {"gate": "construction-verified"},
+                        "ready_for_human_approval": False,
+                        "ready_to_complete": True,
+                    },
+                ],
+            }
+
+        def show_work(self, swarm_id, work_id):
+            return SimpleNamespace(artifact_kinds=("domain-model", "architecture", "test-strategy"))
+
+    monkeypatch.setattr(guided, "AgoraWorkspace", MultiTargetWorkspace)
+
+    decision = guided.inspect_next(tmp_path, swarm="delivery", work="first-work")
+
+    assert decision is not None
+    assert decision.state == "construction"
+    assert decision.target == "operations"
+    assert decision.gate == "construction-verified"
+    assert decision.ready_to_transition is True

@@ -7,6 +7,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from threading import Event, Lock, Thread
+from time import monotonic
 
 from agora_ai_sdlc.decision_card import build_decision_card, render_decision_card
 from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice, select_executor_model
@@ -44,15 +45,26 @@ class _ProgressDisplay:
         self._lock = Lock()
         self._thread: Thread | None = None
         self._rendered_width = 0
+        self._started_at: float | None = None
 
     def start(self) -> None:
         if not self._tty or self._thread is not None:
             return
+        self._started_at = monotonic()
         self._thread = Thread(target=self._animate, name="agora-flow-spinner", daemon=True)
         self._thread.start()
 
     def update(self, stage: str) -> None:
-        message = t(f"session.progress.{stage}", lang=self._lang, runtime=self._runtime)
+        stage_name, separator, detail = stage.partition(":")
+        if stage_name == "executor_wait" and separator and detail:
+            message = t(
+                "session.progress.executor_milestone",
+                lang=self._lang,
+                runtime=self._runtime,
+                detail=detail,
+            )
+        else:
+            message = t(f"session.progress.{stage_name}", lang=self._lang, runtime=self._runtime)
         if not self._tty:
             if stage != self._last_fallback_stage:
                 self._output_fn(message)
@@ -76,7 +88,9 @@ class _ProgressDisplay:
                 message = self._message
             if not message:
                 continue
-            text = f"{self._frames[index % len(self._frames)]} {message}"
+            elapsed = max(0, int(monotonic() - self._started_at)) if self._started_at is not None else 0
+            minutes, seconds = divmod(elapsed, 60)
+            text = f"{self._frames[index % len(self._frames)]} [{minutes:02d}:{seconds:02d}] {message}"
             self._rendered_width = max(self._rendered_width, len(text))
             sys.stdout.write("\r" + text.ljust(self._rendered_width))
             sys.stdout.flush()

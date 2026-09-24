@@ -273,12 +273,15 @@ def test_progress_display_deduplicates_repeated_heartbeat_for_non_tty():
     progress.update("executor")
     progress.update("executor_wait")
     progress.update("executor_wait")
+    progress.update("executor_wait:Verification completed")
+    progress.update("executor_wait:Verification completed")
     progress.stop()
 
-    assert len(outputs) == 3
+    assert len(outputs) == 4
     assert outputs[0] == "Preparando contexto de ejecución acotado con Laya…"
     assert outputs[1].startswith("Iniciando Ollama (local via OpenCode)")
     assert outputs[2] == "El executor sigue activo; Agora Core espera que termine la sesión gobernada…"
+    assert outputs[3].endswith("sigue activo · Verification completed")
 
 
 def test_successful_executor_without_core_progress_stops_instead_of_looping(monkeypatch):

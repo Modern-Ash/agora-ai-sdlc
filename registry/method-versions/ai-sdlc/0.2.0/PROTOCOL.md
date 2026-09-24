@@ -1,6 +1,6 @@
 # AI-SDLC 0.2.0 protocol
 
-The operating pattern remains: **plan -> clarify -> human decision -> execute -> validate**.
+The operating pattern remains: **plan -> clarify -> human decision -> execute -> validate**. AI drafts a plan from the Intent and proposes the next refinement; humans validate meaningful decisions before execution. No phase advances without its gate.
 
 ## Phases
 
@@ -24,4 +24,15 @@ The operating pattern remains: **plan -> clarify -> human decision -> execute ->
 
 Rework transitions are deliberately ungated in this candidate pack. Core records the transition history durably; higher-assurance profiles may add evidence/policy obligations outside the base method.
 
-## Flavor capabilities used by this pack\n\nThe method gate requires Level 1 `plan` and `bolt-plan` artifact kinds. Recursive plan validation, adaptive pathway selection, executable Bolt semantics, Context Graph traceability and the continuous wizard are implemented by the AI-SDLC flavor around this Core Method Pack. They enrich execution without changing the three canonical phase names.
+## Flavor capabilities used by this pack
+
+The method gate requires Level 1 `plan` and `bolt-plan` artifact kinds. Recursive plan validation, adaptive pathway selection, executable Bolt semantics, Context Graph traceability and the continuous wizard are implemented by the AI-SDLC flavor around this Core Method Pack. They enrich execution without changing the three canonical phase names.
+
+
+## Core artifact semantics
+
+- An **Intent** states the outcome to achieve.
+- A **Unit of Work** is a bounded slice of cohesive value derived from the Intent.
+- **Bolts** are short hours/days build-validation iterations over a Unit; they may be sequential or parallel.
+- The Level 1 Plan is progressively decomposed while preserving human validation and traceability.
+- Persisted artifacts form context memory for later steps.

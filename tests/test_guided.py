@@ -103,7 +103,7 @@ def test_command_bundle_groups_core_primitives(monkeypatch, tmp_path):
     assert "agora work clarify" in command_text
     assert "agora approval add" in command_text
     assert "agora work transition" in command_text
-    assert "agora-ai-sdlc continue" in command_text
+    assert "agora-ai-sdlc continue" not in command_text
 
     output = guided.render(decision, show_commands=True)
     assert "Underlying command bundle" in output

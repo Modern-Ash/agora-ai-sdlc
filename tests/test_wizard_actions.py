@@ -83,9 +83,7 @@ def test_verified_criterion_records_deployed_stage_with_assigned_ai_developer(tm
     decision = GuidedDecision(
         **{
             **decision.snapshot(),
-            "criterion_statuses": (
-                ("source-issue", ("elaborated", "designed", "built", "verified")),
-            ),
+            "criterion_statuses": (("source-issue", ("elaborated", "designed", "built", "verified")),),
             "developer_actor": "project:ai-developer",
             "developer_actor_kind": "ai-agent",
         }

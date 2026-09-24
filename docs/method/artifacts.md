@@ -68,7 +68,7 @@ Modernization templates also use structured `behaviors`, `slice-ids`, `slice-id`
 | cutover-plan | CUT | migration-plan, equivalence-report | cutover-plan.md |
 | stabilization-report | STB | cutover-plan | stabilization-report.md |
 
-Canonical AI-DLC enrichment chain: intent -> unit of work -> requirements/user stories -> NFR/risk/measurement -> domain model -> logical design -> test strategy -> implementation plan -> deployment unit -> deployment plan. `architecture` remains a compatible broader design artifact and may bridge existing profiles while `logical-design` expresses the AI-DLC construction concept explicitly.
+Canonical AI-SDLC enrichment chain: intent -> unit of work -> requirements/user stories -> NFR/risk/measurement -> domain model -> logical design -> test strategy -> implementation plan -> deployment unit -> deployment plan. `architecture` remains a compatible broader design artifact and may bridge existing profiles while `logical-design` expresses the AI-SDLC construction concept explicitly.
 
 ## Deterministic checks
 

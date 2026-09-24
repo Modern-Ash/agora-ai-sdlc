@@ -147,8 +147,15 @@ def execute_guided_preparation(
         "runner": runner,
         "launch": True,
     }
+
+    # Runtime selection is not an authority handoff. The Work's assigned actor
+    # remains responsible even when Flow launches a different CLI/runtime.
+    # Setting executor_id to a synthetic ai-<runtime> identity caused Core to
+    # reject valid runtime switches when that actor was not registered.
     if "executor_id" in fields:
-        kwargs["executor_id"] = f"ai-{runtime.id}"
+        assigned = (decision.actor or "").removeprefix("project:")
+        if assigned:
+            kwargs["executor_id"] = assigned
     if "runtime_version" in fields and runtime.version:
         kwargs["runtime_version"] = runtime.version
     if "timeout_seconds" in fields:

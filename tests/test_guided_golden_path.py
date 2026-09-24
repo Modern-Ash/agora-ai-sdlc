@@ -4,11 +4,12 @@ from types import SimpleNamespace
 import pytest
 from agora.model import AddArtifactInput, AddEvidenceInput, WorkActorInput
 from agora.workspace import AgoraWorkspace
+from support.lifecycle import Lifecycle
 
 from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice
 from agora_ai_sdlc.guided_session import run_interactive
-from agora_ai_sdlc.workflow_advisor import WorkflowAdvice, advise_workflow as real_advise_workflow
-from support.lifecycle import Lifecycle
+from agora_ai_sdlc.workflow_advisor import WorkflowAdvice
+from agora_ai_sdlc.workflow_advisor import advise_workflow as real_advise_workflow
 
 
 @pytest.fixture

@@ -239,12 +239,8 @@ def _level_1_plan_preview(root: Path, work: str, *, limit: int = 6) -> tuple[str
 
 def _validation_checkpoint(decision: GuidedDecision, phase: str, step: str) -> str:
     if decision.ready_for_human_approval or decision.missing_approvals:
-        return "Explicit human approval is required before lifecycle progression."
-    if phase == "inception":
-        return f"Validate the {step} output before enriching the next Inception artifact."
-    if phase == "construction":
-        return f"Validate the {step} result and its traceability before downstream Construction work."
-    return f"Validate the {step} recommendation/evidence before operational action."
+        return "approval-required"
+    return f"{phase}:{step}"
 
 
 def _semantic_gaps(root: Path, work: str) -> tuple[str, ...]:
@@ -443,6 +439,47 @@ def _render_step_bar(view: WizardView, *, lang: str) -> str:
     return "  " + "  →  ".join(values)
 
 
+def _localized_dynamic(item: str, *, lang: str) -> str:
+    prefixes = {
+        "Intent / objective: ": "wizard.fact.intent",
+        "Work: ": "wizard.fact.work",
+        "Core lifecycle state: ": "wizard.fact.state",
+        "Next lifecycle target: ": "wizard.fact.target",
+        "Decision gate: ": "wizard.fact.gate",
+        "Responsible: ": "wizard.fact.responsible",
+        "Missing artifact: ": "wizard.gap.artifact",
+        "Unsatisfied criterion: ": "wizard.gap.criterion",
+        "Missing evidence: ": "wizard.gap.evidence",
+        "Repository policy: ": "wizard.gap.policy",
+        "Approval required from: ": "wizard.human.approval",
+    }
+    for prefix, key in prefixes.items():
+        if item.startswith(prefix):
+            return t(key, lang=lang, value=item.removeprefix(prefix))
+    if item.endswith(" human clarification answer(s) persisted as Work context."):
+        count = item.split(" ", 1)[0]
+        return t("wizard.evidence.answers", lang=lang, count=count)
+    exact = {
+        "Current gate reports no required artifact missing.": "wizard.evidence.no_artifact",
+        "Current gate reports no verification evidence missing.": "wizard.evidence.no_evidence",
+        "Repository policy has no reported blocker.": "wizard.evidence.no_policy",
+        "Technical obligations are complete; human validation is the next loss-function checkpoint.": "wizard.human.validation_next",
+    }
+    key = exact.get(item)
+    return t(key, lang=lang) if key else item
+
+
+def _localized_checkpoint(value: str, *, lang: str) -> str:
+    if value == "approval-required":
+        return t("wizard.checkpoint.approval", lang=lang)
+    phase, _, step = value.partition(":")
+    return t(
+        f"wizard.checkpoint.{phase}",
+        lang=lang,
+        step=t(f"wizard.step.{step}", lang=lang),
+    )
+
+
 def render_wizard(view: WizardView, *, lang: str = "en") -> str:
     lines = [
         "╭─ " + t("wizard.title", lang=lang),
@@ -457,7 +494,7 @@ def render_wizard(view: WizardView, *, lang: str = "en") -> str:
         "╰" + "─" * 72,
         "",
         t("wizard.knows", lang=lang),
-        *[f"  • {item}" for item in view.facts],
+        *[f"  • {_localized_dynamic(item, lang=lang)}" for item in view.facts],
     ]
     if view.brownfield:
         lines.extend(
@@ -468,9 +505,13 @@ def render_wizard(view: WizardView, *, lang: str = "en") -> str:
             ]
         )
     if view.gaps:
-        lines.extend(["", t("wizard.open_gaps", lang=lang), *[f"  ! {item}" for item in view.gaps]])
+        lines.extend(
+            ["", t("wizard.open_gaps", lang=lang), *[f"  ! {_localized_dynamic(item, lang=lang)}" for item in view.gaps]]
+        )
     if view.evidence:
-        lines.extend(["", t("wizard.evidence", lang=lang), *[f"  ✓ {item}" for item in view.evidence]])
+        lines.extend(
+            ["", t("wizard.evidence", lang=lang), *[f"  ✓ {_localized_dynamic(item, lang=lang)}" for item in view.evidence]]
+        )
 
     if view.level_1_plan_preview:
         lines.extend(["", t("wizard.level1_preview", lang=lang)])
@@ -480,16 +521,23 @@ def render_wizard(view: WizardView, *, lang: str = "en") -> str:
     lines.extend(["", t("wizard.method_outputs", lang=lang)])
     for item in view.method_outputs:
         marker = "!" if item.status == "required-now" else ("✓" if item.status == "observed" else "·")
-        lines.append(f"  {marker} {item.label:<22} [{item.artifact_kind}]")
+        label = t(f"wizard.artifact.{item.artifact_kind}", lang=lang)
+        lines.append(f"  {marker} {label:<22} [{item.artifact_kind}]")
 
     if view.validation_checkpoint:
         lines.extend(
             [
                 "",
                 t("wizard.validation_checkpoint", lang=lang),
-                "  ◆ " + view.validation_checkpoint,
+                "  ◆ " + _localized_checkpoint(view.validation_checkpoint, lang=lang),
             ]
         )
     if view.human_decisions:
-        lines.extend(["", t("wizard.human_boundary", lang=lang), *[f"  ◆ {item}" for item in view.human_decisions]])
+        lines.extend(
+            [
+                "",
+                t("wizard.human_boundary", lang=lang),
+                *[f"  ◆ {_localized_dynamic(item, lang=lang)}" for item in view.human_decisions],
+            ]
+        )
     return "\n".join(lines)

@@ -11,8 +11,10 @@ from agora.model import StartSessionInput
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.execution_bundle import build_execution_bundle
+from agora_ai_sdlc.execution_context import persist_execution_context, select_execution_context
 from agora_ai_sdlc.executor_launch import ExecutorLaunchError, load_executor_adapters
 from agora_ai_sdlc.guided import GuidedDecision
+from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
 from agora_ai_sdlc.wizard import load_answers
 
@@ -41,7 +43,10 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
         f"Read and follow the guided skill at {skill}.",
     ]
     if bundle_path:
-        parts.append(f"Use the bounded deterministic execution bundle at {bundle_path}.")
+        parts.append(
+            f"Use the bounded execution context at {bundle_path}. "
+            "Treat its selected paths as the preferred reading set; protected/uncertain paths are retained deliberately."
+        )
     if decision.messages:
         parts.append("Current obligations: " + " | ".join(decision.messages))
     answers = load_answers(root, decision.work)
@@ -107,7 +112,17 @@ def execute_guided_preparation(
         work=decision.work,
         persist=True,
     )
-    prompt = _prompt(root, decision, bundle.markdown_path)
+    lean_path = None
+    try:
+        lean = select_execution_context(
+            root,
+            bundle,
+            provider=LayaDecisionProvider(),
+        )
+        lean_path = persist_execution_context(root, decision.work, lean)
+    except (LayaUnavailable, OSError, RuntimeError, ValueError):
+        lean = None
+    prompt = _prompt(root, decision, str(lean_path) if lean_path is not None else bundle.markdown_path)
     runner = _runner(runtime, root, prompt, model)
     workspace = workspace_factory(cwd=root)
 

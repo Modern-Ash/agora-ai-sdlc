@@ -7,6 +7,7 @@ import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Event, Thread
 
 from agora.model import StartSessionInput
 from agora.workspace import AgoraWorkspace
@@ -97,6 +98,33 @@ def _runner(runtime: RuntimeDiscovery, root: Path, prompt: str, model: str | Non
     return shlex.join(argv)
 
 
+def _start_session_with_heartbeat(
+    workspace,
+    data: StartSessionInput,
+    *,
+    progress_fn: Callable[[str], None] | None,
+    interval_seconds: float = 15.0,
+):
+    """Run the synchronous Core session while keeping the terminal visibly alive."""
+
+    if progress_fn is None or interval_seconds <= 0:
+        return workspace.start_session(data)
+
+    stop = Event()
+
+    def emit_heartbeat() -> None:
+        while not stop.wait(interval_seconds):
+            progress_fn("executor_wait")
+
+    thread = Thread(target=emit_heartbeat, name="agora-flow-heartbeat", daemon=True)
+    thread.start()
+    try:
+        return workspace.start_session(data)
+    finally:
+        stop.set()
+        thread.join(timeout=0.2)
+
+
 def execute_guided_preparation(
     root: Path,
     decision: GuidedDecision,
@@ -168,7 +196,11 @@ def execute_guided_preparation(
     if progress_fn is not None:
         progress_fn("executor")
     try:
-        result = workspace.start_session(StartSessionInput(**kwargs))
+        result = _start_session_with_heartbeat(
+            workspace,
+            StartSessionInput(**kwargs),
+            progress_fn=progress_fn,
+        )
     except (OSError, RuntimeError, ValueError) as error:
         raise ExecutorLaunchError(f"Guided executor {runtime.name} failed: {error}") from error
 

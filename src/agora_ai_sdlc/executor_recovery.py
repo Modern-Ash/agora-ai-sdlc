@@ -48,7 +48,7 @@ def _provider_id(model: str) -> str:
 
 def _provider_label(provider: str) -> str:
     labels = {
-        "ollama": "Ollama (local)",
+        "ollama": "Ollama (local via OpenCode)",
         "opencode": "OpenCode",
         "openai": "OpenAI",
         "anthropic": "Anthropic",

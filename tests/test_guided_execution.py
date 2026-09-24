@@ -1,7 +1,8 @@
+import time
 from types import SimpleNamespace
 
 from agora_ai_sdlc.guided import GuidedDecision
-from agora_ai_sdlc.guided_execution import execute_guided_preparation
+from agora_ai_sdlc.guided_execution import _start_session_with_heartbeat, execute_guided_preparation
 
 
 def decision() -> GuidedDecision:
@@ -75,3 +76,22 @@ def test_runtime_switch_does_not_invent_executor_actor(monkeypatch, tmp_path):
     assert "claude" in data.runner
     assert result.runtime == "Claude Code"
     assert progress == ["context", "executor"]
+
+
+def test_start_session_emits_heartbeat_while_waiting():
+    progress = []
+
+    class Workspace:
+        def start_session(self, data):
+            time.sleep(0.03)
+            return SimpleNamespace(status="completed")
+
+    result = _start_session_with_heartbeat(
+        Workspace(),
+        SimpleNamespace(),
+        progress_fn=progress.append,
+        interval_seconds=0.005,
+    )
+
+    assert result.status == "completed"
+    assert "executor_wait" in progress

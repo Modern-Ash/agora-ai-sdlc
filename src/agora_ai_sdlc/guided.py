@@ -218,11 +218,7 @@ def inspect_next(
         developer_actor = (getattr(swarm_record, "assignments", {}) or {}).get("developer")
         if developer_actor:
             actor_record = next(
-                (
-                    actor
-                    for actor in workspace.list_actors()
-                    if getattr(actor, "reference", None) == developer_actor
-                ),
+                (actor for actor in workspace.list_actors() if getattr(actor, "reference", None) == developer_actor),
                 None,
             )
             if actor_record is not None:

@@ -14,7 +14,11 @@ from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.execution_bundle import build_execution_bundle
 from agora_ai_sdlc.execution_context import persist_execution_context, select_execution_context
-from agora_ai_sdlc.executor_launch import ExecutorLaunchError, load_executor_adapters
+from agora_ai_sdlc.executor_launch import (
+    ExecutorLaunchError,
+    _session_failure_diagnostic,
+    load_executor_adapters,
+)
 from agora_ai_sdlc.guided import GuidedDecision
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
@@ -202,7 +206,16 @@ def execute_guided_preparation(
             progress_fn=progress_fn,
         )
     except (OSError, RuntimeError, ValueError) as error:
-        raise ExecutorLaunchError(f"Guided executor {runtime.name} failed: {error}") from error
+        session_path = root / ".agora" / "sessions" / session_id
+        diagnostic = ""
+        try:
+            diagnostic = _session_failure_diagnostic(session_path)
+        except (OSError, ValueError):
+            pass
+        suffix = f" Executor diagnostic: {diagnostic}." if diagnostic else ""
+        if "Durable diagnostics:" not in str(error):
+            suffix += f" Durable diagnostics: {session_path / 'SUMMARY.md'}."
+        raise ExecutorLaunchError(f"Guided executor {runtime.name} failed: {error}.{suffix}") from error
 
     if getattr(result, "status", None) != "completed":
         raise ExecutorLaunchError(

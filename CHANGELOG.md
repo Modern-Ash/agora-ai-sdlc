@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- Add the continuous Agora Flow AI-DLC wizard with inline clarification, AI-DLC phase/substep guidance, transparent method outputs, Enter-to-confirm governed execution, and seamless Start -> wizard flow.\n- Enrich Method Pack 0.2.0 with first-class AI-DLC Inception outputs (Level 1 Plan, User Stories, NFR, Risk Register, Measurement Criteria, Units and Bolts) and Construction outputs (Domain Design, Logical Design and Deployment Unit), while retaining 0.1.0 unchanged for compatibility.\n- Add the optional local Laya Decision Plane, Progressive Intelligence and visible Context Economy: confidence-gated routing, fail-open semantic pruning, before/after context estimates and persisted lean execution context.
+- Add the continuous Agora Flow AI-DLC wizard with inline clarification, AI-DLC phase/substep guidance, transparent method outputs, Enter-to-confirm governed execution, and seamless Start -> wizard flow.
+- Enrich Method Pack 0.2.0 with first-class AI-DLC Inception outputs (Level 1 Plan, User Stories, NFR, Risk Register, Measurement Criteria, Units and Bolts) and Construction outputs (Domain Design, Logical Design and Deployment Unit), while retaining 0.1.0 unchanged for compatibility.
+- Add the optional local Laya Decision Plane, Progressive Intelligence and visible Context Economy: confidence-gated routing, fail-open semantic pruning, before/after context estimates and persisted lean execution context.
 - Runtime selection now carries Agora Core's usage measurement basis (measured, provider-reported, unknown) per consumed dimension; missing values are unknown, never measured.
 - Add the AI-SDLC Studio projection provider (`agora_ai_sdlc.studio_projection`) for Agora Core >=0.9, mapping the flavor manifest and Core session provenance and reporting unsupported sections as explicit unavailable.
 - Add the Regulated Delivery Readiness package and a statement of work template to the professional-services documentation.

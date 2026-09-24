@@ -94,6 +94,7 @@ def select_execution_context(
     latency_ms = 0.0
     tokens_by_path: dict[str, int] = {}
 
+    pending: list[tuple[str, dict]] = []
     for relative in candidates:
         text, tokens = _read(root, relative, max_chars_per_file)
         tokens_by_path[relative] = tokens
@@ -114,18 +115,36 @@ def select_execution_context(
                 "content": text,
             },
         }
-        evaluation = evaluate_with_confidence(
-            provider,
-            state,
-            (FILE_RELEVANCE,),
-            policy=ConfidencePolicy(confidence_threshold),
-        )
-        answer = evaluation.result.answers["relevance"]
+        pending.append((relative, state))
+
+    batch = getattr(provider, "decide_many", None)
+    if pending and callable(batch):
+        raw_results = batch(tuple((state, (FILE_RELEVANCE,)) for _, state in pending))
+        if len(raw_results) != len(pending):
+            raise ValueError("decision provider returned an unexpected context batch size")
+        evaluations = []
+        for result in raw_results:
+            answer = result.answers.get("relevance")
+            if answer is None:
+                raise ValueError("decision provider batch omitted relevance answer")
+            evaluations.append((result, answer, answer.confidence < confidence_threshold))
+    else:
+        evaluations = []
+        for _, state in pending:
+            evaluation = evaluate_with_confidence(
+                provider,
+                state,
+                (FILE_RELEVANCE,),
+                policy=ConfidencePolicy(confidence_threshold),
+            )
+            answer = evaluation.result.answers["relevance"]
+            evaluations.append((evaluation.result, answer, bool(evaluation.escalated)))
+
+    for (relative, _), (result, answer, was_escalated) in zip(pending, evaluations):
         classifications[relative] = str(answer.value)
         confidences[relative] = answer.confidence
-        latency_ms += evaluation.result.latency_ms or 0.0
-
-        if evaluation.escalated:
+        latency_ms += result.latency_ms or 0.0
+        if was_escalated:
             selected.add(relative)
             escalated.append(relative)
         elif answer.value in {"required", "useful"}:

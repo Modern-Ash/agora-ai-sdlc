@@ -120,17 +120,9 @@ class Lifecycle:
         assert self.move("po", "inception") == "inception"
 
     def to_construction(self) -> None:
-        for kind in (
-            "requirements",
-            "user-stories",
-            "nfr",
-            "risk-register",
-            "measurement-criteria",
-            "plan",
-            "unit-of-work",
-            "bolt-plan",
-        ):
-            self.artifact("arch", kind)
+        self.stage("arch", "designed")
+        self.artifact("arch", "architecture")
+        self.artifact("arch", "requirements")
         self.approve("arch", "architect")
         self.approve("po", "product-owner")
         self.clarify()
@@ -139,8 +131,8 @@ class Lifecycle:
     def to_operations(self) -> None:
         self.stage("build", "built")
         self.stage("qa", "verified")
-        for kind in ("domain-model", "logical-design", "implementation-plan", "test-strategy", "deployment-unit"):
-            self.artifact("build", kind)
+        self.artifact("build", "implementation-plan")
+        self.artifact("build", "test-strategy")
         self.evidence("build", "test-suite")
         self.approve("qa", "quality-reviewer")
         assert self.move("qa", "operations") == "operations"

@@ -4,7 +4,8 @@ Modern Ash offers bounded consulting and implementation services around the open
 
 | Package | Primary outcome | Typical boundary |
 | --- | --- | --- |
-| [AI-SDLC Assessment](assessment.md) | Evidence-based current-state baseline and adoption plan | Analysis and recommendations |\n| [AI-DLC Guided Adoption](ai-dlc-adoption.md) | Practice the three-phase method on a real Work through Agora Flow | Bounded adoption/pilot; no outcome guarantee |
+| [AI-SDLC Assessment](assessment.md) | Evidence-based current-state baseline and adoption plan | Analysis and recommendations |
+| [AI-DLC Guided Adoption](ai-dlc-adoption.md) | Practice the three-phase method on a real Work through Agora Flow | Bounded adoption/pilot; no outcome guarantee |
 | [Starter Pilot](starter-pilot.md) | One team, one repository, one accepted Unit of Work | Non-production pilot |
 | [Enterprise Adoption](enterprise-adoption.md) | Governed multi-project rollout using signed project-local snapshots | Self-managed rollout |
 | [Legacy Modernization](modernization.md) | One characterized, traced modernization slice | Bounded migration increment |

@@ -270,12 +270,6 @@ def command_plan(decision: GuidedDecision) -> tuple[tuple[str, str], ...]:
             )
         )
 
-    commands.append(
-        (
-            f"agora-ai-sdlc continue --swarm {decision.swarm} --work {decision.work}",
-            "Re-read authoritative state after mutations and present the next human decision.",
-        )
-    )
     return tuple(commands)
 
 

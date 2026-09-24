@@ -28,11 +28,13 @@ def _actor_id(decision: GuidedDecision) -> str:
 def next_in_session_action(decision: GuidedDecision) -> str:
     """Return the action Enter should perform at a non-generative node."""
 
+    criterion_statuses = dict(decision.criterion_statuses)
     if (
         decision.state == "operations"
         and decision.target == "completed"
         and decision.gate == "completion"
         and decision.unsatisfied_criteria
+        and all("deployed" in criterion_statuses.get(item, ()) for item in decision.unsatisfied_criteria)
         and not (
             decision.missing_artifacts
             or decision.missing_evidence

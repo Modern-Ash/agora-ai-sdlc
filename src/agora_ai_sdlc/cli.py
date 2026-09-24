@@ -83,7 +83,7 @@ def main(argv: list[str] | None = None) -> int:
     install.add_argument("--config", help="Read a reproducible YAML/JSON install config")
     install.add_argument("--write-config", help="Write the resolved install config without applying")
     install.add_argument("--yes", action="store_true", help="Apply without interactive confirmation")
-    start = sub.add_parser("start", help="Start AI-SDLC work from a real issue and stop at human plan review")
+    start = sub.add_parser("start", help="Start AI-DLC work and enter the continuous Agora Flow wizard")
     start.add_argument("--issue", type=int, required=True, help="Issue number to use as the candidate Intent source")
     start.add_argument("--project", help="GitHub owner/repository; inferred from origin when omitted")
     start.add_argument(
@@ -105,6 +105,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     start.add_argument("--lang", choices=SUPPORTED_LANGUAGES, help="Presentation language")
     start.add_argument("--ui-file", help="Write human progress to a new file, separate from agent output")
+    start.add_argument("--no-wizard", action="store_true", help="Stop after Start/Inception instead of entering the interactive wizard")
     guided = sub.add_parser("continue", help="Show the next governed decision in human-friendly AI-SDLC language")
     guided.add_argument("--root", default=".", help="Project root")
     guided.add_argument("--swarm", help="Limit to one delivery swarm")
@@ -509,6 +510,26 @@ def main(argv: list[str] | None = None) -> int:
                     channel.write(render_start(result, lang=language, details=args.details))
                 else:
                     print(render_start(result, lang=language, details=args.details))
+
+                enter_wizard = (
+                    not args.json
+                    and not args.ui_file
+                    and not args.prepare_only
+                    and not args.no_wizard
+                    and sys.stdin.isatty()
+                    and sys.stdout.isatty()
+                )
+                if enter_wizard:
+                    from agora_ai_sdlc.guided_session import run_interactive
+
+                    print("")
+                    print(t("wizard.start_continuous", lang=language))
+                    run_interactive(
+                        Path(result.workspace_root),
+                        swarm=args.swarm,
+                        work=result.work_id,
+                        lang=language,
+                    )
         except KeyboardInterrupt:
             print("Start cancelled by user.", file=sys.stderr)
             return 130

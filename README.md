@@ -159,12 +159,18 @@ This repository was previously named with a trailing dot (`agora-ai-sdlc.`). Git
 
 ```bash
 uv sync
-uv run python scripts/verify_all.py   # full verification
+uv run python scripts/install_git_hooks.py  # once per clone/worktree setup
+uv run python scripts/verify_commit.py      # fast commit gate
+uv run python scripts/verify_all.py         # full pre-push / CI verification
 uv run pytest
 uv run agora-ai-sdlc --version
 uv run agora-ai-sdlc self-test --json
 uv build
 ```
+
+The installed `pre-commit` hook blocks Python syntax, Ruff lint/format and staged-diff errors before a
+commit is created. The `pre-push` hook runs the complete project verification before code reaches a PR.
+The hooks intentionally reuse repository scripts rather than maintaining a second CI rule set.
 
 ## Executable samples
 

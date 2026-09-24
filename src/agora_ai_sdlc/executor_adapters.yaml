@@ -5,7 +5,25 @@ executors:
     argv: ["{executable}", "exec", "--ephemeral", "--color", "never", "{prompt}"]
   claude:
     kind: "agent"
-    argv: ["{executable}", "--print", "--permission-mode", "acceptEdits", "--no-session-persistence", "{prompt}"]
+    argv:
+      - "{executable}"
+      - "--print"
+      - "--permission-mode"
+      - "acceptEdits"
+      - "--allowedTools"
+      - "Read"
+      - "Write"
+      - "Edit"
+      - "Bash(pwd)"
+      - "Bash(git status:*)"
+      - "Bash(git diff:*)"
+      - "Bash(aisdlc verify:*)"
+      - "Bash(agora artifact add:*)"
+      - "Bash(agora evidence add:*)"
+      - "Bash(agora work readiness:*)"
+      - "Bash(agora work criterion-satisfy:*)"
+      - "--no-session-persistence"
+      - "{prompt}"
   opencode:
     kind: "agent"
     argv: ["{python}", "-m", "agora_ai_sdlc.opencode_runner", "--executable", "{executable}", "--root", "{root}", "--model", "{model}", "--prompt", "{prompt}"]

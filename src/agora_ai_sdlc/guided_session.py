@@ -15,6 +15,7 @@ from agora_ai_sdlc.opencode_runner import list_available_models, list_ollama_age
 from agora_ai_sdlc.runtime_discovery import discover_runtimes
 from agora_ai_sdlc.workflow_advisor import advise_workflow
 from agora_ai_sdlc.wizard import build_wizard_view, render_wizard, save_answer
+from agora_ai_sdlc.wizard_actions import execute_in_session_action
 
 
 @dataclass(frozen=True)
@@ -179,13 +180,20 @@ def run_interactive(
             output_fn(t("wizard.choose", lang=lang))
             continue
 
-        if advice.action == "review":
-            _render_review(decision, output_fn, lang=lang)
+        if advice.action != "prepare":
+            if advice.action == "review":
+                _render_review(decision, output_fn, lang=lang)
+                output_fn("")
+                output_fn(t("wizard.review_boundary", lang=lang))
+                continue
+            try:
+                action_result = execute_in_session_action(root, decision)
+            except (OSError, RuntimeError, ValueError, PermissionError) as error:
+                output_fn(t("wizard.node_action_failed", lang=lang, error=str(error)))
+                continue
             output_fn("")
-            output_fn(t("wizard.review_boundary", lang=lang))
-            # Do not fabricate approval. The same wizard remains active and
-            # exposes the exact Core state until an approval is explicitly
-            # recorded by the responsible actor.
+            output_fn(t("wizard.node_action_complete", lang=lang, summary=action_result.summary))
+            output_fn(t("session.reinspect", lang=lang))
             continue
 
         if selected_runtime is None:

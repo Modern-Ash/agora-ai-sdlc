@@ -127,6 +127,8 @@ class WizardView:
     human_decisions: tuple[str, ...]
     method_outputs: tuple[MethodOutput, ...]
     brownfield: bool = False
+    level_1_plan_preview: tuple[str, ...] = ()
+    validation_checkpoint: str | None = None
 
     def snapshot(self) -> dict:
         return asdict(self)
@@ -200,6 +202,44 @@ def _section(text: str, heading: str) -> str:
     )
     match = pattern.search(text)
     return match.group(1).strip() if match else ""
+
+
+def _level_1_plan_preview(root: Path, work: str, *, limit: int = 6) -> tuple[str, ...]:
+    candidates = (
+        root / ".agora" / "ai-sdlc" / "handoffs" / work / "DETERMINISTIC_INCEPTION.md",
+        root / ".agora" / "ai-sdlc" / "handoffs" / f"issue-{work.removeprefix('issue-')}" / "DETERMINISTIC_INCEPTION.md",
+    )
+    for path in candidates:
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        section = _section(text, "Level 1 Plan")
+        items: list[str] = []
+        for line in section.splitlines():
+            value = line.strip()
+            if not value.startswith("-"):
+                continue
+            value = value.removeprefix("-").strip()
+            if value:
+                items.append(value)
+            if len(items) >= limit:
+                break
+        if items:
+            return tuple(items)
+    return ()
+
+
+def _validation_checkpoint(decision: GuidedDecision, phase: str, step: str) -> str:
+    if decision.ready_for_human_approval or decision.missing_approvals:
+        return "Explicit human approval is required before lifecycle progression."
+    if phase == "inception":
+        return f"Validate the {step} output before enriching the next Inception artifact."
+    if phase == "construction":
+        return f"Validate the {step} result and its traceability before downstream Construction work."
+    return f"Validate the {step} recommendation/evidence before operational action."
 
 
 def _semantic_gaps(root: Path, work: str) -> tuple[str, ...]:
@@ -362,6 +402,8 @@ def build_wizard_view(root: Path, decision: GuidedDecision) -> WizardView:
         human_decisions=tuple(human),
         method_outputs=_method_outputs(root, decision, phase),
         brownfield=_brownfield(decision),
+        level_1_plan_preview=_level_1_plan_preview(root, decision.work),
+        validation_checkpoint=_validation_checkpoint(decision, phase, current),
     )
 
 
@@ -418,11 +460,24 @@ def render_wizard(view: WizardView, *, lang: str = "en") -> str:
     if view.evidence:
         lines.extend(["", t("wizard.evidence", lang=lang), *[f"  ✓ {item}" for item in view.evidence]])
 
+    if view.level_1_plan_preview:
+        lines.extend(["", t("wizard.level1_preview", lang=lang)])
+        for index, item in enumerate(view.level_1_plan_preview, start=1):
+            lines.append(f"  {index}. {item}")
+
     lines.extend(["", t("wizard.method_outputs", lang=lang)])
     for item in view.method_outputs:
         marker = "!" if item.status == "required-now" else ("✓" if item.status == "observed" else "·")
         lines.append(f"  {marker} {item.label:<22} [{item.artifact_kind}]")
 
+    if view.validation_checkpoint:
+        lines.extend(
+            [
+                "",
+                t("wizard.validation_checkpoint", lang=lang),
+                "  ◆ " + view.validation_checkpoint,
+            ]
+        )
     if view.human_decisions:
         lines.extend(["", t("wizard.human_boundary", lang=lang), *[f"  ◆ {item}" for item in view.human_decisions]])
     return "\n".join(lines)

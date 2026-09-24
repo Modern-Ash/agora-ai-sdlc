@@ -39,17 +39,11 @@ def build_decision_card(
 ) -> DecisionCard:
     rationale: list[str] = []
     if decision.missing_artifacts:
-        rationale.append(
-            t("decision.reason.missing_artifacts", lang=lang, items=", ".join(decision.missing_artifacts))
-        )
+        rationale.append(t("decision.reason.missing_artifacts", lang=lang, items=", ".join(decision.missing_artifacts)))
     if decision.unsatisfied_criteria:
-        rationale.append(
-            t("decision.reason.criteria", lang=lang, items=", ".join(decision.unsatisfied_criteria))
-        )
+        rationale.append(t("decision.reason.criteria", lang=lang, items=", ".join(decision.unsatisfied_criteria)))
     if decision.missing_evidence:
-        rationale.append(
-            t("decision.reason.evidence", lang=lang, items=", ".join(decision.missing_evidence))
-        )
+        rationale.append(t("decision.reason.evidence", lang=lang, items=", ".join(decision.missing_evidence)))
     if getattr(advice, "escalation_required", False):
         rationale.append(t("decision.reason.low_confidence", lang=lang))
     elif advice.source == "laya" and getattr(advice, "reasoning_tier", None):
@@ -137,9 +131,7 @@ def build_decision_card(
     if getattr(advice, "security_review", None) == "required":
         risks.append(t("decision.risk.security", lang=lang))
     if getattr(advice, "context_escalated", ()):
-        risks.append(
-            t("decision.risk.context_fail_open", lang=lang, count=len(advice.context_escalated))
-        )
+        risks.append(t("decision.risk.context_fail_open", lang=lang, count=len(advice.context_escalated)))
     if getattr(advice, "escalation_required", False):
         risks.append(t("decision.risk.reasoning_escalated", lang=lang))
 

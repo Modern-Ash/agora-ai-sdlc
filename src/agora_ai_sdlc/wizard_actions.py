@@ -30,9 +30,7 @@ def next_in_session_action(decision: GuidedDecision) -> str:
 
     criterion_statuses = dict(decision.criterion_statuses)
     pending_deployment = tuple(
-        item
-        for item in decision.unsatisfied_criteria
-        if "deployed" not in criterion_statuses.get(item, ())
+        item for item in decision.unsatisfied_criteria if "deployed" not in criterion_statuses.get(item, ())
     )
     if (
         decision.state == "operations"

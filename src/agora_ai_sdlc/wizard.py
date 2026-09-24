@@ -338,6 +338,32 @@ def _method_outputs(root: Path, decision: GuidedDecision, phase: str) -> tuple[M
     return tuple(outputs)
 
 
+def _has_open_technical_obligations(decision: GuidedDecision) -> bool:
+    return bool(
+        decision.missing_artifacts
+        or decision.unsatisfied_criteria
+        or decision.missing_evidence
+        or decision.git_issues
+        or decision.clarification_issues
+    )
+
+
+def _visible_target(decision: GuidedDecision) -> str | None:
+    """Hide backward Core transition candidates while technical work is still open."""
+
+    target = (decision.target or "").casefold()
+    state = (decision.state or "").casefold()
+    order = {"inception": 0, "construction": 1, "operations": 2}
+    if (
+        state in order
+        and target in order
+        and order[target] < order[state]
+        and _has_open_technical_obligations(decision)
+    ):
+        return None
+    return decision.target
+
+
 def build_wizard_view(root: Path, decision: GuidedDecision) -> WizardView:
     phase = _phase(decision)
     phase_index = PHASE_ORDER.index(phase)
@@ -351,8 +377,9 @@ def build_wizard_view(root: Path, decision: GuidedDecision) -> WizardView:
     facts.append(f"Work: {decision.swarm}/{decision.work}")
     if decision.state:
         facts.append(f"Core lifecycle state: {decision.state}")
-    if decision.target:
-        facts.append(f"Next lifecycle target: {decision.target}")
+    visible_target = _visible_target(decision)
+    if visible_target:
+        facts.append(f"Next lifecycle target: {visible_target}")
     if decision.gate:
         facts.append(f"Decision gate: {decision.gate}")
     if decision.role:
@@ -391,7 +418,7 @@ def build_wizard_view(root: Path, decision: GuidedDecision) -> WizardView:
 
     human = []
     human.extend(f"Approval required from: {item}" for item in decision.missing_approvals)
-    if decision.ready_for_human_approval:
+    if decision.ready_for_human_approval and not _has_open_technical_obligations(decision):
         human.append("Technical obligations are complete; human validation is the next loss-function checkpoint.")
 
     return WizardView(

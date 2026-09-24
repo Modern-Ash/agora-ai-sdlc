@@ -10,7 +10,6 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from agora_ai_sdlc.execution_bundle import build_execution_bundle
-from agora_ai_sdlc.execution_context import select_execution_context
 from agora_ai_sdlc.execution_decisions import advise_execution
 from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice, recovery_choices
 from agora_ai_sdlc.guided import GuidedDecision
@@ -72,7 +71,11 @@ def advise_workflow(
     *,
     confidence_threshold: float = 0.90,
 ) -> WorkflowAdvice:
-    """Choose the simplest next interaction and use Laya only where it adds value."""
+    """Choose the simplest next interaction.
+
+    Keep the pre-confirmation Laya pass lightweight. Expensive per-file context
+    selection is deferred to execution after the user explicitly confirms.
+    """
 
     # Authority-bearing decisions never go through Laya.
     if decision.ready_for_human_approval and decision.missing_approvals:
@@ -158,19 +161,6 @@ def advise_workflow(
             validation_focus = str(focus.value)
             validation_focus_confidence = focus.confidence
 
-        selected = select_execution_context(
-            root,
-            bundle,
-            provider=provider,
-            confidence_threshold=confidence_threshold,
-        )
-        context_candidates = len(selected.candidate_paths)
-        context_selected = len(selected.selected_paths)
-        context_tokens_before = selected.candidate_tokens
-        context_tokens_after = selected.selected_tokens
-        context_tokens_saved = selected.saved_tokens
-        context_reduction_ratio = selected.reduction_ratio
-        context_escalated = selected.escalated_paths
     except (LayaUnavailable, OSError, RuntimeError, ValueError):
         pass
 

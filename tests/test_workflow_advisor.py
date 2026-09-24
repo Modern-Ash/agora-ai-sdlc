@@ -71,10 +71,6 @@ def test_low_cost_work_preselects_local_free_runtime(monkeypatch):
     monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.build_execution_bundle", lambda *args, **kwargs: object())
     monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.advise_execution", lambda *args, **kwargs: evaluation)
     monkeypatch.setattr(
-        "agora_ai_sdlc.workflow_advisor.select_execution_context",
-        lambda *args, **kwargs: context_selection(),
-    )
-    monkeypatch.setattr(
         "agora_ai_sdlc.workflow_advisor._free_runtime",
         lambda root: ExecutorRecoveryChoice("opencode", "ollama/qwen3:8b", "Ollama · qwen3:8b [local]"),
     )
@@ -86,9 +82,9 @@ def test_low_cost_work_preselects_local_free_runtime(monkeypatch):
     assert advice.confidence == 0.97
     assert advice.recommended_runtime is not None
     assert "[local]" in advice.recommended_runtime.label
-    assert advice.context_candidates == 2
-    assert advice.context_selected == 1
-    assert advice.context_tokens_saved == 700
+    assert advice.context_candidates == 0
+    assert advice.context_selected == 0
+    assert advice.context_tokens_saved == 0
 
 
 def test_uncertain_laya_never_suppresses_normal_escalation(monkeypatch):
@@ -101,10 +97,6 @@ def test_uncertain_laya_never_suppresses_normal_escalation(monkeypatch):
     monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.build_execution_bundle", lambda *args, **kwargs: object())
     monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.advise_execution", lambda *args, **kwargs: evaluation)
     monkeypatch.setattr(
-        "agora_ai_sdlc.workflow_advisor.select_execution_context",
-        lambda *args, **kwargs: context_selection(),
-    )
-    monkeypatch.setattr(
         "agora_ai_sdlc.workflow_advisor._free_runtime",
         lambda root: (_ for _ in ()).throw(AssertionError("uncertain result must not auto-select")),
     )
@@ -113,3 +105,23 @@ def test_uncertain_laya_never_suppresses_normal_escalation(monkeypatch):
     assert advice.action == "prepare"
     assert advice.escalation_required
     assert advice.recommended_runtime is None
+
+
+def test_preconfirmation_advice_does_not_select_per_file_context(monkeypatch):
+    answer = SimpleNamespace(value="standard", confidence=0.96)
+    evaluation = SimpleNamespace(
+        result=SimpleNamespace(answers={"reasoning_tier": answer}),
+        escalated=(),
+    )
+
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.build_execution_bundle", lambda *args, **kwargs: object())
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.advise_execution", lambda *args, **kwargs: evaluation)
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor._free_runtime", lambda root: None)
+
+    advice = advise_workflow(Path("."), decision())
+
+    assert advice.action == "prepare"
+    assert advice.context_candidates == 0
+    assert advice.context_selected == 0
+    assert advice.context_tokens_before == 0
+    assert advice.context_tokens_after == 0

@@ -5,7 +5,7 @@ import pytest
 
 from agora_ai_sdlc.executor_launch import ExecutorLaunchError
 from agora_ai_sdlc.guided import GuidedDecision
-from agora_ai_sdlc.guided_execution import _start_session_with_heartbeat, execute_guided_preparation
+from agora_ai_sdlc.guided_execution import _prompt, _start_session_with_heartbeat, execute_guided_preparation
 
 
 def decision() -> GuidedDecision:
@@ -23,6 +23,17 @@ def decision() -> GuidedDecision:
         messages=("Prepare missing artifacts.",),
         missing_artifacts=("plan",),
     )
+
+
+def test_guided_prompt_requests_safe_durable_progress_milestones(monkeypatch, tmp_path):
+    monkeypatch.setattr("agora_ai_sdlc.guided_execution.load_answers", lambda *args, **kwargs: {})
+
+    prompt = _prompt(tmp_path, decision(), "repo://EXECUTION_BUNDLE.md")
+
+    assert "agora session progress" in prompt
+    assert "$AGORA_SESSION_ID" in prompt
+    assert "$AGORA_EXECUTOR" in prompt
+    assert "never report chain-of-thought" in prompt
 
 
 def test_runtime_switch_does_not_invent_executor_actor(monkeypatch, tmp_path):

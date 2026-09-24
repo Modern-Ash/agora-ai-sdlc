@@ -3,7 +3,6 @@ from pathlib import Path
 
 from agora_ai_sdlc.artifacts import PREFIX, check_traceability, parse_artifact, parse_template
 
-
 ROOT = Path(__file__).parent.parent
 
 

@@ -6,8 +6,9 @@ Agora Core policies, evidence and human approvals remain authoritative.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any, Mapping, Protocol
+from typing import Any, Protocol
 
 VALID_TYPES = {"choice", "score", "noul"}
 

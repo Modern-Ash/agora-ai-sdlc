@@ -14,6 +14,7 @@ from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice, select_execu
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next, render
 from agora_ai_sdlc.guided_execution import execute_guided_preparation
 from agora_ai_sdlc.i18n import t
+from agora_ai_sdlc.iteration_status import inspect_iteration, render_terminal_summary
 from agora_ai_sdlc.opencode_runner import list_available_models, list_ollama_agent_models
 from agora_ai_sdlc.runtime_discovery import discover_runtimes
 from agora_ai_sdlc.wizard import build_wizard_view, render_wizard, save_answer
@@ -297,11 +298,12 @@ def run_interactive(
     while True:
         decision = inspect_next(root, swarm=swarm, work=work, lang=lang)
         if decision is None:
-            output_fn("Agora AI-SDLC")
+            status = inspect_iteration(root, swarm=swarm, work=work)
             output_fn("")
-            output_fn(t("guided.none", lang=lang))
+            output_fn(render_terminal_summary(status, lang=lang))
+            reason = "completed" if status.state == "completed" else "clear"
             return GuidedSessionResult(
-                "clear",
+                reason,
                 selected_runtime.agent if selected_runtime else None,
                 selected_runtime.model if selected_runtime else None,
             )

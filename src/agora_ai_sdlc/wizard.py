@@ -1,7 +1,7 @@
-"""Continuous AI-DLC delivery wizard projection for Agora AI-SDLC.
+"""Continuous AI-SDLC delivery wizard projection for Agora AI-SDLC.
 
 The wizard is a transparent presentation/interaction layer over authoritative
-Agora Core facts. It preserves AI-DLC terminology while hiding operational
+Agora Core facts. It preserves AI-SDLC terminology while hiding operational
 complexity, never evidence or authority boundaries.
 """
 

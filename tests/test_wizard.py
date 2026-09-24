@@ -112,3 +112,38 @@ def test_wizard_shows_level_1_plan_preview_and_validation_checkpoint(tmp_path):
     assert "Level 1 Plan · current proposal" in rendered
     assert "Human validation checkpoint" in rendered
     assert "implement: execute" in rendered
+
+
+def test_wizard_hides_backward_target_while_construction_obligations_are_open(tmp_path):
+    view = build_wizard_view(
+        tmp_path,
+        decision(
+            state="construction",
+            target="inception",
+            clarification_issues=(),
+            missing_artifacts=("domain-model",),
+            missing_evidence=("test-suite",),
+            ready_for_human_approval=True,
+        ),
+    )
+
+    assert "Core lifecycle state: construction" in view.facts
+    assert not any(item == "Next lifecycle target: inception" for item in view.facts)
+    assert not any("Technical obligations are complete" in item for item in view.human_decisions)
+
+
+def test_wizard_keeps_forward_target_when_progression_is_valid(tmp_path):
+    view = build_wizard_view(
+        tmp_path,
+        decision(
+            state="construction",
+            target="operations",
+            clarification_issues=(),
+            missing_artifacts=(),
+            missing_evidence=(),
+            ready_for_human_approval=True,
+        ),
+    )
+
+    assert "Next lifecycle target: operations" in view.facts
+    assert any("Technical obligations are complete" in item for item in view.human_decisions)

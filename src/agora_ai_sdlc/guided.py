@@ -177,7 +177,7 @@ def inspect_next(
     try:
         work_record = workspace.show_work(str(task.swarm_id or ""), str(task.work_id or ""))
         observed_artifacts = tuple(getattr(work_record, "artifact_kinds", ()) or ())
-    except (OSError, ValueError, FileNotFoundError):
+    except (AttributeError, OSError, ValueError, FileNotFoundError):
         observed_artifacts = ()
 
     messages = _humanize(

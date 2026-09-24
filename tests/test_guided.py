@@ -256,6 +256,18 @@ def test_guided_projection_includes_current_criterion_stages(monkeypatch, tmp_pa
                 criterion_statuses={"source-issue": ["elaborated", "designed", "built", "verified", "deployed"]},
             )
 
+        def show_swarm(self, swarm_id):
+            return SimpleNamespace(assignments={"developer": "project:ai-developer"})
+
+        def list_actors(self):
+            return [
+                SimpleNamespace(
+                    id="ai-developer",
+                    reference="project:ai-developer",
+                    kind="ai-agent",
+                )
+            ]
+
     monkeypatch.setattr(guided, "AgoraWorkspace", CriterionWorkspace)
 
     decision = guided.inspect_next(tmp_path, swarm="delivery", work="first-work")
@@ -264,3 +276,5 @@ def test_guided_projection_includes_current_criterion_stages(monkeypatch, tmp_pa
     assert decision.criterion_statuses == (
         ("source-issue", ("elaborated", "designed", "built", "verified", "deployed")),
     )
+    assert decision.developer_actor == "project:ai-developer"
+    assert decision.developer_actor_kind == "ai-agent"

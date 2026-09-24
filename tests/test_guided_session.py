@@ -182,3 +182,58 @@ def test_failed_runtime_is_not_reselected_automatically(monkeypatch):
     assert calls["execute"] == 1
     assert calls["select"] == 1
     assert any("Actor not found: ai-claude" in line for line in outputs)
+
+
+def test_invalid_confirmation_does_not_reinspect_or_rerun_laya(monkeypatch):
+    outputs = []
+    calls = {"inspect": 0, "advice": 0}
+
+    def inspect(*args, **kwargs):
+        calls["inspect"] += 1
+        return decision()
+
+    def advise(*args, **kwargs):
+        calls["advice"] += 1
+        return advice_result
+
+    advice_result = advice()
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.inspect_next", inspect)
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.build_wizard_view", lambda *args, **kwargs: view())
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.advise_workflow", advise)
+
+    answers = iter(["invalid", "x"])
+    result = run_interactive(Path("."), input_fn=lambda prompt: next(answers), output_fn=outputs.append)
+
+    assert result.reason == "exit"
+    assert calls == {"inspect": 1, "advice": 1}
+    assert any("Choose Enter, A, D or X." in line for line in outputs)
+
+
+def test_review_boundary_stops_session_without_recomputing(monkeypatch):
+    outputs = []
+    calls = {"inspect": 0, "advice": 0}
+
+    def inspect(*args, **kwargs):
+        calls["inspect"] += 1
+        return decision(missing_artifacts=(), blockers=())
+
+    def advise_review(*args, **kwargs):
+        calls["advice"] += 1
+        return SimpleNamespace(
+            action="review",
+            summary="Review evidence.",
+            source="deterministic",
+            reasoning_tier=None,
+            confidence=None,
+            recommended_runtime=None,
+        )
+
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.inspect_next", inspect)
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.build_wizard_view", lambda *args, **kwargs: view())
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.advise_workflow", advise_review)
+
+    result = run_interactive(Path("."), input_fn=lambda prompt: "", output_fn=outputs.append)
+
+    assert result.reason == "review"
+    assert calls == {"inspect": 1, "advice": 1}
+    assert any("No approval was recorded." in line for line in outputs)

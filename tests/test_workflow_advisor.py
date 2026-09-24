@@ -20,25 +20,25 @@ def context_selection():
 
 def decision(**changes):
     values = {
-        "swarm":"delivery",
-        "work":"issue-26",
-        "title":"Deliver issue",
-        "method":"ai-sdlc",
-        "actor":"project:developer",
-        "role":"developer",
-        "state":"construction",
-        "target":"operations",
-        "gate":"construction-complete",
-        "blockers":("blocked",),
-        "messages":("Prepare missing work.",),
-        "missing_artifacts":("implementation-plan",),
-        "missing_evidence":(),
-        "missing_approvals":(),
-        "unsatisfied_criteria":(),
-        "git_issues":(),
-        "clarification_issues":(),
-        "ready_for_human_approval":False,
-        "ready_to_transition":False,
+        "swarm": "delivery",
+        "work": "issue-26",
+        "title": "Deliver issue",
+        "method": "ai-sdlc",
+        "actor": "project:developer",
+        "role": "developer",
+        "state": "construction",
+        "target": "operations",
+        "gate": "construction-complete",
+        "blockers": ("blocked",),
+        "messages": ("Prepare missing work.",),
+        "missing_artifacts": ("implementation-plan",),
+        "missing_evidence": (),
+        "missing_approvals": (),
+        "unsatisfied_criteria": (),
+        "git_issues": (),
+        "clarification_issues": (),
+        "ready_for_human_approval": False,
+        "ready_to_transition": False,
     }
     values.update(changes)
     return GuidedDecision(**values)
@@ -56,25 +56,20 @@ def test_human_approval_never_uses_laya(monkeypatch):
             missing_approvals=("product-owner",),
         ),
     )
-    assert advice.action == "review"
+    assert advice.action == "approve"
     assert advice.source == "deterministic"
     assert not advice.needs_runtime
 
 
 def test_low_cost_work_preselects_local_free_runtime(monkeypatch):
-    class Answer:
-        value = "local"
-        confidence = 0.97
-
-    class Result:
-        answers = {"reasoning_tier": Answer()}
-
-    class Evaluation:
-        result = Result()
-        escalated = ()
+    answer = SimpleNamespace(value="local", confidence=0.97)
+    evaluation = SimpleNamespace(
+        result=SimpleNamespace(answers={"reasoning_tier": answer}),
+        escalated=(),
+    )
 
     monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.build_execution_bundle", lambda *args, **kwargs: object())
-    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.advise_execution", lambda *args, **kwargs: Evaluation())
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.advise_execution", lambda *args, **kwargs: evaluation)
     monkeypatch.setattr(
         "agora_ai_sdlc.workflow_advisor.select_execution_context",
         lambda *args, **kwargs: context_selection(),
@@ -97,19 +92,14 @@ def test_low_cost_work_preselects_local_free_runtime(monkeypatch):
 
 
 def test_uncertain_laya_never_suppresses_normal_escalation(monkeypatch):
-    class Answer:
-        value = "local"
-        confidence = 0.51
-
-    class Result:
-        answers = {"reasoning_tier": Answer()}
-
-    class Evaluation:
-        result = Result()
-        escalated = ("reasoning_tier",)
+    answer = SimpleNamespace(value="local", confidence=0.51)
+    evaluation = SimpleNamespace(
+        result=SimpleNamespace(answers={"reasoning_tier": answer}),
+        escalated=("reasoning_tier",),
+    )
 
     monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.build_execution_bundle", lambda *args, **kwargs: object())
-    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.advise_execution", lambda *args, **kwargs: Evaluation())
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.advise_execution", lambda *args, **kwargs: evaluation)
     monkeypatch.setattr(
         "agora_ai_sdlc.workflow_advisor.select_execution_context",
         lambda *args, **kwargs: context_selection(),

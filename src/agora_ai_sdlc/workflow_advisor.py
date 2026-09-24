@@ -36,6 +36,10 @@ class WorkflowAdvice:
     context_escalated: tuple[str, ...] = ()
     security_review: str | None = None
     security_confidence: float | None = None
+    change_risk: str | None = None
+    change_risk_confidence: float | None = None
+    validation_focus: str | None = None
+    validation_focus_confidence: float | None = None
 
     def snapshot(self) -> dict:
         data = asdict(self)
@@ -114,6 +118,10 @@ def advise_workflow(
     context_escalated: tuple[str, ...] = ()
     security_review = None
     security_confidence = None
+    change_risk = None
+    change_risk_confidence = None
+    validation_focus = None
+    validation_focus_confidence = None
 
     try:
         bundle = build_execution_bundle(
@@ -138,6 +146,14 @@ def advise_workflow(
         if security is not None:
             security_review = str(security.value)
             security_confidence = security.confidence
+        risk = evaluated.result.answers.get("change_risk")
+        if risk is not None:
+            change_risk = str(risk.value)
+            change_risk_confidence = risk.confidence
+        focus = evaluated.result.answers.get("validation_focus")
+        if focus is not None:
+            validation_focus = str(focus.value)
+            validation_focus_confidence = focus.confidence
 
         selected = select_execution_context(
             root,
@@ -178,6 +194,10 @@ def advise_workflow(
             context_escalated=context_escalated,
             security_review=security_review,
             security_confidence=security_confidence,
+            change_risk=change_risk,
+            change_risk_confidence=change_risk_confidence,
+            validation_focus=validation_focus,
+            validation_focus_confidence=validation_focus_confidence,
         )
 
     if escalation:
@@ -205,4 +225,8 @@ def advise_workflow(
         context_escalated=context_escalated,
         security_review=security_review,
         security_confidence=security_confidence,
+        change_risk=change_risk,
+        change_risk_confidence=change_risk_confidence,
+        validation_focus=validation_focus,
+        validation_focus_confidence=validation_focus_confidence,
     )

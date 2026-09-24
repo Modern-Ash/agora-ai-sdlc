@@ -173,7 +173,11 @@ def test_failed_runtime_recovers_inside_same_decision_without_rerunning_laya(mon
         calls["execute"] += 1
         if calls["execute"] == 1:
             assert kwargs["runtime_id"] == "claude"
-            raise ValueError("Claude exited with code 1")
+            raise ValueError(
+                "Guided executor Claude Code failed: Session runner exited with code 1. "
+                "Durable diagnostics: /tmp/claude/SUMMARY.md. Resume with: agora resume --session test. "
+                "Executor diagnostic: You've hit your weekly limit · resets 4pm."
+            )
         assert kwargs["runtime_id"] == "opencode"
         assert kwargs["model"] == "ollama/qwen3:8b"
         return SimpleNamespace(runtime="OpenCode", result_path="/tmp/RESULT.md")
@@ -193,8 +197,11 @@ def test_failed_runtime_recovers_inside_same_decision_without_rerunning_laya(mon
 
     assert result.reason == "clear"
     assert calls == {"inspect": 2, "advice": 1, "select": 1, "execute": 2}
-    assert any("Claude exited with code 1" in line for line in outputs)
-    assert any("current decision is preserved" in line for line in outputs)
+    assert any("Claude Code · configured model failed" in line for line in outputs)
+    assert any("You've hit your weekly limit" in line for line in outputs)
+    assert any("Durable diagnostics: /tmp/claude/SUMMARY.md" in line for line in outputs)
+    assert any("Decision preserved" in line for line in outputs)
+    assert not any("Session runner exited with code 1" in line for line in outputs)
     assert any("Confirm and run with Ollama" in line for line in outputs)
 
 

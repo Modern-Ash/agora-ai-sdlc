@@ -84,7 +84,7 @@ class _ProgressDisplay:
 
     def _clear_line(self) -> None:
         if self._rendered_width:
-            sys.stdout.write("\r" + (" " * self._rendered_width) + "\r")
+            sys.stdout.write("\r" + (" " * self._rendered_width) + "\r\n")
             sys.stdout.flush()
 
 
@@ -157,6 +157,44 @@ def _render_prepare_handoff(
         output_fn("  " + t("session.analyze_clarification", lang=lang))
     output_fn("")
     output_fn("  " + t("session.runtime_note", lang=lang))
+
+
+def _render_execution_error(
+    error: BaseException,
+    runtime: ExecutorRecoveryChoice,
+    output_fn: Callable[[str], None],
+    *,
+    lang: str,
+) -> None:
+    """Render executor failures as readable console diagnostics instead of one long exception line."""
+
+    text = str(error).strip()
+    diagnostic = None
+    durable = None
+
+    diagnostic_marker = " Executor diagnostic: "
+    if diagnostic_marker in text:
+        text, diagnostic = text.rsplit(diagnostic_marker, 1)
+        diagnostic = diagnostic.rstrip(".")
+
+    durable_marker = " Durable diagnostics: "
+    if durable_marker in text:
+        prefix, remainder = text.split(durable_marker, 1)
+        resume_marker = ". Resume with:"
+        if resume_marker in remainder:
+            durable = remainder.split(resume_marker, 1)[0].strip().rstrip(".")
+        text = prefix.rstrip(".")
+
+    output_fn("")
+    output_fn("╭─ " + t("session.execution_error_title", lang=lang, runtime=runtime.label))
+    if diagnostic:
+        output_fn("│ " + t("session.execution_error_reason", lang=lang, reason=diagnostic))
+    else:
+        output_fn("│ " + t("session.execution_error_reason", lang=lang, reason=text))
+    if durable:
+        output_fn("│ " + t("session.execution_error_durable", lang=lang, path=durable))
+    output_fn("│ " + t("session.execution_error_preserved", lang=lang))
+    output_fn("╰" + "─" * 72)
 
 
 def _decision_fingerprint(decision: GuidedDecision) -> tuple[object, ...]:
@@ -401,8 +439,12 @@ def run_interactive(
                 break
 
             failed_runtimes.add((selected_runtime.agent, selected_runtime.model))
-            output_fn(t("session.execution_failed", lang=lang, error=str(execution_error)))
-            output_fn(t("session.execution_retry_same_decision", lang=lang))
+            _render_execution_error(
+                execution_error,
+                selected_runtime,
+                output_fn,
+                lang=lang,
+            )
             selected_runtime = None
             confirmation, selected_runtime = _confirm_current_decision(
                 root,

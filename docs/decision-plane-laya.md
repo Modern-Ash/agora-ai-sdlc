@@ -1,7 +1,7 @@
 # Local Decision Plane with Laya
 
-Agora AI-SDLC uses [Laya](https://github.com/NandhaKishorM/laya) as its local System-1
-decision engine. Laya is the only System-1 provider shipped by this integration and is Apache-2.0
+Agora AI-SDLC can use [Laya](https://github.com/NandhaKishorM/laya) as its local System-1
+decision engine. Laya is the only System-1 provider supported by this integration and is Apache-2.0
 licensed. It is deliberately separate from the generative runtimes used by Construction and Review.
 
 ## UX principle: one continuous wizard
@@ -9,8 +9,10 @@ licensed. It is deliberately separate from the generative runtimes used by Const
 Laya is not a user-facing mode. The normal workflow is a transparent wizard over Core:
 
 ```text
-Understand -> Clarify -> Plan -> Build -> Verify -> Review -> Done
+Inception -> Construction -> Operations
 ```
+
+Within each phase, the wizard shows dynamic method substeps (for example Clarify / Level 1 Plan / Units / Bolts in Inception, and Domain Design / Logical Design / Implementation / Testing in Construction). Human validation is continuous rather than a separate final Review phase.
 
 Every screen answers four questions: where the Work is, what Agora knows, what is still missing, and
 what will happen if the user confirms. The default interaction is `Enter` to confirm the proposed next
@@ -39,13 +41,19 @@ silently removing context or authorizing an action.
 
 ## Normal workflow
 
-Laya is part of the normal AI-SDLC installation and is intentionally hidden behind the guided workflow.
-Users should not need a separate Laya command for routine delivery:
+Laya is intentionally hidden behind the guided workflow, but its heavy ML dependencies remain optional so the base installation stays lightweight. Users do not need a separate Laya command for routine delivery:
 
 ```bash
+# lightweight wizard/Core
 pip install agora-ai-sdlc
+
+# full local System-1 capability
+pip install "agora-ai-sdlc[full]"
+
 aisdlc continue
 ```
+
+If Laya is not installed, Agora fails open to deterministic/Core and generative behavior; delivery is not blocked.
 
 `continue` uses deterministic Core state first, then Laya for cheap local classification when that can
 simplify the next interaction. It presents one recommended next action, Enter accepts that default, and

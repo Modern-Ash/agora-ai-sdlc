@@ -112,7 +112,7 @@ def write_inception_handoff(
                 "4. `## User Stories`",
                 "5. `## Non-functional requirements`",
                 "6. `## Measurement Criteria`",
-                "7. `## Proposed Units` (cohesive Units where decomposition adds execution value)",
+                "7. `## Proposed Units` (Cohesive Units where decomposition adds execution value)",
                 "8. `## Suggested Bolts`",
                 "9. `## Acceptance criteria trace`",
                 "10. `## Risk Register`",

@@ -70,7 +70,7 @@ def test_wizard_presents_progress_and_full_operational_facts(tmp_path):
     )
     rendered = render_wizard(view, lang="en")
 
-    assert "Agora Flow · AI-DLC delivery" in rendered
+    assert "Agora Flow · AI-SDLC delivery" in rendered
     assert "▶ Construction" in rendered
     assert "▶ Testing" in rendered
     assert "Intent / objective: Implement idempotent retry" in rendered
@@ -82,7 +82,7 @@ def test_wizard_spanish_labels_do_not_hide_underlying_facts(tmp_path):
     view = build_wizard_view(tmp_path, decision(clarification_issues=(), missing_artifacts=("architecture",)))
     rendered = render_wizard(view, lang="es")
 
-    assert "Agora Flow · delivery AI-DLC" in rendered
+    assert "Agora Flow · delivery AI-SDLC" in rendered
     assert "Qué sabe Agora" in rendered
     assert "Work: delivery/issue-26" in rendered
     assert "Decision gate: inception-approved" in rendered

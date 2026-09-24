@@ -6,6 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from agora_ai_sdlc.construction_executor import launch_construction_executor
 from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice, select_executor_model
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next, render
 from agora_ai_sdlc.i18n import t
@@ -150,6 +151,30 @@ def run_interactive(
                 )
             if selected_runtime is None:
                 continue
+            if decision.state == "construction":
+                if not decision.actor:
+                    output_fn("Construction has no assigned responsible actor.")
+                    continue
+                try:
+                    execution = launch_construction_executor(
+                        root,
+                        swarm_id=decision.swarm,
+                        work_id=decision.work,
+                        actor_reference=decision.actor,
+                        runtime_id=selected_runtime.agent,
+                        model=selected_runtime.model,
+                    )
+                except (OSError, ValueError) as error:
+                    output_fn(str(error))
+                    continue
+                output_fn("")
+                output_fn(f"Construction session: {execution.session_id}")
+                output_fn(f"Construction status: {execution.status}")
+                if execution.output:
+                    output_fn(execution.output)
+                output_fn(f"Durable result: {execution.result_path}")
+                continue
+
             _render_prepare_handoff(decision, selected_runtime, output_fn, lang=lang)
             output_fn("")
             output_fn(t("session.followup", lang=lang))

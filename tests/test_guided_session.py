@@ -29,14 +29,19 @@ def decision(**changes):
 
 def view(*, questions=()):
     return WizardView(
-        current_step="build",
-        completed_steps=("understand", "clarify", "plan"),
-        upcoming_steps=("verify", "review", "done"),
+        phase="construction",
+        current_step="implementation",
+        completed_phases=("inception",),
+        upcoming_phases=("operations",),
+        completed_steps=("semantic-elevation", "domain-design", "logical-design"),
+        upcoming_steps=("testing", "deployment-unit"),
         facts=("Objective: Deliver first governed outcome", "Work: delivery/first-work"),
         gaps=("Missing artifact: implementation-plan",),
         questions=tuple(questions),
         evidence=("Repository policy has no reported blocker.",),
         human_decisions=(),
+        method_outputs=(),
+        brownfield=False,
     )
 
 

@@ -151,6 +151,63 @@ Agora Flow intelligence
 If Laya is unavailable, the wizard says the decision came from deterministic/Core behavior and
 continues without blocking delivery.
 
+## Decision Card before every action
+
+The wizard does not ask for a blind confirmation. Before a material action it renders one compact
+Decision Card containing:
+
+- **why** Agora proposes the action;
+- **what will run** if the user confirms;
+- **what cannot happen automatically**;
+- selected executor/runtime when applicable;
+- decision source and confidence;
+- candidate versus selected context and estimated token economy;
+- security/reasoning escalation warnings;
+- the exact human/Core checkpoint to which control returns.
+
+Example:
+
+```text
+╭─ Proposed decision
+│ Prepare the remaining Construction outputs.
+│
+│ Why
+│   • Deployment Unit is still missing.
+│   • AC-002 still needs verification.
+│   • Local System-1 classified this as local with confidence 0.96.
+│
+│ If confirmed, Agora will
+│   1. Assemble bounded context.
+│   2. Run one governed preparation iteration.
+│   3. Persist artifacts/evidence.
+│   4. Re-read Core and recalculate.
+│
+│ Executor: Ollama · qwen3:8b [local]
+│ Intelligence: Laya local System-1 → local
+│ Context: 12 candidate files → 5 selected; ~8400 → ~2900 tokens
+│
+│ Boundaries
+│   • no implicit human approval
+│   • no gate bypass
+│   • no implicit merge/deployment
+│
+│ Next checkpoint: return to the wizard for human/Core validation
+╰────────────────────────────────────────────────────────────────────────
+```
+
+This is the primary Agora Flow usability contract: abstraction of operational complexity without
+abstraction of evidence, rationale or authority.
+
+## Level 1 Plan and recursive validation
+
+Whenever the current Inception draft contains a Level 1 Plan, the wizard previews its current top-level
+steps instead of hiding the plan inside a Markdown artifact. The full artifact remains available through
+Details.
+
+Validation is transversal rather than a final Review phase. Every method substep exposes the next
+human validation checkpoint before the next semantic enrichment or lifecycle transition. This models
+AI-DLC's human oversight as an early-error-correction/loss-function behavior rather than a final signoff.
+
 ## Progressive Intelligence
 
 Agora uses the cheapest sufficient layer rather than sending every decision to a generative model:

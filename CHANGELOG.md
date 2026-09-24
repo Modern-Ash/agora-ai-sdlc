@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Evolve Agora Flow into a continuous AI-DLC wizard with phase/substep progress, Level 1 Plan preview, transparent Decision Cards, transversal human validation checkpoints and first-class AI-DLC artifacts.
 - Add the continuous Agora Flow AI-DLC wizard with inline clarification, AI-DLC phase/substep guidance, transparent method outputs, Enter-to-confirm governed execution, and seamless Start -> wizard flow.
 - Enrich Method Pack 0.2.0 with first-class AI-DLC Inception outputs (Level 1 Plan, User Stories, NFR, Risk Register, Measurement Criteria, Units and Bolts) and Construction outputs (Domain Design, Logical Design and Deployment Unit), while retaining 0.1.0 unchanged for compatibility.
 - Add the optional local Laya Decision Plane, Progressive Intelligence and visible Context Economy: confidence-gated routing, fail-open semantic pruning, before/after context estimates and persisted lean execution context.

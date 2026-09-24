@@ -53,8 +53,10 @@ def _select_runtime(
 def _render_review(decision: GuidedDecision, output_fn: Callable[[str], None], *, lang: str = "en") -> None:
     output_fn("")
     output_fn(t("session.review", lang=lang))
-    output_fn(f"  Work: {decision.swarm}/{decision.work}")
-    output_fn(f"  Stage: {decision.state or 'unknown'} -> {decision.target or '-'}")
+    output_fn(f"  {t('session.work', lang=lang)}: {decision.swarm}/{decision.work}")
+    output_fn(
+        f"  {t('session.stage', lang=lang)}: {decision.state or t('guided.unknown', lang=lang)} -> {decision.target or '-'}"
+    )
     output_fn(f"  {t('session.gate', lang=lang)}: {decision.gate or '-'}")
     if decision.missing_artifacts:
         output_fn(f"  {t('session.missing_artifacts', lang=lang)}: " + ", ".join(decision.missing_artifacts))
@@ -123,7 +125,12 @@ def run_interactive(
             output_fn("")
             output_fn(t("wizard.question_title", lang=lang))
             output_fn(f"  {question.text}")
-            output_fn(f"  {t('wizard.why', lang=lang)}: {question.reason}")
+            reason = (
+            t("wizard.question_material_reason", lang=lang)
+            if question.reason == "This answer removes a material ambiguity before AI enriches the next artifact."
+            else question.reason
+        )
+        output_fn(f"  {t('wizard.why', lang=lang)}: {reason}")
             answer = input_fn(t("wizard.answer", lang=lang)).strip()
             if answer.casefold() in {"x", "q", "exit"}:
                 return GuidedSessionResult(
@@ -148,7 +155,7 @@ def run_interactive(
             selected_runtime = advice.recommended_runtime
 
         output_fn("")
-        output_fn(render_decision_card(build_decision_card(decision, advice), lang=lang))
+        output_fn(render_decision_card(build_decision_card(decision, advice, lang=lang), lang=lang))
 
         output_fn("")
         output_fn(t("wizard.actions", lang=lang))
@@ -192,7 +199,8 @@ def run_interactive(
                 output_fn(t("wizard.node_action_failed", lang=lang, error=str(error)))
                 continue
             output_fn("")
-            output_fn(t("wizard.node_action_complete", lang=lang, summary=action_result.summary))
+            summary = t(f"wizard.action_result.{action_result.kind}", lang=lang, **dict(action_result.details))
+            output_fn(t("wizard.node_action_complete", lang=lang, summary=summary))
             output_fn(t("session.reinspect", lang=lang))
             continue
 

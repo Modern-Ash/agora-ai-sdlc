@@ -12,6 +12,7 @@ import re
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from agora_ai_sdlc.context_graph import load_artifacts
 from agora_ai_sdlc.guided import GuidedDecision
 from agora_ai_sdlc.i18n import t
 
@@ -259,16 +260,34 @@ def save_answer(root: Path, work: str, question: WizardQuestion, answer: str) ->
     return path
 
 
-def _method_outputs(decision: GuidedDecision, phase: str) -> tuple[MethodOutput, ...]:
+def _observed_artifact_kinds(root: Path, work: str) -> set[str]:
+    observed: set[str] = set()
+    roots = [root / ".agora", root / "docs", root / "ai-sdlc"]
+    for candidate in roots:
+        if not candidate.is_dir():
+            continue
+        try:
+            for _, _, artifact in load_artifacts(candidate):
+                artifact_work = str(artifact.front.get("work") or "")
+                if artifact_work and artifact_work != work:
+                    continue
+                observed.add(artifact.kind)
+        except (OSError, ValueError):
+            continue
+    return observed
+
+
+def _method_outputs(root: Path, decision: GuidedDecision, phase: str) -> tuple[MethodOutput, ...]:
     missing = set(decision.missing_artifacts)
+    observed = _observed_artifact_kinds(root, decision.work)
     outputs = []
     for label, kind in METHOD_OUTPUTS[phase]:
-        if kind in missing:
+        if kind in observed:
+            status = "observed"
+        elif kind in missing:
             status = "required-now"
-        elif missing:
-            status = "method-output"
         else:
-            status = "satisfied-now"
+            status = "method-output"
         outputs.append(MethodOutput(label, kind, status))
     return tuple(outputs)
 
@@ -341,7 +360,7 @@ def build_wizard_view(root: Path, decision: GuidedDecision) -> WizardView:
         questions=tuple(questions),
         evidence=tuple(evidence),
         human_decisions=tuple(human),
-        method_outputs=_method_outputs(decision, phase),
+        method_outputs=_method_outputs(root, decision, phase),
         brownfield=_brownfield(decision),
     )
 
@@ -401,7 +420,7 @@ def render_wizard(view: WizardView, *, lang: str = "en") -> str:
 
     lines.extend(["", t("wizard.method_outputs", lang=lang)])
     for item in view.method_outputs:
-        marker = "!" if item.status == "required-now" else ("✓" if item.status == "satisfied-now" else "·")
+        marker = "!" if item.status == "required-now" else ("✓" if item.status == "observed" else "·")
         lines.append(f"  {marker} {item.label:<22} [{item.artifact_kind}]")
 
     if view.human_decisions:

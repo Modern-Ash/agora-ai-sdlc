@@ -147,9 +147,7 @@ def test_final_criterion_acceptance_is_human_and_never_uses_laya(monkeypatch):
             missing_evidence=(),
             missing_approvals=(),
             unsatisfied_criteria=("source-issue",),
-            criterion_statuses=(
-                ("source-issue", ("elaborated", "designed", "built", "verified", "deployed")),
-            ),
+            criterion_statuses=(("source-issue", ("elaborated", "designed", "built", "verified", "deployed")),),
         ),
     )
 

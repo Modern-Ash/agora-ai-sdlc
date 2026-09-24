@@ -53,8 +53,7 @@ def install_hook(directory: Path, name: str, content: str) -> None:
         existing = target.read_text(encoding="utf-8", errors="replace")
         if MARKER not in existing:
             raise RuntimeError(
-                f"Refusing to overwrite unmanaged Git hook: {target}. "
-                "Merge it manually with the Agora AI-SDLC hook."
+                f"Refusing to overwrite unmanaged Git hook: {target}. Merge it manually with the Agora AI-SDLC hook."
             )
 
     target.write_text(content, encoding="utf-8")

@@ -227,18 +227,15 @@ def run_interactive(
 
         output_fn("")
         output_fn(t("session.executing", lang=lang, runtime=selected_runtime.label))
-        runtime_label = selected_runtime.label
-
-        def report_progress(stage: str) -> None:
-            output_fn(t(f"session.progress.{stage}", lang=lang, runtime=runtime_label))
-
         try:
             result = execute_guided_preparation(
                 root,
                 decision,
                 runtime_id=selected_runtime.agent,
                 model=selected_runtime.model,
-                progress_fn=report_progress,
+                progress_fn=lambda stage, runtime_label=selected_runtime.label: output_fn(
+                    t(f"session.progress.{stage}", lang=lang, runtime=runtime_label)
+                ),
             )
         except (OSError, RuntimeError, ValueError) as error:
             failed_runtimes.add((selected_runtime.agent, selected_runtime.model))

@@ -127,11 +127,11 @@ def run_interactive(
             output_fn(t("wizard.question_title", lang=lang))
             output_fn(f"  {question.text}")
             reason = (
-            t("wizard.question_material_reason", lang=lang)
-            if question.reason == "This answer removes a material ambiguity before AI enriches the next artifact."
-            else question.reason
-        )
-        output_fn(f"  {t('wizard.why', lang=lang)}: {reason}")
+                t("wizard.question_material_reason", lang=lang)
+                if question.reason == "This answer removes a material ambiguity before AI enriches the next artifact."
+                else question.reason
+            )
+            output_fn(f"  {t('wizard.why', lang=lang)}: {reason}")
             answer = input_fn(t("wizard.answer", lang=lang)).strip()
             if answer.casefold() in {"x", "q", "exit"}:
                 return GuidedSessionResult(

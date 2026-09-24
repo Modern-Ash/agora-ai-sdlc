@@ -171,6 +171,18 @@ def main(argv: list[str] | None = None) -> int:
     starter.add_argument("--home", required=True)
     starter.add_argument("--yes", action="store_true", help="Apply the preview non-interactively")
     args = parser.parse_args(argv)
+    if args.command is None:
+        if sys.stdin.isatty() and sys.stdout.isatty():
+            from agora_ai_sdlc.guided_session import run_interactive
+
+            try:
+                run_interactive(Path("."), lang=resolve_language())
+            except (OSError, ValueError) as error:
+                print(error, file=sys.stderr)
+                return 2
+            return 0
+        parser.print_help()
+        return 0
     if args.command in {"observe", "skill"}:
         from agora_ai_sdlc.observation_cli import dispatch
 

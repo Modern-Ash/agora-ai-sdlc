@@ -258,3 +258,41 @@ def test_progress_display_deduplicates_repeated_heartbeat_for_non_tty():
     assert outputs[0] == "Preparando contexto de ejecución acotado con Laya…"
     assert outputs[1].startswith("Iniciando Ollama (local via OpenCode)")
     assert outputs[2] == "El executor sigue activo; Agora Core espera que termine la sesión gobernada…"
+
+
+def test_successful_executor_without_core_progress_stops_instead_of_looping(monkeypatch):
+    outputs = []
+    calls = {"inspect": 0, "advice": 0, "execute": 0}
+    runtime = SimpleNamespace(
+        agent="opencode",
+        model="ollama/qwen3-coder:latest",
+        label="Ollama (local via OpenCode) · ollama/qwen3-coder:latest [local]",
+    )
+    current = decision()
+
+    def inspect(*args, **kwargs):
+        calls["inspect"] += 1
+        return current
+
+    def advise_once(*args, **kwargs):
+        calls["advice"] += 1
+        return advice(runtime)
+
+    def execute(*args, **kwargs):
+        calls["execute"] += 1
+        return SimpleNamespace(
+            runtime="OpenCode",
+            result_path="/tmp/RESULT.md",
+        )
+
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.inspect_next", inspect)
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.build_wizard_view", lambda *args, **kwargs: view())
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.advise_workflow", advise_once)
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.execute_guided_preparation", execute)
+
+    result = run_interactive(Path("."), input_fn=lambda prompt: "", output_fn=outputs.append)
+
+    assert result.reason == "no-progress"
+    assert calls == {"inspect": 2, "advice": 1, "execute": 1}
+    assert any("no governed progress" in line for line in outputs)
+    assert any("/tmp/RESULT.md" in line for line in outputs)

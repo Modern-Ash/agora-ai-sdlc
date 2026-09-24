@@ -1,7 +1,8 @@
-"""Continuous delivery wizard projection for Agora AI-SDLC.
+"""Continuous AI-DLC delivery wizard projection for Agora AI-SDLC.
 
-The wizard is presentation and interaction state over authoritative Core facts.
-It never invents lifecycle state or approval.
+The wizard is a transparent presentation/interaction layer over authoritative
+Agora Core facts. It preserves AI-DLC terminology while hiding operational
+complexity, never evidence or authority boundaries.
 """
 
 from __future__ import annotations
@@ -14,15 +15,85 @@ from pathlib import Path
 from agora_ai_sdlc.guided import GuidedDecision
 from agora_ai_sdlc.i18n import t
 
-STEP_ORDER = ("understand", "clarify", "plan", "build", "verify", "review", "done")
-STEP_LABELS = {
-    "understand": "Understand",
-    "clarify": "Clarify",
-    "plan": "Plan",
-    "build": "Build",
-    "verify": "Verify",
-    "review": "Review",
-    "done": "Done",
+PHASE_ORDER = ("inception", "construction", "operations")
+PHASE_STEPS = {
+    "inception": (
+        "understand",
+        "clarify",
+        "level-1-plan",
+        "stories",
+        "nfr-risk",
+        "units",
+        "bolts",
+    ),
+    "construction": (
+        "semantic-elevation",
+        "domain-design",
+        "logical-design",
+        "implementation",
+        "testing",
+        "deployment-unit",
+    ),
+    "operations": (
+        "deployment",
+        "observability",
+        "feedback",
+    ),
+}
+
+ARTIFACT_STEP = {
+    "intent": ("inception", "understand"),
+    "clarification": ("inception", "clarify"),
+    "plan": ("inception", "level-1-plan"),
+    "requirements": ("inception", "stories"),
+    "user-stories": ("inception", "stories"),
+    "nfr": ("inception", "nfr-risk"),
+    "risk-register": ("inception", "nfr-risk"),
+    "measurement-criteria": ("inception", "nfr-risk"),
+    "prfaq": ("inception", "nfr-risk"),
+    "unit-of-work": ("inception", "units"),
+    "bolt-plan": ("inception", "bolts"),
+    "legacy-inventory": ("construction", "semantic-elevation"),
+    "dependency-map": ("construction", "semantic-elevation"),
+    "characterization": ("construction", "semantic-elevation"),
+    "static-system-model": ("construction", "semantic-elevation"),
+    "dynamic-system-model": ("construction", "semantic-elevation"),
+    "domain-model": ("construction", "domain-design"),
+    "logical-design": ("construction", "logical-design"),
+    "architecture": ("construction", "logical-design"),
+    "implementation-plan": ("construction", "implementation"),
+    "test-strategy": ("construction", "testing"),
+    "threat-model": ("construction", "testing"),
+    "deployment-unit": ("construction", "deployment-unit"),
+    "deployment-plan": ("operations", "deployment"),
+    "operational-readiness": ("operations", "deployment"),
+    "rollback-procedure": ("operations", "deployment"),
+    "learning-record": ("operations", "feedback"),
+}
+
+METHOD_OUTPUTS = {
+    "inception": (
+        ("Intent", "intent"),
+        ("Level 1 Plan", "plan"),
+        ("User Stories", "user-stories"),
+        ("NFRs", "nfr"),
+        ("Risk Register", "risk-register"),
+        ("Measurement Criteria", "measurement-criteria"),
+        ("Units", "unit-of-work"),
+        ("Suggested Bolts", "bolt-plan"),
+    ),
+    "construction": (
+        ("Domain Design", "domain-model"),
+        ("Logical Design", "logical-design"),
+        ("Test Strategy", "test-strategy"),
+        ("Deployment Unit", "deployment-unit"),
+    ),
+    "operations": (
+        ("Deployment Plan", "deployment-plan"),
+        ("Operational Readiness", "operational-readiness"),
+        ("Rollback", "rollback-procedure"),
+        ("Learning", "learning-record"),
+    ),
 }
 
 
@@ -34,8 +105,18 @@ class WizardQuestion:
 
 
 @dataclass(frozen=True)
+class MethodOutput:
+    label: str
+    artifact_kind: str
+    status: str  # required-now | satisfied-now | method-output
+
+
+@dataclass(frozen=True)
 class WizardView:
+    phase: str
     current_step: str
+    completed_phases: tuple[str, ...]
+    upcoming_phases: tuple[str, ...]
     completed_steps: tuple[str, ...]
     upcoming_steps: tuple[str, ...]
     facts: tuple[str, ...]
@@ -43,32 +124,72 @@ class WizardView:
     questions: tuple[WizardQuestion, ...]
     evidence: tuple[str, ...]
     human_decisions: tuple[str, ...]
+    method_outputs: tuple[MethodOutput, ...]
+    brownfield: bool = False
 
     def snapshot(self) -> dict:
         return asdict(self)
 
 
-def _step(decision: GuidedDecision) -> str:
+def _phase(decision: GuidedDecision) -> str:
     state = (decision.state or "").casefold()
-    if decision.ready_for_human_approval or decision.missing_approvals:
-        return "review"
-    if decision.missing_evidence:
-        return "verify"
-    if decision.unsatisfied_criteria:
-        return "build"
-    if decision.clarification_issues:
-        return "clarify"
-    if decision.missing_artifacts:
-        if state in {"readiness", "intent", "inception"}:
-            return "plan"
-        return "build"
-    if decision.ready_to_transition:
-        return "review"
+    target = (decision.target or "").casefold()
     if state in {"operations", "done", "completed", "closed"}:
-        return "done"
+        return "operations"
     if state in {"construction"}:
-        return "build"
-    return "understand"
+        return "construction"
+    if target == "operations":
+        return "construction"
+    return "inception"
+
+
+def _brownfield(decision: GuidedDecision) -> bool:
+    kinds = set(decision.missing_artifacts)
+    return bool(
+        kinds
+        & {
+            "legacy-inventory",
+            "dependency-map",
+            "characterization",
+            "static-system-model",
+            "dynamic-system-model",
+            "target-architecture",
+            "migration-plan",
+        }
+    )
+
+
+def _step(decision: GuidedDecision, phase: str) -> str:
+    missing = tuple(decision.missing_artifacts)
+    if phase == "inception":
+        if decision.clarification_issues:
+            return "clarify"
+        for item in missing:
+            mapped = ARTIFACT_STEP.get(item)
+            if mapped and mapped[0] == phase:
+                return mapped[1]
+        if decision.unsatisfied_criteria:
+            return "stories"
+        return "level-1-plan"
+
+    if phase == "construction":
+        if _brownfield(decision):
+            return "semantic-elevation"
+        for item in missing:
+            mapped = ARTIFACT_STEP.get(item)
+            if mapped and mapped[0] == phase:
+                return mapped[1]
+        if decision.missing_evidence:
+            return "testing"
+        return "implementation"
+
+    for item in missing:
+        mapped = ARTIFACT_STEP.get(item)
+        if mapped and mapped[0] == phase:
+            return mapped[1]
+    if decision.missing_evidence:
+        return "observability"
+    return "deployment"
 
 
 def _section(text: str, heading: str) -> str:
@@ -138,24 +259,40 @@ def save_answer(root: Path, work: str, question: WizardQuestion, answer: str) ->
     return path
 
 
+def _method_outputs(decision: GuidedDecision, phase: str) -> tuple[MethodOutput, ...]:
+    missing = set(decision.missing_artifacts)
+    outputs = []
+    for label, kind in METHOD_OUTPUTS[phase]:
+        if kind in missing:
+            status = "required-now"
+        elif missing:
+            status = "method-output"
+        else:
+            status = "satisfied-now"
+        outputs.append(MethodOutput(label, kind, status))
+    return tuple(outputs)
+
+
 def build_wizard_view(root: Path, decision: GuidedDecision) -> WizardView:
-    current = _step(decision)
-    index = STEP_ORDER.index(current)
-    completed = STEP_ORDER[:index]
-    upcoming = STEP_ORDER[index + 1 :]
+    phase = _phase(decision)
+    phase_index = PHASE_ORDER.index(phase)
+    steps = PHASE_STEPS[phase]
+    current = _step(decision, phase)
+    step_index = steps.index(current)
 
     facts = []
     if decision.title:
-        facts.append(f"Objective: {decision.title}")
+        facts.append(f"Intent / objective: {decision.title}")
     facts.append(f"Work: {decision.swarm}/{decision.work}")
     if decision.state:
-        facts.append(f"Current lifecycle state: {decision.state}")
+        facts.append(f"Core lifecycle state: {decision.state}")
     if decision.target:
         facts.append(f"Next lifecycle target: {decision.target}")
     if decision.gate:
-        facts.append(f"Gate: {decision.gate}")
+        facts.append(f"Decision gate: {decision.gate}")
     if decision.role:
-        facts.append(f"Responsible role: {decision.role}")
+        owner = decision.role + (f" ({decision.actor})" if decision.actor else "")
+        facts.append(f"Responsible: {owner}")
 
     gaps = []
     gaps.extend(f"Missing artifact: {item}" for item in decision.missing_artifacts)
@@ -173,60 +310,98 @@ def build_wizard_view(root: Path, decision: GuidedDecision) -> WizardView:
             WizardQuestion(
                 id=qid,
                 text=gap.rstrip("?") + "?",
-                reason="This answer removes a material ambiguity before implementation.",
+                reason="This answer removes a material ambiguity before AI enriches the next artifact.",
             )
         )
 
     evidence = []
+    if answers:
+        evidence.append(f"{len(answers)} human clarification answer(s) persisted as Work context.")
     if not decision.missing_artifacts:
-        evidence.append("Required artifacts are present.")
+        evidence.append("Current gate reports no required artifact missing.")
     if not decision.missing_evidence:
-        evidence.append("No verification evidence is currently missing.")
+        evidence.append("Current gate reports no verification evidence missing.")
     if not decision.git_issues:
         evidence.append("Repository policy has no reported blocker.")
 
     human = []
     human.extend(f"Approval required from: {item}" for item in decision.missing_approvals)
     if decision.ready_for_human_approval:
-        human.append("Technical obligations are complete; human confirmation is the next boundary.")
+        human.append("Technical obligations are complete; human validation is the next loss-function checkpoint.")
 
     return WizardView(
+        phase=phase,
         current_step=current,
-        completed_steps=tuple(completed),
-        upcoming_steps=tuple(upcoming),
+        completed_phases=PHASE_ORDER[:phase_index],
+        upcoming_phases=PHASE_ORDER[phase_index + 1 :],
+        completed_steps=steps[:step_index],
+        upcoming_steps=steps[step_index + 1 :],
         facts=tuple(facts),
         gaps=tuple(gaps),
         questions=tuple(questions),
         evidence=tuple(evidence),
         human_decisions=tuple(human),
+        method_outputs=_method_outputs(decision, phase),
+        brownfield=_brownfield(decision),
     )
 
 
-def render_wizard(view: WizardView, *, lang: str = "en") -> str:
-    progress = []
-    for step in STEP_ORDER:
+def _render_phase_bar(view: WizardView, *, lang: str) -> str:
+    values = []
+    for phase in PHASE_ORDER:
+        if phase in view.completed_phases:
+            marker = "✓"
+        elif phase == view.phase:
+            marker = "▶"
+        else:
+            marker = "·"
+        values.append(f"{marker} {t(f'wizard.phase.{phase}', lang=lang)}")
+    return "  " + "  →  ".join(values)
+
+
+def _render_step_bar(view: WizardView, *, lang: str) -> str:
+    values = []
+    for step in PHASE_STEPS[view.phase]:
         if step in view.completed_steps:
             marker = "✓"
         elif step == view.current_step:
             marker = "▶"
         else:
             marker = "·"
-        label = t(f"wizard.step.{step}", lang=lang)
-        progress.append(f"{marker} {label}")
-    current_label = t(f"wizard.step.{view.current_step}", lang=lang)
+        values.append(f"{marker} {t(f'wizard.step.{step}', lang=lang)}")
+    return "  " + "  →  ".join(values)
+
+
+def render_wizard(view: WizardView, *, lang: str = "en") -> str:
     lines = [
-        t("wizard.title", lang=lang),
-        "  " + "  →  ".join(progress),
-        "",
-        f"{t('wizard.current_step', lang=lang)}: {current_label}",
+        "╭─ " + t("wizard.title", lang=lang),
+        _render_phase_bar(view, lang=lang),
+        "│",
+        f"│ {t('wizard.phase_label', lang=lang)}: {t(f'wizard.phase.{view.phase}', lang=lang)}",
+        _render_step_bar(view, lang=lang),
+        "╰" + "─" * 72,
         "",
         t("wizard.knows", lang=lang),
         *[f"  • {item}" for item in view.facts],
     ]
+    if view.brownfield:
+        lines.extend(
+            [
+                "",
+                t("wizard.brownfield", lang=lang),
+                "  • " + t("wizard.semantic_elevation", lang=lang),
+            ]
+        )
     if view.gaps:
         lines.extend(["", t("wizard.open_gaps", lang=lang), *[f"  ! {item}" for item in view.gaps]])
     if view.evidence:
         lines.extend(["", t("wizard.evidence", lang=lang), *[f"  ✓ {item}" for item in view.evidence]])
+
+    lines.extend(["", t("wizard.method_outputs", lang=lang)])
+    for item in view.method_outputs:
+        marker = "!" if item.status == "required-now" else ("✓" if item.status == "satisfied-now" else "·")
+        lines.append(f"  {marker} {item.label:<22} [{item.artifact_kind}]")
+
     if view.human_decisions:
-        lines.extend(["", t("wizard.human_boundary", lang=lang), *[f"  • {item}" for item in view.human_decisions]])
+        lines.extend(["", t("wizard.human_boundary", lang=lang), *[f"  ◆ {item}" for item in view.human_decisions]])
     return "\n".join(lines)

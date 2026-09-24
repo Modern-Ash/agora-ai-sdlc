@@ -98,8 +98,7 @@ def test_start_session_emits_latest_durable_milestone_while_waiting(tmp_path):
     progress_path = tmp_path / ".agora" / "sessions" / session_id / "PROGRESS.md"
     progress_path.parent.mkdir(parents=True)
     progress_path.write_text(
-        "# Session progress\n\n"
-        "- 2026-09-24T22:00:00Z | executor=project:developer | Verification completed\n",
+        "# Session progress\n\n- 2026-09-24T22:00:00Z | executor=project:developer | Verification completed\n",
         encoding="utf-8",
     )
 

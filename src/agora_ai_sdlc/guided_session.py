@@ -159,6 +159,26 @@ def _render_prepare_handoff(
     output_fn("  " + t("session.runtime_note", lang=lang))
 
 
+def _decision_fingerprint(decision: GuidedDecision) -> tuple[object, ...]:
+    """Capture the authoritative obligations that must change after useful preparation."""
+
+    return (
+        decision.state,
+        decision.target,
+        decision.gate,
+        decision.blockers,
+        decision.missing_artifacts,
+        decision.missing_evidence,
+        decision.missing_approvals,
+        decision.unsatisfied_criteria,
+        decision.git_issues,
+        decision.clarification_issues,
+        decision.observed_artifacts,
+        decision.ready_for_human_approval,
+        decision.ready_to_transition,
+    )
+
+
 def run_interactive(
     root: Path,
     *,
@@ -172,6 +192,8 @@ def run_interactive(
 
     selected_runtime: ExecutorRecoveryChoice | None = None
     failed_runtimes: set[tuple[str, str | None]] = set()
+    previous_execution_fingerprint: tuple[object, ...] | None = None
+    previous_execution_result_path: str | None = None
 
     while True:
         decision = inspect_next(root, swarm=swarm, work=work, lang=lang)
@@ -184,6 +206,27 @@ def run_interactive(
                 selected_runtime.agent if selected_runtime else None,
                 selected_runtime.model if selected_runtime else None,
             )
+
+        if (
+            previous_execution_fingerprint is not None
+            and _decision_fingerprint(decision) == previous_execution_fingerprint
+        ):
+            output_fn("")
+            output_fn(
+                t(
+                    "session.no_progress",
+                    lang=lang,
+                    result=previous_execution_result_path or "-",
+                )
+            )
+            return GuidedSessionResult(
+                "no-progress",
+                selected_runtime.agent if selected_runtime else None,
+                selected_runtime.model if selected_runtime else None,
+            )
+
+        previous_execution_fingerprint = None
+        previous_execution_result_path = None
 
         view = build_wizard_view(root, decision)
         output_fn("")
@@ -316,5 +359,7 @@ def run_interactive(
                 continue
         finally:
             progress.stop()
+        previous_execution_fingerprint = _decision_fingerprint(decision)
+        previous_execution_result_path = result.result_path
         output_fn(t("session.execution_complete", lang=lang, runtime=result.runtime))
         output_fn(t("session.reinspect", lang=lang))

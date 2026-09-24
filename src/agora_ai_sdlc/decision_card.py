@@ -18,6 +18,7 @@ class DecisionCard:
     intelligence: str
     context_summary: str | None
     risk_summary: tuple[str, ...]
+    validation_focus: str | None
     return_boundary: str
 
 
@@ -75,6 +76,10 @@ def build_decision_card(decision: GuidedDecision, advice: WorkflowAdvice) -> Dec
         )
 
     risks = []
+    if getattr(advice, "change_risk", None):
+        confidence = getattr(advice, "change_risk_confidence", None)
+        suffix = f" ({confidence:.2f})" if confidence is not None else ""
+        risks.append(f"Change risk: {advice.change_risk}{suffix}.")
     if getattr(advice, "security_review", None) == "required":
         risks.append("Focused security review recommended by the local decision layer.")
     if getattr(advice, "context_escalated", ()):
@@ -96,6 +101,7 @@ def build_decision_card(decision: GuidedDecision, advice: WorkflowAdvice) -> Dec
         intelligence=intelligence,
         context_summary=context_summary,
         risk_summary=tuple(risks),
+        validation_focus=getattr(advice, "validation_focus", None),
         return_boundary=boundary,
     )
 
@@ -111,6 +117,7 @@ def render_decision_card(card: DecisionCard, *, lang: str = "en") -> str:
         "intelligence": "Inteligencia" if es else "Intelligence",
         "context": "Contexto" if es else "Context",
         "risk": "Atención" if es else "Attention",
+        "focus": "Foco de validación" if es else "Validation focus",
         "return": "Próximo checkpoint" if es else "Next checkpoint",
     }
     lines = [
@@ -128,6 +135,8 @@ def render_decision_card(card: DecisionCard, *, lang: str = "en") -> str:
     lines.append(f"│ {labels['intelligence']}: {card.intelligence}")
     if card.context_summary:
         lines.append(f"│ {labels['context']}: {card.context_summary}")
+    if card.validation_focus:
+        lines.append(f"│ {labels['focus']}: {card.validation_focus}")
     if card.risk_summary:
         lines.extend(["│", "│ " + labels["risk"], *[f"│   ! {item}" for item in card.risk_summary]])
     lines.extend(

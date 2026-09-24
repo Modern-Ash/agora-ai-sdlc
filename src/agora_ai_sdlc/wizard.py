@@ -109,7 +109,7 @@ class WizardQuestion:
 class MethodOutput:
     label: str
     artifact_kind: str
-    status: str  # required-now | satisfied-now | method-output
+    status: str  # required-now | observed | method-output
 
 
 @dataclass(frozen=True)

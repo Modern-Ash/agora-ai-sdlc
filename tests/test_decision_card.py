@@ -118,3 +118,48 @@ def test_final_criterion_acceptance_card_is_explicit_human_action():
     assert any("criterios completados" in item for item in card.will_do)
     assert "Inteligencia: determinístico/Core" in rendered
     assert "Executor:" not in rendered
+
+
+def test_deployed_stage_card_is_deterministic_and_names_technical_action():
+    technical_decision = GuidedDecision(
+        swarm="delivery",
+        work="issue-26",
+        title="Deliver issue",
+        method="ai-sdlc",
+        actor="project:product-owner",
+        role="product-owner",
+        state="operations",
+        target="completed",
+        gate="completion",
+        blockers=("unsatisfied=[source-issue]",),
+        messages=("Complete criteria.",),
+        unsatisfied_criteria=("source-issue",),
+        criterion_statuses=(("source-issue", ("elaborated", "designed", "built", "verified")),),
+        developer_actor="project:ai-developer",
+        developer_actor_kind="ai-agent",
+    )
+    technical_advice = SimpleNamespace(
+        action="mark-deployed",
+        summary="Record deployed stage.",
+        source="deterministic",
+        reasoning_tier=None,
+        confidence=None,
+        recommended_runtime=None,
+        escalation_required=False,
+        context_candidates=0,
+        context_selected=0,
+        context_tokens_before=0,
+        context_tokens_after=0,
+        context_tokens_saved=0,
+        context_escalated=(),
+        security_review=None,
+        change_risk=None,
+        validation_focus=None,
+    )
+
+    rendered = render_decision_card(build_decision_card(technical_decision, technical_advice, lang="es"), lang="es")
+
+    assert "Registrar la etapa de deployment evidenciada" in rendered
+    assert "actor developer asignado" in rendered
+    assert "Inteligencia: determinístico/Core" in rendered
+    assert "Executor:" not in rendered

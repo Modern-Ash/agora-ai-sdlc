@@ -81,7 +81,6 @@ class LayaDecisionProvider:
             raw=dict(raw),
         )
 
-
     def decide_many(
         self,
         requests: tuple[tuple[Mapping[str, Any], tuple[DecisionQuestion, ...]], ...],

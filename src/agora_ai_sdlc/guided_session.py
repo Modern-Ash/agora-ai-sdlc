@@ -151,6 +151,7 @@ def run_interactive(
             output_fn(t("wizard.recalculate", lang=lang))
             continue
 
+        output_fn(t("session.analyzing", lang=lang))
         advice = advise_workflow(root, decision)
         if selected_runtime is None and advice.recommended_runtime is not None:
             recommended_key = (advice.recommended_runtime.agent, advice.recommended_runtime.model)
@@ -160,42 +161,49 @@ def run_interactive(
         output_fn("")
         output_fn(render_decision_card(build_decision_card(decision, advice, lang=lang), lang=lang))
 
-        output_fn("")
-        output_fn(t("wizard.actions", lang=lang))
-        answer = input_fn(t("wizard.confirm", lang=lang)).strip().casefold()
-
-        if answer in {"x", "q", "exit"}:
-            return GuidedSessionResult(
-                "exit",
-                selected_runtime.agent if selected_runtime else None,
-                selected_runtime.model if selected_runtime else None,
-            )
-
-        if answer in {"d", "details"}:
+        while True:
             output_fn("")
-            output_fn(render(decision, expert=True, show_commands=True, lang=lang))
-            continue
+            output_fn(t("wizard.actions", lang=lang))
+            answer = input_fn(t("wizard.confirm", lang=lang)).strip().casefold()
 
-        if answer in {"a", "adjust", "c", "change"}:
-            selected_runtime = _select_runtime(
-                root,
-                input_fn=input_fn,
-                output_fn=output_fn,
-                current=selected_runtime,
-                lang=lang,
-            )
-            continue
+            if answer in {"x", "q", "exit"}:
+                return GuidedSessionResult(
+                    "exit",
+                    selected_runtime.agent if selected_runtime else None,
+                    selected_runtime.model if selected_runtime else None,
+                )
 
-        if answer not in {"", "y", "yes", "confirm", "ok"}:
-            output_fn(t("wizard.choose", lang=lang))
-            continue
+            if answer in {"d", "details"}:
+                output_fn("")
+                output_fn(render(decision, expert=True, show_commands=True, lang=lang))
+                continue
+
+            if answer in {"a", "adjust", "c", "change"}:
+                selected_runtime = _select_runtime(
+                    root,
+                    input_fn=input_fn,
+                    output_fn=output_fn,
+                    current=selected_runtime,
+                    lang=lang,
+                )
+                continue
+
+            if answer not in {"", "y", "yes", "confirm", "ok"}:
+                output_fn(t("wizard.choose", lang=lang))
+                continue
+
+            break
 
         if advice.action != "prepare":
             if advice.action == "review":
                 _render_review(decision, output_fn, lang=lang)
                 output_fn("")
                 output_fn(t("wizard.review_boundary", lang=lang))
-                continue
+                return GuidedSessionResult(
+                    "review",
+                    selected_runtime.agent if selected_runtime else None,
+                    selected_runtime.model if selected_runtime else None,
+                )
             try:
                 action_result = execute_in_session_action(root, decision)
             except (OSError, RuntimeError, ValueError, PermissionError) as error:
@@ -225,6 +233,9 @@ def run_interactive(
                 decision,
                 runtime_id=selected_runtime.agent,
                 model=selected_runtime.model,
+                progress_fn=lambda stage: output_fn(
+                    t(f"session.progress.{stage}", lang=lang, runtime=selected_runtime.label)
+                ),
             )
         except (OSError, RuntimeError, ValueError) as error:
             failed_runtimes.add((selected_runtime.agent, selected_runtime.model))

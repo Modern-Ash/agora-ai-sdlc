@@ -66,18 +66,27 @@ def test_intent_one_negative_per_obligation(life, skip, marker):
         assert "unsatisfied=[value]" in message
 
 
-# ---- architecture-approved ---------------------------------------------
+# ---- inception-ready ----------------------------------------------------
 
 
-def architecture_ready(life, skip=None):
+INCEPTION_ARTIFACTS = (
+    "requirements",
+    "user-stories",
+    "nfr",
+    "risk-register",
+    "measurement-criteria",
+    "plan",
+    "unit-of-work",
+    "bolt-plan",
+)
+
+
+def inception_ready(life, skip=None):
     intent_ready(life)
     life.move("po", "inception")
-    if skip != "criterion":
-        life.stage("arch", "designed")
-    if skip != "architecture":
-        life.artifact("arch", "architecture")
-    if skip != "requirements":
-        life.artifact("arch", "requirements")
+    for kind in INCEPTION_ARTIFACTS:
+        if skip != kind:
+            life.artifact("arch", kind)
     if skip != "architect":
         life.approve("arch", "architect")
     if skip != "product":
@@ -86,37 +95,40 @@ def architecture_ready(life, skip=None):
         life.clarify()
 
 
-def test_architecture_positive(life):
-    architecture_ready(life)
+def test_inception_ready_positive(life):
+    inception_ready(life)
     assert life.move("arch", "construction") == "construction"
 
 
 @pytest.mark.parametrize(
     ("skip", "marker"),
     [
-        ("criterion", "required-criterion-stage=designed"),
-        ("architecture", "missing-artifacts=[architecture]"),
-        ("requirements", "missing-artifacts=[requirements]"),
+        ("user-stories", "missing-artifacts=[user-stories]"),
+        ("nfr", "missing-artifacts=[nfr]"),
+        ("risk-register", "missing-artifacts=[risk-register]"),
+        ("measurement-criteria", "missing-artifacts=[measurement-criteria]"),
+        ("plan", "missing-artifacts=[plan]"),
+        ("unit-of-work", "missing-artifacts=[unit-of-work]"),
+        ("bolt-plan", "missing-artifacts=[bolt-plan]"),
         ("architect", "missing-approvals=[architect]"),
         ("clarify", "clarification-inputs-stale"),
     ],
 )
-def test_architecture_one_negative_per_obligation(life, skip, marker):
-    architecture_ready(life, skip)
+def test_inception_ready_one_negative_per_obligation(life, skip, marker):
+    inception_ready(life, skip)
     assert marker in blocked(life, "arch", "construction")
 
 
 def test_approvals_are_not_gate_scoped_in_core(life):
-    """Documents a Core 0.8.2 limit: a role's approval given at an earlier gate satisfies later gates in the
-    same revision, so a fresh product-owner approval per gate is a convention, not enforced."""
-    intent_ready(life, skip="approval")  # only the readiness-gate approval exists
+    """Documents a Core limit: approval records are work-revision scoped rather than gate scoped."""
+    intent_ready(life, skip="approval")
     assert life.move("po", "inception") == "inception"
 
 
 def test_missing_actor_cannot_advance(life):
-    architecture_ready(life)
+    inception_ready(life)
     with pytest.raises(PermissionError):
-        life.move("po", "construction")  # product-owner is not a transition role for this edge
+        life.move("po", "construction")
     assert life.state() == "inception"
 
 
@@ -134,7 +146,7 @@ def test_reopen_drops_previous_revision_inputs(life):
     assert work.artifact_kinds == [] and work.approval_roles == [] and work.satisfied_criteria == []
 
 
-@pytest.mark.parametrize("gate", ["readiness-approved", "intent-framed", "architecture-approved"])
+@pytest.mark.parametrize("gate", ["readiness-approved", "intent-framed", "inception-ready"])
 def test_human_ownership_gates_require_product_owner(gate):
     from test_role_conformance import GATES
 

@@ -19,27 +19,27 @@ def context_selection():
 
 
 def decision(**changes):
-    values = dict(
-        swarm="delivery",
-        work="issue-26",
-        title="Deliver issue",
-        method="ai-sdlc",
-        actor="project:developer",
-        role="developer",
-        state="construction",
-        target="operations",
-        gate="construction-complete",
-        blockers=("blocked",),
-        messages=("Prepare missing work.",),
-        missing_artifacts=("implementation-plan",),
-        missing_evidence=(),
-        missing_approvals=(),
-        unsatisfied_criteria=(),
-        git_issues=(),
-        clarification_issues=(),
-        ready_for_human_approval=False,
-        ready_to_transition=False,
-    )
+    values = {
+        "swarm":"delivery",
+        "work":"issue-26",
+        "title":"Deliver issue",
+        "method":"ai-sdlc",
+        "actor":"project:developer",
+        "role":"developer",
+        "state":"construction",
+        "target":"operations",
+        "gate":"construction-complete",
+        "blockers":("blocked",),
+        "messages":("Prepare missing work.",),
+        "missing_artifacts":("implementation-plan",),
+        "missing_evidence":(),
+        "missing_approvals":(),
+        "unsatisfied_criteria":(),
+        "git_issues":(),
+        "clarification_issues":(),
+        "ready_for_human_approval":False,
+        "ready_to_transition":False,
+    }
     values.update(changes)
     return GuidedDecision(**values)
 

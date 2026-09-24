@@ -34,6 +34,8 @@ class WorkflowAdvice:
     context_tokens_saved: int = 0
     context_reduction_ratio: float = 0.0
     context_escalated: tuple[str, ...] = ()
+    security_review: str | None = None
+    security_confidence: float | None = None
 
     def snapshot(self) -> dict:
         data = asdict(self)
@@ -110,6 +112,8 @@ def advise_workflow(
     context_tokens_saved = 0
     context_reduction_ratio = 0.0
     context_escalated: tuple[str, ...] = ()
+    security_review = None
+    security_confidence = None
 
     try:
         bundle = build_execution_bundle(
@@ -130,6 +134,10 @@ def advise_workflow(
             confidence = answer.confidence
             source = "laya"
             escalation = "reasoning_tier" in evaluated.escalated
+        security = evaluated.result.answers.get("security_review")
+        if security is not None:
+            security_review = str(security.value)
+            security_confidence = security.confidence
 
         selected = select_execution_context(
             root,
@@ -168,6 +176,8 @@ def advise_workflow(
             context_tokens_saved=context_tokens_saved,
             context_reduction_ratio=context_reduction_ratio,
             context_escalated=context_escalated,
+            security_review=security_review,
+            security_confidence=security_confidence,
         )
 
     if escalation:
@@ -193,4 +203,6 @@ def advise_workflow(
         context_tokens_saved=context_tokens_saved,
         context_reduction_ratio=context_reduction_ratio,
         context_escalated=context_escalated,
+        security_review=security_review,
+        security_confidence=security_confidence,
     )

@@ -13,4 +13,4 @@ require-resolved-clarifications: false
 
 # construction-verified
 
-Operations starts after Domain Design, Logical Design, implementation/test artifacts and an operations-ready Deployment Unit exist; criteria are verified, successful test-suite evidence is recorded and the Developer approves the construction result. The broader architecture artifact remains supported by the flavor but is not a substitute for the AI-DLC Domain Design -> Logical Design sequence.
+Operations starts after Domain Design, Logical Design, implementation/test artifacts and an operations-ready Deployment Unit exist; criteria are verified, successful test-suite evidence is recorded and the Developer approves the construction result. The broader architecture artifact remains supported by the flavor but is not a substitute for the AI-SDLC Domain Design -> Logical Design sequence.

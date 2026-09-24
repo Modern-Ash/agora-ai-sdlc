@@ -377,8 +377,10 @@ def render_wizard(view: WizardView, *, lang: str = "en") -> str:
         "╭─ " + t("wizard.title", lang=lang),
         _render_phase_bar(view, lang=lang),
         "│",
-        f"│ {t('wizard.phase_label', lang=lang)}: {t(f'wizard.phase.{view.phase}', lang=lang)}",
+        f"│ {t('wizard.phase_label', lang=lang)}: {t(f'wizard.phase.{view.phase}', lang=lang)} "
+        f"· {len(view.completed_steps) + 1}/{len(PHASE_STEPS[view.phase])}",
         _render_step_bar(view, lang=lang),
+        f"│ {t('wizard.method_guide', lang=lang)}: {t(f'wizard.help.{view.current_step}', lang=lang)}",
         "╰" + "─" * 72,
         "",
         t("wizard.knows", lang=lang),

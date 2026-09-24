@@ -36,3 +36,8 @@ The method gate requires Level 1 `plan` and `bolt-plan` artifact kinds. Recursiv
 - **Bolts** are short hours/days build-validation iterations over a Unit; they may be sequential or parallel.
 - The Level 1 Plan is progressively decomposed while preserving human validation and traceability.
 - Persisted artifacts form context memory for later steps.
+
+
+## Governance behavior
+
+Fail closed when a gate reports missing evidence or missing approval. Agora Core remains authoritative for lifecycle state and the wizard may explain blockers but cannot fabricate their satisfaction.

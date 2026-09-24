@@ -111,14 +111,14 @@ def test_prompt_selects_llm_first_and_model_second(tmp_path: Path):
     assert choice == ExecutorRecoveryChoice(
         agent="opencode",
         model="ollama/gpt-oss:20b",
-        label="Ollama (local) · ollama/gpt-oss:20b [local]",
+        label="Ollama (local via OpenCode) · ollama/gpt-oss:20b [local]",
     )
     rendered = output.getvalue()
     assert "Paso 1/2: elegí el LLM/proveedor:" in rendered
-    assert "1) Ollama (local)" in rendered
+    assert "1) Ollama (local via OpenCode)" in rendered
     assert "2) OpenCode" in rendered
     assert "3) OpenAI" in rendered
-    assert "Paso 2/2: elegí el modelo para Ollama (local):" in rendered
+    assert "Paso 2/2: elegí el modelo para Ollama (local via OpenCode):" in rendered
     assert "claude:latest [local]" in rendered
     assert "gpt-oss:20b [local]" in rendered
     assert "qwen2.5-coder:7b [local]" in rendered
@@ -149,7 +149,7 @@ def test_prompt_can_pull_and_select_new_ollama_model(tmp_path: Path):
     assert choice == ExecutorRecoveryChoice(
         agent="opencode",
         model="ollama/qwen3:8b",
-        label="Ollama (local) · ollama/qwen3:8b [local]",
+        label="Ollama (local via OpenCode) · ollama/qwen3:8b [local]",
     )
     rendered = output.getvalue()
     assert "Descargar otro modelo con ollama pull" in rendered
@@ -213,7 +213,7 @@ def test_shared_recovery_loop_retries_any_llm_backed_operation(monkeypatch, tmp_
         lambda *args, **kwargs: ExecutorRecoveryChoice(
             agent="opencode",
             model="ollama/claude:latest",
-            label="Ollama (local) · ollama/claude:latest [local]",
+            label="Ollama (local via OpenCode) · ollama/claude:latest [local]",
         ),
     )
 

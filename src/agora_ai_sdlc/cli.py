@@ -534,7 +534,7 @@ def main(argv: list[str] | None = None) -> int:
                 if enter_wizard:
                     from agora_ai_sdlc.guided_session import run_interactive
 
-                    print("")
+                    print()
                     print(t("wizard.start_continuous", lang=language))
                     run_interactive(
                         Path(result.workspace_root),

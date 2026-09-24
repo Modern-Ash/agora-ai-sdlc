@@ -9,6 +9,7 @@ from pathlib import Path
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next
+from agora_ai_sdlc.i18n import t
 from agora_ai_sdlc.progress import lifecycle_progress
 
 
@@ -264,4 +265,33 @@ def render_status(status: IterationStatus, *, detail: str = "normal") -> str:
         lines.append(f"  Ready to transition: {status.ready_to_transition}")
         lines.append("  Rendering source: local/Core facts only; no LLM call")
 
+    return "\n".join(lines)
+
+
+def render_terminal_summary(status: IterationStatus, *, lang: str = "en") -> str:
+    """Render the terminal/no-next-action state without forcing another diagnostic command."""
+
+    lines = ["╭─ " + t("terminal.title", lang=lang)]
+    if status.work is None:
+        lines.extend(
+            [
+                "│ " + t("terminal.no_work", lang=lang),
+                "╰" + "─" * 72,
+            ]
+        )
+        return "\n".join(lines)
+
+    lines.append(f"│ {t('terminal.work', lang=lang)}: {status.swarm}/{status.work}")
+    lines.append(f"│ {t('terminal.state', lang=lang)}: {status.state or t('guided.unknown', lang=lang)}")
+    if status.work_branch or status.current_branch:
+        lines.append(
+            f"│ {t('terminal.branch', lang=lang)}: {status.work_branch or status.current_branch}"
+        )
+    if status.state == "completed":
+        lines.append("│ ✓ " + t("terminal.completed", lang=lang))
+    else:
+        lines.append("│ ! " + t("terminal.no_action", lang=lang))
+    if status.last_activity:
+        lines.append(f"│ {t('terminal.last_activity', lang=lang)}: {status.last_activity}")
+    lines.append("╰" + "─" * 72)
     return "\n".join(lines)

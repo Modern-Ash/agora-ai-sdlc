@@ -25,11 +25,13 @@ Start a new governed delivery from the existing entry point; on an interactive t
 aisdlc start --issue 26
 ```
 
-For an already-started Work, resume the same continuous wizard:
+For an already-started Work, resume the same continuous wizard with the bare entry point:
 
 ```bash
-aisdlc continue
+aisdlc
 ```
+
+`aisdlc continue` remains available for Expert CLI, scripting and one-shot inspection.
 
 On a real terminal, the wizard proposes the next AI-DLC step, asks only material clarification questions, explains what it knows and what it will do, and accepts Enter as the happy-path confirmation. Runtime/model selection appears only when execution actually needs it. In non-TTY contexts it falls back to one-shot structured output.
 
@@ -105,7 +107,7 @@ pip install agora-ai-sdlc
 pip install "agora-ai-sdlc[full]"
 ```
 
-The normal delivery workflow remains `aisdlc start ...` / `aisdlc continue`; users do not invoke Laya directly. If Laya is unavailable, the wizard fails open to deterministic/generative behavior rather than blocking delivery.
+The normal Automagic workflow is `aisdlc start ...` once and `aisdlc` to resume; users do not invoke Laya directly. If Laya is unavailable, the wizard fails open to deterministic/generative behavior rather than blocking delivery.
 
 The Context Graph stays deterministic: Laya can prune candidates but cannot introduce unrelated
 artifacts. Low-confidence decisions fail open and remain on the normal generative/human escalation
@@ -118,7 +120,7 @@ See [AI-DLC method compatibility](docs/method/ai-dlc-compatibility.md) for the c
 The normal user experience is a single continuous wizard:
 
 ```bash
-aisdlc continue
+aisdlc
 ```
 
 Agora shows the current delivery step, the facts it is using, open gaps, evidence, the proposed next

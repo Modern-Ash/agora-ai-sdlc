@@ -19,15 +19,19 @@ agora-ai-sdlc install /path/to/project --config ai-sdlc-install.yaml --yes
 
 The installer selects adoption profile, governance depth, language/framework, optional integrations, AI runtimes and human/AI role execution. See [Project installer](docs/installer.md).
 
-After bootstrap, use the guided AI-SDLC workflow:
+Start a new governed delivery from the existing entry point; on an interactive terminal it flows directly into the same wizard:
+
+```bash
+aisdlc start --issue 26
+```
+
+For an already-started Work, resume the same continuous wizard:
 
 ```bash
 aisdlc continue
 ```
 
-On a real terminal, `continue` is interactive: it waits for a menu selection, can choose or change among
-responsive detected runtimes, and keeps the selected assistant active for the session. In non-TTY
-contexts it falls back to one-shot output.
+On a real terminal, the wizard proposes the next AI-DLC step, asks only material clarification questions, explains what it knows and what it will do, and accepts Enter as the happy-path confirmation. Runtime/model selection appears only when execution actually needs it. In non-TTY contexts it falls back to one-shot structured output.
 
 It renders a decision card with objective, method, current/next stage, responsible role, gate readiness,
 satisfied/missing obligations, the human/AI responsibility boundary, and the recommended next action.
@@ -48,19 +52,25 @@ operation. Agora Core remains the lifecycle authority.
 
 ## Local decision plane (Laya)
 
-AI-SDLC uses the free, Apache-2.0 [Laya](https://github.com/NandhaKishorM/laya)
-runtime for fast typed decisions before escalating work to a generative model. Laya is advisory only;
+AI-SDLC can use the free, Apache-2.0 [Laya](https://github.com/NandhaKishorM/laya)
+runtime as its only System-1 decision engine before escalating work to a generative model. Laya is advisory only;
 Agora Core remains authoritative for lifecycle state, evidence, approvals and transitions.
 
 ```bash
+# lightweight Core/wizard
 pip install agora-ai-sdlc
-aisdlc decision --root . --work issue-26 --json
-aisdlc context ./artifacts REQ-001 --laya --objective "Implement the current issue" --json
+
+# full local Decision Plane (recommended for token/context savings)
+pip install "agora-ai-sdlc[full]"
 ```
+
+The normal delivery workflow remains `aisdlc start ...` / `aisdlc continue`; users do not invoke Laya directly. If Laya is unavailable, the wizard fails open to deterministic/generative behavior rather than blocking delivery.
 
 The Context Graph stays deterministic: Laya can prune candidates but cannot introduce unrelated
 artifacts. Low-confidence decisions fail open and remain on the normal generative/human escalation
 path. See [Local Decision Plane with Laya](docs/decision-plane-laya.md).
+
+See [AI-DLC method compatibility](docs/method/ai-dlc-compatibility.md) for the canonical method mapping and the explicit Agora extensions.
 
 ## Continuous delivery wizard
 

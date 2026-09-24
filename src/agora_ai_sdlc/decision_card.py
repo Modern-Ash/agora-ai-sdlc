@@ -47,10 +47,26 @@ def build_decision_card(decision: GuidedDecision, advice: WorkflowAdvice) -> Dec
             "Persist produced artifacts/evidence according to AI-DLC contracts.",
             "Re-read Agora Core immediately and recalculate the next step.",
         )
+    elif advice.action == "verify":
+        will_do = (
+            "Run the allowlisted deterministic verification for this Work.",
+            "Persist verification evidence.",
+            "Re-read Agora Core and recalculate the next node.",
+        )
+    elif advice.action == "approve":
+        will_do = (
+            "Record only the explicit human approval shown on this card.",
+            "Re-read Agora Core before attempting any lifecycle transition.",
+        )
+    elif advice.action == "transition":
+        will_do = (
+            "Apply the Core-authorized transition to the displayed target state.",
+            "Continue immediately from the new workflow node.",
+        )
     else:
         will_do = (
             "Present the evidence and outstanding obligations.",
-            "Stop at the human validation checkpoint.",
+            "Remain at the current human validation checkpoint.",
         )
 
     will_not_do = (
@@ -87,11 +103,10 @@ def build_decision_card(decision: GuidedDecision, advice: WorkflowAdvice) -> Dec
     if getattr(advice, "escalation_required", False):
         risks.append("Reasoning decision escalated because confidence was insufficient.")
 
-    boundary = (
-        "Return to the wizard after execution for the next human/Core decision."
-        if advice.action == "prepare"
-        else "Human validation is required before lifecycle progression."
-    )
+    if advice.action in {"prepare", "verify", "approve", "transition"}:
+        boundary = "Return immediately to the wizard after Core re-inspection."
+    else:
+        boundary = "Human validation is required before lifecycle progression."
     return DecisionCard(
         title=advice.summary,
         rationale=tuple(rationale),

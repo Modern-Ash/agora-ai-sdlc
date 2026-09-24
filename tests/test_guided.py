@@ -253,9 +253,7 @@ def test_guided_projection_includes_current_criterion_stages(monkeypatch, tmp_pa
         def show_work(self, swarm_id, work_id):
             return SimpleNamespace(
                 artifact_kinds=("operational-readiness", "rollback-procedure"),
-                criterion_statuses={
-                    "source-issue": ["elaborated", "designed", "built", "verified", "deployed"]
-                },
+                criterion_statuses={"source-issue": ["elaborated", "designed", "built", "verified", "deployed"]},
             )
 
     monkeypatch.setattr(guided, "AgoraWorkspace", CriterionWorkspace)

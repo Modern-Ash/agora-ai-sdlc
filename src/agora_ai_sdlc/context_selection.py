@@ -7,9 +7,9 @@ that set; it cannot add unrelated artifacts or grant lifecycle authority.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Mapping
+from collections.abc import Mapping
 
-from agora_ai_sdlc.context_graph import ContextBundle, ContextItem, Graph, context_bundle
+from agora_ai_sdlc.context_graph import ContextBundle, Graph, context_bundle
 from agora_ai_sdlc.decision_metrics import DecisionMetrics
 from agora_ai_sdlc.decision_plane import (
     ConfidencePolicy,

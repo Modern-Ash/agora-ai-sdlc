@@ -13,9 +13,9 @@ from agora_ai_sdlc.guided_execution import execute_guided_preparation
 from agora_ai_sdlc.i18n import t
 from agora_ai_sdlc.opencode_runner import list_available_models, list_ollama_agent_models
 from agora_ai_sdlc.runtime_discovery import discover_runtimes
-from agora_ai_sdlc.workflow_advisor import advise_workflow
 from agora_ai_sdlc.wizard import build_wizard_view, render_wizard, save_answer
 from agora_ai_sdlc.wizard_actions import execute_in_session_action
+from agora_ai_sdlc.workflow_advisor import advise_workflow
 
 
 @dataclass(frozen=True)

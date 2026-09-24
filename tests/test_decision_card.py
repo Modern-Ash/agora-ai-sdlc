@@ -42,6 +42,10 @@ def advice():
         context_tokens_saved=5500,
         context_escalated=("src/uncertain.py",),
         security_review="required",
+        change_risk="moderate",
+        change_risk_confidence=0.93,
+        validation_focus="security",
+        validation_focus_confidence=0.91,
     )
 
 
@@ -52,12 +56,15 @@ def test_decision_card_exposes_why_scope_boundaries_and_context():
     assert any("deployment-unit" in item for item in card.rationale)
     assert any("5500" in card.context_summary for _ in [0])
     assert any("security" in item.casefold() for item in card.risk_summary)
+    assert any("moderate" in item.casefold() for item in card.risk_summary)
+    assert card.validation_focus == "security"
     assert any("approval" in item.casefold() for item in card.will_not_do)
 
     rendered = render_decision_card(card)
     assert "Proposed decision" in rendered
     assert "If confirmed, Agora will" in rendered
     assert "Boundaries" in rendered
+    assert "Validation focus: security" in rendered
     assert "Next checkpoint" in rendered
 
 

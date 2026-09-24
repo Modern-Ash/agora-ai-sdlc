@@ -9,7 +9,7 @@ from pathlib import Path
 
 from agora_ai_sdlc import __version__
 from agora_ai_sdlc.depth_profiles import DEFAULT, ProfileError, asset_root, resolve
-from agora_ai_sdlc.i18n import SUPPORTED_LANGUAGES, resolve_language
+from agora_ai_sdlc.i18n import SUPPORTED_LANGUAGES, resolve_language, t
 from agora_ai_sdlc.starter import apply as apply_starter
 from agora_ai_sdlc.starter import interactive as interactive_starter
 

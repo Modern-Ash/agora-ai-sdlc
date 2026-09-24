@@ -3,9 +3,9 @@ schema: "agora/transition/v1"
 from: "inception"
 to: "construction"
 roles: ["architect"]
-gate: "architecture-approved"
+gate: "inception-ready"
 ---
 
-# Approve design
+# Validate Inception
 
-Move to construction once the design is approved.
+Move to Construction once the AI-DLC Inception contract is complete and human-validated.

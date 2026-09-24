@@ -29,12 +29,12 @@ def build_decision_card(decision: GuidedDecision, advice: WorkflowAdvice) -> Dec
         rationale.append("Acceptance criteria still need work: " + ", ".join(decision.unsatisfied_criteria))
     if decision.missing_evidence:
         rationale.append("Verification evidence is still missing: " + ", ".join(decision.missing_evidence))
-    if advice.escalation_required:
+    if getattr(advice, "escalation_required", False):
         rationale.append("Local System-1 confidence is below the configured threshold; generative reasoning is retained.")
-    elif advice.source == "laya" and advice.reasoning_tier:
+    elif advice.source == "laya" and getattr(advice, "reasoning_tier", None):
         rationale.append(
             f"Local System-1 classified the reasoning tier as {advice.reasoning_tier}"
-            + (f" with confidence {advice.confidence:.2f}." if advice.confidence is not None else ".")
+            + (f" with confidence {advice.confidence:.2f}." if getattr(advice, "confidence", None) is not None else ".")
         )
     if not rationale:
         rationale.append("Agora Core reports this as the next governed action.")
@@ -63,23 +63,23 @@ def build_decision_card(decision: GuidedDecision, advice: WorkflowAdvice) -> Dec
     intelligence = "deterministic/Core"
     if advice.source == "laya":
         intelligence = "Laya local System-1"
-        if advice.reasoning_tier:
+        if getattr(advice, "reasoning_tier", None):
             intelligence += f" → {advice.reasoning_tier}"
 
     context_summary = None
-    if advice.context_candidates:
+    if getattr(advice, "context_candidates", 0):
         context_summary = (
-            f"{advice.context_candidates} candidate files → {advice.context_selected} selected; "
-            f"~{advice.context_tokens_before} → ~{advice.context_tokens_after} tokens "
-            f"(~{advice.context_tokens_saved} avoided)"
+            f"{advice.context_candidates} candidate files → {getattr(advice, 'context_selected', 0)} selected; "
+            f"~{getattr(advice, 'context_tokens_before', 0)} → ~{getattr(advice, 'context_tokens_after', 0)} tokens "
+            f"(~{getattr(advice, 'context_tokens_saved', 0)} avoided)"
         )
 
     risks = []
-    if advice.security_review == "required":
+    if getattr(advice, "security_review", None) == "required":
         risks.append("Focused security review recommended by the local decision layer.")
-    if advice.context_escalated:
+    if getattr(advice, "context_escalated", ()):
         risks.append(f"{len(advice.context_escalated)} uncertain context item(s) retained fail-open.")
-    if advice.escalation_required:
+    if getattr(advice, "escalation_required", False):
         risks.append("Reasoning decision escalated because confidence was insufficient.")
 
     boundary = (

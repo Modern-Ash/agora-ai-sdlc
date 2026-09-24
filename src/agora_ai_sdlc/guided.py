@@ -219,6 +219,19 @@ def command_plan(decision: GuidedDecision) -> tuple[tuple[str, str], ...]:
 
     actor = decision.actor or "<responsible-actor>"
     commands: list[tuple[str, str]] = []
+    construction_needs_executor = decision.state == "construction" and bool(
+        decision.missing_artifacts or decision.missing_evidence or decision.unsatisfied_criteria
+    )
+    if construction_needs_executor:
+        commands.append(
+            (
+                f"aisdlc continue --swarm {decision.swarm} --work {decision.work} --run",
+                (
+                    "Launch the assigned governed Construction executor with the deterministic "
+                    "execution bundle; it must stop before approval or lifecycle transition."
+                ),
+            )
+        )
 
     if "readiness-assessment" in decision.missing_artifacts:
         artifact_path = f"docs/governance/{decision.work}-readiness.md"
@@ -259,7 +272,7 @@ def command_plan(decision: GuidedDecision) -> tuple[tuple[str, str], ...]:
             )
         )
 
-    if decision.target:
+    if decision.target and not (construction_needs_executor and decision.target == "inception"):
         commands.append(
             (
                 (

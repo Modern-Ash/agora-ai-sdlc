@@ -127,16 +127,15 @@ def _inception_prompt(root: Path, handoff_path: Path) -> str:
     )
 
 
-def build_executor_runner(
+def build_runtime_runner(
     runtime: RuntimeDiscovery,
     root: Path,
-    handoff_path: Path,
+    prompt: str,
     *,
     model: str | None = None,
 ) -> str:
     adapter = _adapter(runtime.id)
     executable = runtime.executable or runtime.command
-    prompt = _inception_prompt(root, handoff_path)
     values = {
         "executable": executable,
         "python": sys.executable,
@@ -162,6 +161,23 @@ def build_executor_runner(
     if not argv or Path(argv[0]).name != Path(expected_executable).name:
         raise ExecutorLaunchError(f"Executor adapter {runtime.id!r} produced an invalid launch command")
     return shlex.join(argv)
+
+
+def build_executor_runner(
+    runtime: RuntimeDiscovery,
+    root: Path,
+    handoff_path: Path,
+    *,
+    model: str | None = None,
+) -> str:
+    """Build the legacy Inception runner on top of the shared runtime adapter path."""
+
+    return build_runtime_runner(
+        runtime,
+        root,
+        _inception_prompt(root, handoff_path),
+        model=model,
+    )
 
 
 def _bounded_output(text: str) -> str:

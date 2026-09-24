@@ -1,8 +1,21 @@
 from pathlib import Path
+from types import SimpleNamespace
 
 from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice
 from agora_ai_sdlc.guided import GuidedDecision
 from agora_ai_sdlc.workflow_advisor import advise_workflow
+
+
+def context_selection():
+    return SimpleNamespace(
+        candidate_paths=("src/a.py", "src/b.py"),
+        selected_paths=("src/a.py",),
+        candidate_tokens=1200,
+        selected_tokens=500,
+        saved_tokens=700,
+        reduction_ratio=700 / 1200,
+        escalated_paths=(),
+    )
 
 
 def decision(**changes):
@@ -63,6 +76,10 @@ def test_low_cost_work_preselects_local_free_runtime(monkeypatch):
     monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.build_execution_bundle", lambda *args, **kwargs: object())
     monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.advise_execution", lambda *args, **kwargs: Evaluation())
     monkeypatch.setattr(
+        "agora_ai_sdlc.workflow_advisor.select_execution_context",
+        lambda *args, **kwargs: context_selection(),
+    )
+    monkeypatch.setattr(
         "agora_ai_sdlc.workflow_advisor._free_runtime",
         lambda root: ExecutorRecoveryChoice("opencode", "ollama/qwen3:8b", "Ollama · qwen3:8b [local]"),
     )
@@ -74,6 +91,9 @@ def test_low_cost_work_preselects_local_free_runtime(monkeypatch):
     assert advice.confidence == 0.97
     assert advice.recommended_runtime is not None
     assert "[local]" in advice.recommended_runtime.label
+    assert advice.context_candidates == 2
+    assert advice.context_selected == 1
+    assert advice.context_tokens_saved == 700
 
 
 def test_uncertain_laya_never_suppresses_normal_escalation(monkeypatch):

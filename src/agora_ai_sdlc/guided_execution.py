@@ -5,9 +5,9 @@ from __future__ import annotations
 import shlex
 import sys
 from collections.abc import Callable
-from threading import Event, Thread
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Event, Thread
 
 from agora.model import StartSessionInput
 from agora.workspace import AgoraWorkspace

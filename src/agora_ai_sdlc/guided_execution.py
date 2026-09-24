@@ -70,6 +70,13 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
                 "artifacts/evidence needed for the next gate, and run safe deterministic verification when useful."
             ),
             "Use existing Agora/Core commands and repository conventions instead of inventing lifecycle state.",
+            (
+                "When AGORA_SESSION_ID and AGORA_EXECUTOR are available, report only concise observable milestones "
+                "after major outcomes with: agora session progress --session \"$AGORA_SESSION_ID\" "
+                "--by \"$AGORA_EXECUTOR\" --summary \"<milestone>\". "
+                "Good milestones describe facts such as context inspected, artifact persisted, or verification completed; "
+                "never report chain-of-thought, private reasoning, prompts, secrets, or raw provider output."
+            ),
             "Do not record human approval, do not change a human-owned decision, do not merge, deploy, or bypass a gate.",
             "Do not perform unrelated refactors. Minimize context and avoid reading files that the bounded bundle does not justify.",
             "Stop after the preparatory work is complete so Agora can re-read authoritative state.",
@@ -102,6 +109,29 @@ def _runner(runtime: RuntimeDiscovery, root: Path, prompt: str, model: str | Non
     return shlex.join(argv)
 
 
+def _latest_session_progress(workspace, session_id: str) -> str | None:
+    """Read the latest bounded executor milestone from Core's durable PROGRESS.md."""
+
+    try:
+        project_root = getattr(workspace, "project_root", None)
+        root = Path(project_root()) if callable(project_root) else Path(workspace.cwd)
+        path = root / ".agora" / "sessions" / session_id / "PROGRESS.md"
+        if not path.is_file():
+            return None
+        lines = path.read_text(encoding="utf-8").splitlines()
+    except (AttributeError, OSError, TypeError, ValueError):
+        return None
+
+    for line in reversed(lines):
+        if not line.startswith("- ") or " | " not in line:
+            continue
+        parts = line.split(" | ", 2)
+        if len(parts) == 3:
+            summary = parts[2].strip()
+            return summary or None
+    return None
+
+
 def _start_session_with_heartbeat(
     workspace,
     data: StartSessionInput,
@@ -118,7 +148,8 @@ def _start_session_with_heartbeat(
 
     def emit_heartbeat() -> None:
         while not stop.wait(interval_seconds):
-            progress_fn("executor_wait")
+            summary = _latest_session_progress(workspace, data.id)
+            progress_fn(f"executor_wait:{summary}" if summary else "executor_wait")
 
     thread = Thread(target=emit_heartbeat, name="agora-flow-heartbeat", daemon=True)
     thread.start()

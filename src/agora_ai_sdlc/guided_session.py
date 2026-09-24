@@ -300,20 +300,21 @@ def run_interactive(
         progress = _ProgressDisplay(output_fn=output_fn, lang=lang, runtime=selected_runtime.label)
         progress.start()
         try:
-            result = execute_guided_preparation(
-                root,
-                decision,
-                runtime_id=selected_runtime.agent,
-                model=selected_runtime.model,
-                progress_fn=progress.update,
-            )
-        except (OSError, RuntimeError, ValueError) as error:
+            try:
+                result = execute_guided_preparation(
+                    root,
+                    decision,
+                    runtime_id=selected_runtime.agent,
+                    model=selected_runtime.model,
+                    progress_fn=progress.update,
+                )
+            except (OSError, RuntimeError, ValueError) as error:
+                failed_runtimes.add((selected_runtime.agent, selected_runtime.model))
+                output_fn(t("session.execution_failed", lang=lang, error=str(error)))
+                output_fn(t("session.execution_recovery", lang=lang))
+                selected_runtime = None
+                continue
+        finally:
             progress.stop()
-            failed_runtimes.add((selected_runtime.agent, selected_runtime.model))
-            output_fn(t("session.execution_failed", lang=lang, error=str(error)))
-            output_fn(t("session.execution_recovery", lang=lang))
-            selected_runtime = None
-            continue
-        progress.stop()
         output_fn(t("session.execution_complete", lang=lang, runtime=result.runtime))
         output_fn(t("session.reinspect", lang=lang))

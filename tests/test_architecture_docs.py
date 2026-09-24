@@ -21,7 +21,13 @@ REQUIRED_TERMS = {
 }
 VENDOR_ATTRIBUTION_ALLOWED = {
     "AGENTS.md",
+    "README.md",
+    "CHANGELOG.md",
+    "docs/decision-plane-laya.md",
     "docs/method/overview.md",
+    "docs/method/agora-flow-wizard.md",
+    "docs/method/ai-dlc-compatibility.md",
+    "docs/method/lifecycle.md",
     "docs/product/positioning.md",
     "docs/reference/aws-ai-dlc-mapping.md",
     "docs/reference/aws-ai-dlc-fidelity-plan.md",

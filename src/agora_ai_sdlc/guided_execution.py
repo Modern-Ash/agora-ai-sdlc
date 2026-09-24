@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shlex
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -103,6 +104,7 @@ def execute_guided_preparation(
     runtime_id: str,
     model: str | None = None,
     workspace_factory=AgoraWorkspace,
+    progress_fn: Callable[[str], None] | None = None,
 ) -> GuidedExecutionResult:
     """Run one bounded executor iteration and return to Core for re-inspection."""
 
@@ -115,6 +117,8 @@ def execute_guided_preparation(
         persist=True,
     )
     lean_path = None
+    if progress_fn is not None:
+        progress_fn("context")
     try:
         lean = select_execution_context(
             root,
@@ -161,6 +165,8 @@ def execute_guided_preparation(
     if "timeout_seconds" in fields:
         kwargs["timeout_seconds"] = 600
 
+    if progress_fn is not None:
+        progress_fn("executor")
     try:
         result = workspace.start_session(StartSessionInput(**kwargs))
     except (OSError, RuntimeError, ValueError) as error:

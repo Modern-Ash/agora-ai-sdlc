@@ -10,6 +10,17 @@
 
 AWS AI-DLC is methodological inspiration only. This project is independent, not affiliated with or endorsed by AWS, and requires no AWS service. The [concept mapping](../reference/aws-ai-dlc-mapping.md) lists what is shared at the level of public terminology.
 
+## Interaction model
+
+The product intentionally supports different levels of abstraction over one Core lifecycle:
+
+- **Agora Flow / Automagic:** continuous wizard, recommended for adoption and less CLI-oriented users.
+- **Expert CLI:** direct `aisdlc` and Agora Core commands for practitioners who want full operational control.
+- **Automation/API:** structured JSON and Core interfaces for CI, IDEs and autonomous tooling.
+
+Automagic mode is not a reduced-governance mode. It executes the same Core operations and exposes
+their evidence and authority boundaries; it only removes the need to navigate between commands manually.
+
 ## Differentiators
 
 Agora AI-SDLC does not require teams to practice the method by copying a prompt library. It turns the

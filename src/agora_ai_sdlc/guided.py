@@ -39,6 +39,7 @@ class GuidedDecision:
     ready_for_human_approval: bool = False
     ready_to_transition: bool = False
     observed_artifacts: tuple[str, ...] = ()
+    criterion_statuses: tuple[tuple[str, tuple[str, ...]], ...] = ()
 
     @property
     def blocked(self) -> bool:
@@ -200,8 +201,13 @@ def inspect_next(
     try:
         work_record = workspace.show_work(str(task.swarm_id or ""), str(task.work_id or ""))
         observed_artifacts = tuple(getattr(work_record, "artifact_kinds", ()) or ())
+        raw_statuses = getattr(work_record, "criterion_statuses", {}) or {}
+        criterion_statuses = tuple(
+            (str(key), tuple(str(stage) for stage in stages)) for key, stages in sorted(raw_statuses.items())
+        )
     except (AttributeError, OSError, ValueError, FileNotFoundError):
         observed_artifacts = ()
+        criterion_statuses = ()
 
     messages = _humanize(
         blockers,
@@ -234,6 +240,7 @@ def inspect_next(
         ready_for_human_approval=bool(details.get("ready_for_human_approval", False)),
         ready_to_transition=bool(details.get("ready_to_complete", not blockers)),
         observed_artifacts=observed_artifacts,
+        criterion_statuses=criterion_statuses,
     )
 
 

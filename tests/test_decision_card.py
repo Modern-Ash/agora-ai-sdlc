@@ -75,3 +75,46 @@ def test_decision_card_spanish_preserves_operational_detail():
     assert "Contexto" in rendered
     assert "Ollama · qwen3:8b [local]" in rendered
     assert "~8400 → ~2900 tokens" in rendered
+
+
+def test_final_criterion_acceptance_card_is_explicit_human_action():
+    final_decision = GuidedDecision(
+        swarm="delivery",
+        work="issue-26",
+        title="Deliver issue",
+        method="ai-sdlc",
+        actor="project:product-owner",
+        role="product-owner",
+        state="operations",
+        target="completed",
+        gate="completion",
+        blockers=("unsatisfied=[source-issue]",),
+        messages=("Complete criteria.",),
+        unsatisfied_criteria=("source-issue",),
+    )
+    final_advice = SimpleNamespace(
+        action="accept-criteria",
+        summary="Accept completed criteria.",
+        source="deterministic",
+        reasoning_tier=None,
+        confidence=None,
+        recommended_runtime=None,
+        escalation_required=False,
+        context_candidates=0,
+        context_selected=0,
+        context_tokens_before=0,
+        context_tokens_after=0,
+        context_tokens_saved=0,
+        context_escalated=(),
+        security_review=None,
+        change_risk=None,
+        validation_focus=None,
+    )
+
+    card = build_decision_card(final_decision, final_advice, lang="es")
+    rendered = render_decision_card(card, lang="es")
+
+    assert "aceptación explícita del Product Owner" in card.title
+    assert any("criterios completados" in item for item in card.will_do)
+    assert "Inteligencia: determinístico/Core" in rendered
+    assert "Executor:" not in rendered

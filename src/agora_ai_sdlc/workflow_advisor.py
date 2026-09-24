@@ -85,6 +85,29 @@ def advise_workflow(
             needs_runtime=False,
         )
 
+    # Final acceptance of already-delivered criteria is a human authority boundary,
+    # not another generative preparation step.
+    criterion_statuses = dict(decision.criterion_statuses)
+    final_criterion_acceptance = (
+        decision.state == "operations"
+        and decision.target == "completed"
+        and decision.gate == "completion"
+        and bool(decision.unsatisfied_criteria)
+        and all("deployed" in criterion_statuses.get(item, ()) for item in decision.unsatisfied_criteria)
+        and not (
+            decision.missing_artifacts
+            or decision.missing_evidence
+            or decision.clarification_issues
+            or decision.git_issues
+        )
+    )
+    if final_criterion_acceptance:
+        return WorkflowAdvice(
+            action="accept-criteria",
+            summary="Explicitly accept the completed criteria as Product Owner, then re-read Core.",
+            needs_runtime=False,
+        )
+
     # Verification is deterministic and cheaper than any model call.
     if decision.missing_evidence and not (
         decision.missing_artifacts or decision.clarification_issues or decision.unsatisfied_criteria

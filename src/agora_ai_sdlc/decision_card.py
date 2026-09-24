@@ -78,6 +78,10 @@ def build_decision_card(
             "decision.do.approve.record",
             "decision.do.approve.reinspect",
         ),
+        "accept-criteria": (
+            "decision.do.accept_criteria.record",
+            "decision.do.accept_criteria.reinspect",
+        ),
         "transition": (
             "decision.do.transition.apply",
             "decision.do.transition.continue",
@@ -135,7 +139,7 @@ def build_decision_card(
     if getattr(advice, "escalation_required", False):
         risks.append(t("decision.risk.reasoning_escalated", lang=lang))
 
-    if advice.action in {"prepare", "verify", "approve", "transition"}:
+    if advice.action in {"prepare", "verify", "approve", "accept-criteria", "transition"}:
         boundary = t("decision.return.reinspect", lang=lang)
     else:
         boundary = t("decision.return.human_validation", lang=lang)

@@ -125,3 +125,64 @@ def test_preconfirmation_advice_does_not_select_per_file_context(monkeypatch):
     assert advice.context_selected == 0
     assert advice.context_tokens_before == 0
     assert advice.context_tokens_after == 0
+
+
+def test_final_criterion_acceptance_is_human_and_never_uses_laya(monkeypatch):
+    monkeypatch.setattr(
+        "agora_ai_sdlc.workflow_advisor.build_execution_bundle",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("final acceptance must not call Laya")),
+    )
+
+    advice = advise_workflow(
+        Path("."),
+        decision(
+            actor="project:product-owner",
+            role="product-owner",
+            state="operations",
+            target="completed",
+            gate="completion",
+            blockers=("unsatisfied=[source-issue]",),
+            messages=("Complete criteria.",),
+            missing_artifacts=(),
+            missing_evidence=(),
+            missing_approvals=(),
+            unsatisfied_criteria=("source-issue",),
+            criterion_statuses=(("source-issue", ("elaborated", "designed", "built", "verified", "deployed")),),
+        ),
+    )
+
+    assert advice.action == "accept-criteria"
+    assert advice.source == "deterministic"
+    assert advice.needs_runtime is False
+
+
+def test_final_criterion_before_deployed_still_requires_preparation(monkeypatch):
+    answer = SimpleNamespace(value="standard", confidence=0.96)
+    evaluation = SimpleNamespace(
+        result=SimpleNamespace(answers={"reasoning_tier": answer}),
+        escalated=(),
+    )
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.build_execution_bundle", lambda *args, **kwargs: object())
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.advise_execution", lambda *args, **kwargs: evaluation)
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor._free_runtime", lambda root: None)
+
+    advice = advise_workflow(
+        Path("."),
+        decision(
+            actor="project:product-owner",
+            role="product-owner",
+            state="operations",
+            target="completed",
+            gate="completion",
+            blockers=("unsatisfied=[source-issue]",),
+            messages=("Complete criteria.",),
+            missing_artifacts=(),
+            missing_evidence=(),
+            missing_approvals=(),
+            unsatisfied_criteria=("source-issue",),
+            criterion_statuses=(("source-issue", ("elaborated", "designed", "built", "verified")),),
+        ),
+    )
+
+    assert advice.action == "prepare"
+    assert advice.needs_runtime is True

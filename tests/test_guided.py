@@ -212,3 +212,55 @@ def test_guided_projection_prefers_forward_transition_over_rework(monkeypatch, t
     assert decision.target == "operations"
     assert decision.gate == "construction-verified"
     assert decision.ready_to_transition is True
+
+
+def test_guided_projection_includes_current_criterion_stages(monkeypatch, tmp_path):
+    class CriterionWorkspace(FakeWorkspace):
+        def next_actions(self, *, swarm_id=None, human_only=False, limit=1000):
+            return [
+                SimpleNamespace(
+                    swarm_id="delivery",
+                    work_id="first-work",
+                    actor="project:product-owner",
+                    role="product-owner",
+                    state="operations",
+                    target_states=["completed"],
+                    blockers=["unsatisfied=[source-issue]"],
+                )
+            ]
+
+        def next_gate_readiness(self, swarm_id, work_id):
+            return {
+                "transitions": [
+                    {
+                        "title": "Complete delivery",
+                        "method": "ai-sdlc",
+                        "target_state": "completed",
+                        "gate": {
+                            "gate": "completion",
+                            "unsatisfied": ["source-issue"],
+                            "missing_artifacts": [],
+                            "missing_evidence_types": [],
+                            "missing_approvals": [],
+                            "git_issues": [],
+                        },
+                        "ready_for_human_approval": False,
+                        "ready_to_complete": False,
+                    }
+                ]
+            }
+
+        def show_work(self, swarm_id, work_id):
+            return SimpleNamespace(
+                artifact_kinds=("operational-readiness", "rollback-procedure"),
+                criterion_statuses={"source-issue": ["elaborated", "designed", "built", "verified", "deployed"]},
+            )
+
+    monkeypatch.setattr(guided, "AgoraWorkspace", CriterionWorkspace)
+
+    decision = guided.inspect_next(tmp_path, swarm="delivery", work="first-work")
+
+    assert decision is not None
+    assert decision.criterion_statuses == (
+        ("source-issue", ("elaborated", "designed", "built", "verified", "deployed")),
+    )

@@ -207,7 +207,12 @@ def _section(text: str, heading: str) -> str:
 def _level_1_plan_preview(root: Path, work: str, *, limit: int = 6) -> tuple[str, ...]:
     candidates = (
         root / ".agora" / "ai-sdlc" / "handoffs" / work / "DETERMINISTIC_INCEPTION.md",
-        root / ".agora" / "ai-sdlc" / "handoffs" / f"issue-{work.removeprefix('issue-')}" / "DETERMINISTIC_INCEPTION.md",
+        root
+        / ".agora"
+        / "ai-sdlc"
+        / "handoffs"
+        / f"issue-{work.removeprefix('issue-')}"
+        / "DETERMINISTIC_INCEPTION.md",
     )
     for path in candidates:
         if not path.is_file():
@@ -245,7 +250,12 @@ def _validation_checkpoint(decision: GuidedDecision, phase: str, step: str) -> s
 def _semantic_gaps(root: Path, work: str) -> tuple[str, ...]:
     candidates = (
         root / ".agora" / "ai-sdlc" / "handoffs" / work / "DETERMINISTIC_INCEPTION.md",
-        root / ".agora" / "ai-sdlc" / "handoffs" / f"issue-{work.removeprefix('issue-')}" / "DETERMINISTIC_INCEPTION.md",
+        root
+        / ".agora"
+        / "ai-sdlc"
+        / "handoffs"
+        / f"issue-{work.removeprefix('issue-')}"
+        / "DETERMINISTIC_INCEPTION.md",
     )
     for path in candidates:
         if not path.is_file():

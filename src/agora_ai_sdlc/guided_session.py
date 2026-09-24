@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from threading import Event, Lock, Thread
 
 from agora_ai_sdlc.decision_card import build_decision_card, render_decision_card
 from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice, select_executor_model
@@ -16,6 +18,74 @@ from agora_ai_sdlc.runtime_discovery import discover_runtimes
 from agora_ai_sdlc.wizard import build_wizard_view, render_wizard, save_answer
 from agora_ai_sdlc.wizard_actions import execute_in_session_action
 from agora_ai_sdlc.workflow_advisor import advise_workflow
+
+
+class _ProgressDisplay:
+    """Animate one in-place status line on TTYs and stay concise in logs/tests."""
+
+    _frames = ("⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏")
+
+    def __init__(
+        self,
+        *,
+        output_fn: Callable[[str], None],
+        lang: str,
+        runtime: str,
+        interval_seconds: float = 0.1,
+    ) -> None:
+        self._output_fn = output_fn
+        self._lang = lang
+        self._runtime = runtime
+        self._interval_seconds = interval_seconds
+        self._tty = output_fn is print and sys.stdout.isatty()
+        self._message = ""
+        self._last_fallback_stage: str | None = None
+        self._stop = Event()
+        self._lock = Lock()
+        self._thread: Thread | None = None
+        self._rendered_width = 0
+
+    def start(self) -> None:
+        if not self._tty or self._thread is not None:
+            return
+        self._thread = Thread(target=self._animate, name="agora-flow-spinner", daemon=True)
+        self._thread.start()
+
+    def update(self, stage: str) -> None:
+        message = t(f"session.progress.{stage}", lang=self._lang, runtime=self._runtime)
+        if not self._tty:
+            if stage != self._last_fallback_stage:
+                self._output_fn(message)
+                self._last_fallback_stage = stage
+            return
+        with self._lock:
+            self._message = message
+
+    def stop(self) -> None:
+        if not self._tty:
+            return
+        self._stop.set()
+        if self._thread is not None:
+            self._thread.join(timeout=0.5)
+        self._clear_line()
+
+    def _animate(self) -> None:
+        index = 0
+        while not self._stop.wait(self._interval_seconds):
+            with self._lock:
+                message = self._message
+            if not message:
+                continue
+            text = f"{self._frames[index % len(self._frames)]} {message}"
+            self._rendered_width = max(self._rendered_width, len(text))
+            sys.stdout.write("\r" + text.ljust(self._rendered_width))
+            sys.stdout.flush()
+            index += 1
+
+    def _clear_line(self) -> None:
+        if self._rendered_width:
+            sys.stdout.write("\r" + (" " * self._rendered_width) + "\r")
+            sys.stdout.flush()
 
 
 @dataclass(frozen=True)
@@ -227,21 +297,23 @@ def run_interactive(
 
         output_fn("")
         output_fn(t("session.executing", lang=lang, runtime=selected_runtime.label))
+        progress = _ProgressDisplay(output_fn=output_fn, lang=lang, runtime=selected_runtime.label)
+        progress.start()
         try:
             result = execute_guided_preparation(
                 root,
                 decision,
                 runtime_id=selected_runtime.agent,
                 model=selected_runtime.model,
-                progress_fn=lambda stage, runtime_label=selected_runtime.label: output_fn(
-                    t(f"session.progress.{stage}", lang=lang, runtime=runtime_label)
-                ),
+                progress_fn=progress.update,
             )
         except (OSError, RuntimeError, ValueError) as error:
+            progress.stop()
             failed_runtimes.add((selected_runtime.agent, selected_runtime.model))
             output_fn(t("session.execution_failed", lang=lang, error=str(error)))
             output_fn(t("session.execution_recovery", lang=lang))
             selected_runtime = None
             continue
+        progress.stop()
         output_fn(t("session.execution_complete", lang=lang, runtime=result.runtime))
         output_fn(t("session.reinspect", lang=lang))

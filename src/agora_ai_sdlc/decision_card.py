@@ -128,7 +128,7 @@ def render_decision_card(card: DecisionCard, *, lang: str = "en") -> str:
         "why": "Por qué" if es else "Why",
         "do": "Si confirmás, Agora hará" if es else "If confirmed, Agora will",
         "not": "Límites" if es else "Boundaries",
-        "executor": "Executor" if es else "Executor",
+        "executor": "Executor",
         "intelligence": "Inteligencia" if es else "Intelligence",
         "context": "Contexto" if es else "Context",
         "risk": "Atención" if es else "Attention",

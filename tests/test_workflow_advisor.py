@@ -156,15 +156,11 @@ def test_final_criterion_acceptance_is_human_and_never_uses_laya(monkeypatch):
     assert advice.needs_runtime is False
 
 
-def test_final_criterion_before_deployed_still_requires_preparation(monkeypatch):
-    answer = SimpleNamespace(value="standard", confidence=0.96)
-    evaluation = SimpleNamespace(
-        result=SimpleNamespace(answers={"reasoning_tier": answer}),
-        escalated=(),
+def test_verified_final_criterion_uses_assigned_ai_developer_without_laya(monkeypatch):
+    monkeypatch.setattr(
+        "agora_ai_sdlc.workflow_advisor.build_execution_bundle",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("deployed stage must not call Laya")),
     )
-    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.build_execution_bundle", lambda *args, **kwargs: object())
-    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.advise_execution", lambda *args, **kwargs: evaluation)
-    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor._free_runtime", lambda root: None)
 
     advice = advise_workflow(
         Path("."),
@@ -181,8 +177,41 @@ def test_final_criterion_before_deployed_still_requires_preparation(monkeypatch)
             missing_approvals=(),
             unsatisfied_criteria=("source-issue",),
             criterion_statuses=(("source-issue", ("elaborated", "designed", "built", "verified")),),
+            developer_actor="project:ai-developer",
+            developer_actor_kind="ai-agent",
         ),
     )
 
-    assert advice.action == "prepare"
-    assert advice.needs_runtime is True
+    assert advice.action == "mark-deployed"
+    assert advice.source == "deterministic"
+    assert advice.needs_runtime is False
+
+
+def test_verified_final_criterion_with_human_developer_stays_at_review_boundary(monkeypatch):
+    monkeypatch.setattr(
+        "agora_ai_sdlc.workflow_advisor.build_execution_bundle",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("human developer boundary must not call Laya")),
+    )
+
+    advice = advise_workflow(
+        Path("."),
+        decision(
+            actor="project:product-owner",
+            role="product-owner",
+            state="operations",
+            target="completed",
+            gate="completion",
+            blockers=("unsatisfied=[source-issue]",),
+            messages=("Complete criteria.",),
+            missing_artifacts=(),
+            missing_evidence=(),
+            missing_approvals=(),
+            unsatisfied_criteria=("source-issue",),
+            criterion_statuses=(("source-issue", ("elaborated", "designed", "built", "verified")),),
+            developer_actor="project:developer",
+            developer_actor_kind="human",
+        ),
+    )
+
+    assert advice.action == "review"
+    assert advice.needs_runtime is False

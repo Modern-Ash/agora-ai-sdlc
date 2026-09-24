@@ -97,15 +97,15 @@ def test_conformance_derive_aws_original_uses_repository_rules(capsys):
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"]["id"] == "aws-original"
     assert payload["facts_source"] == "derived:aws-original-rules/v1"
-    assert payload["overall_status"] == "PARTIAL"
-    assert any(item["status"] == "PARTIAL" for item in payload["results"])
+    assert payload["overall_status"] == "PASS"
+    assert not any(item["status"] == "PARTIAL" for item in payload["results"])
     assert any(item["status"] == "PASS" for item in payload["results"])
     assert not any(item["status"] == "FAIL" for item in payload["results"])
 
 
 def test_conformance_derive_strict_and_provider_errors(tmp_path, capsys):
     assert main(["conformance", "aws-original", "--derive", "--root", str(ROOT), "--strict"]) == 0
-    assert "Overall: PARTIAL" in capsys.readouterr().out
+    assert "Overall: PASS" in capsys.readouterr().out
 
     facts = tmp_path / "facts.yaml"
     _write_conformance_facts(facts)

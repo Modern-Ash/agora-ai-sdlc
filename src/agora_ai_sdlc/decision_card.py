@@ -31,7 +31,9 @@ def build_decision_card(decision: GuidedDecision, advice: WorkflowAdvice) -> Dec
     if decision.missing_evidence:
         rationale.append("Verification evidence is still missing: " + ", ".join(decision.missing_evidence))
     if getattr(advice, "escalation_required", False):
-        rationale.append("Local System-1 confidence is below the configured threshold; generative reasoning is retained.")
+        rationale.append(
+            "Local System-1 confidence is below the configured threshold; generative reasoning is retained."
+        )
     elif advice.source == "laya" and getattr(advice, "reasoning_tier", None):
         rationale.append(
             f"Local System-1 classified the reasoning tier as {advice.reasoning_tier}"

@@ -245,6 +245,17 @@ def main() -> dict:
     register(life, "po", "intent", "intent.md", artifact_doc("intent", "INT-001"))
     register(life, "po", "unit-of-work", "unit.md", artifact_doc("unit-of-work", "UOW-001", ("INT-001",)))
     register(life, "po", "requirements", "requirements.md", artifact_doc("requirements", "REQ-001", ("UOW-001",)))
+    register(life, "po", "user-stories", "user-stories.md", artifact_doc("user-stories", "UST-001", ("REQ-001",)))
+    register(life, "po", "nfr", "nfr.md", artifact_doc("nfr", "NFR-001", ("REQ-001",)))
+    register(life, "po", "risk-register", "risk-register.md", artifact_doc("risk-register", "RSK-001", ("NFR-001",)))
+    register(
+        life,
+        "po",
+        "measurement-criteria",
+        "measurement-criteria.md",
+        artifact_doc("measurement-criteria", "MCR-001", ("UST-001",)),
+    )
+    register(life, "po", "bolt-plan", "bolt-plan-draft.md", bolt_plan(completed=False))
 
     level1 = parse_plan(LEVEL1)
     level2 = parse_plan(LEVEL2)
@@ -268,23 +279,37 @@ def main() -> dict:
     final_bolts = parse_bolt_plan(bolt_plan(completed=True))
     bolt_summary = trace(final_bolts)
     assert bolt_summary["construction_evidence_complete"]
-    register(life, "dev", "bolt-plan", "bolt-plan.md", bolt_plan(completed=True))
+    (project / "bolt-plan-draft.md").write_text(bolt_plan(completed=True), encoding="utf-8")
 
     register(life, "dev", "domain-model", "domain-model.md", artifact_doc("domain-model", "DOM-001", ("UOW-001",)))
     register(life, "dev", "architecture", "architecture.md", artifact_doc("architecture", "ARC-001", ("REQ-001",)))
     register(
         life,
         "dev",
+        "logical-design",
+        "logical-design.md",
+        artifact_doc("logical-design", "LOG-001", ("DOM-001", "NFR-001", "RSK-001")),
+    )
+    register(
+        life,
+        "dev",
         "implementation-plan",
         "implementation-plan.md",
-        artifact_doc("implementation-plan", "IMP-001", ("ARC-001",)),
+        artifact_doc("implementation-plan", "IMP-001", ("LOG-001",)),
     )
     register(
         life,
         "dev",
         "test-strategy",
         "test-strategy.md",
-        artifact_doc("test-strategy", "TST-001", ("UOW-001",)),
+        artifact_doc("test-strategy", "TST-001", ("UST-001", "NFR-001")),
+    )
+    register(
+        life,
+        "dev",
+        "deployment-unit",
+        "deployment-unit.md",
+        artifact_doc("deployment-unit", "DPU-001", ("IMP-001", "TST-001", "LOG-001")),
     )
 
     # Unrelated artifact proves context scoping.

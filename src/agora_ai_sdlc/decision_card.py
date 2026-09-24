@@ -46,7 +46,7 @@ def build_decision_card(decision: GuidedDecision, advice: WorkflowAdvice) -> Dec
         will_do = (
             "Assemble bounded context from authoritative Work/repository facts.",
             "Execute one governed, non-authoritative preparation iteration.",
-            "Persist produced artifacts/evidence according to AI-DLC contracts.",
+            "Persist produced artifacts/evidence according to AI-SDLC contracts.",
             "Re-read Agora Core immediately and recalculate the next step.",
         )
     elif advice.action == "verify":

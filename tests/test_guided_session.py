@@ -151,37 +151,51 @@ def test_details_keep_full_governance_visible(monkeypatch):
     assert any("Underlying command bundle" in line for line in outputs)
 
 
-def test_failed_runtime_is_not_reselected_automatically(monkeypatch):
+def test_failed_runtime_recovers_inside_same_decision_without_rerunning_laya(monkeypatch):
     outputs = []
-    calls = {"inspect": 0, "select": 0, "execute": 0}
-    runtime = SimpleNamespace(agent="claude", model=None, label="Claude Code · configured model")
+    calls = {"inspect": 0, "advice": 0, "select": 0, "execute": 0}
+    claude = SimpleNamespace(agent="claude", model=None, label="Claude Code · configured model")
+    ollama = SimpleNamespace(
+        agent="opencode",
+        model="ollama/qwen3:8b",
+        label="Ollama (local via OpenCode) · ollama/qwen3:8b [local]",
+    )
 
     def inspect(*args, **kwargs):
         calls["inspect"] += 1
-        return decision() if calls["inspect"] < 4 else None
+        return decision() if calls["inspect"] == 1 else None
 
-    monkeypatch.setattr("agora_ai_sdlc.guided_session.inspect_next", inspect)
-    monkeypatch.setattr("agora_ai_sdlc.guided_session.build_wizard_view", lambda *args, **kwargs: view())
-    monkeypatch.setattr("agora_ai_sdlc.guided_session.advise_workflow", lambda *args, **kwargs: advice(runtime))
+    def advise_once(*args, **kwargs):
+        calls["advice"] += 1
+        return advice(claude)
 
     def execute(*args, **kwargs):
         calls["execute"] += 1
-        raise ValueError("Actor not found: ai-claude")
-
-    monkeypatch.setattr("agora_ai_sdlc.guided_session.execute_guided_preparation", execute)
+        if calls["execute"] == 1:
+            assert kwargs["runtime_id"] == "claude"
+            raise ValueError("Claude exited with code 1")
+        assert kwargs["runtime_id"] == "opencode"
+        assert kwargs["model"] == "ollama/qwen3:8b"
+        return SimpleNamespace(runtime="OpenCode", result_path="/tmp/RESULT.md")
 
     def select(*args, **kwargs):
         calls["select"] += 1
+        return ollama
 
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.inspect_next", inspect)
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.build_wizard_view", lambda *args, **kwargs: view())
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.advise_workflow", advise_once)
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.execute_guided_preparation", execute)
     monkeypatch.setattr("agora_ai_sdlc.guided_session._select_runtime", select)
 
-    answers = iter(["", "", "x"])
+    answers = iter(["", "a", ""])
     result = run_interactive(Path("."), input_fn=lambda prompt: next(answers), output_fn=outputs.append)
 
-    assert result.reason == "exit"
-    assert calls["execute"] == 1
-    assert calls["select"] == 1
-    assert any("Actor not found: ai-claude" in line for line in outputs)
+    assert result.reason == "clear"
+    assert calls == {"inspect": 2, "advice": 1, "select": 1, "execute": 2}
+    assert any("Claude exited with code 1" in line for line in outputs)
+    assert any("current decision is preserved" in line for line in outputs)
+    assert any("Confirm and run with Ollama" in line for line in outputs)
 
 
 def test_invalid_confirmation_does_not_reinspect_or_rerun_laya(monkeypatch):

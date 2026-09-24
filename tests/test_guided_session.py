@@ -8,20 +8,20 @@ from agora_ai_sdlc.wizard import WizardQuestion, WizardView
 
 def decision(**changes):
     values = {
-        "swarm":"delivery",
-        "work":"first-work",
-        "title":"Deliver first governed outcome",
-        "method":"ai-sdlc",
-        "actor":"project:developer",
-        "role":"developer",
-        "state":"construction",
-        "target":"operations",
-        "gate":"construction-complete",
-        "blockers":("blocked",),
-        "messages":("Prepare missing work.",),
-        "missing_artifacts":("implementation-plan",),
-        "clarification_issues":(),
-        "missing_approvals":(),
+        "swarm": "delivery",
+        "work": "first-work",
+        "title": "Deliver first governed outcome",
+        "method": "ai-sdlc",
+        "actor": "project:developer",
+        "role": "developer",
+        "state": "construction",
+        "target": "operations",
+        "gate": "construction-complete",
+        "blockers": ("blocked",),
+        "messages": ("Prepare missing work.",),
+        "missing_artifacts": ("implementation-plan",),
+        "clarification_issues": (),
+        "missing_approvals": (),
     }
     values.update(changes)
     return GuidedDecision(**values)

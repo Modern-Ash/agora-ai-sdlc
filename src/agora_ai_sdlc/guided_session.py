@@ -179,6 +179,53 @@ def _decision_fingerprint(decision: GuidedDecision) -> tuple[object, ...]:
     )
 
 
+def _confirm_current_decision(
+    root: Path,
+    decision: GuidedDecision,
+    *,
+    selected_runtime: ExecutorRecoveryChoice | None,
+    input_fn: Callable[[str], str],
+    output_fn: Callable[[str], None],
+    lang: str,
+    retry: bool = False,
+) -> tuple[str, ExecutorRecoveryChoice | None]:
+    """Confirm the current decision without re-reading Core or re-running Laya."""
+
+    while True:
+        output_fn("")
+        if selected_runtime is not None:
+            output_fn(t("wizard.actions_selected", lang=lang, runtime=selected_runtime.label))
+        elif retry:
+            output_fn(t("wizard.actions_retry", lang=lang))
+        else:
+            output_fn(t("wizard.actions", lang=lang))
+        answer = input_fn(t("wizard.confirm", lang=lang)).strip().casefold()
+
+        if answer in {"x", "q", "exit"}:
+            return "exit", selected_runtime
+
+        if answer in {"d", "details"}:
+            output_fn("")
+            output_fn(render(decision, expert=True, show_commands=True, lang=lang))
+            continue
+
+        if answer in {"a", "adjust", "c", "change"}:
+            selected_runtime = _select_runtime(
+                root,
+                input_fn=input_fn,
+                output_fn=output_fn,
+                current=selected_runtime,
+                lang=lang,
+            )
+            continue
+
+        if answer not in {"", "y", "yes", "confirm", "ok"}:
+            output_fn(t("wizard.choose", lang=lang))
+            continue
+
+        return "confirm", selected_runtime
+
+
 def run_interactive(
     root: Path,
     *,
@@ -274,41 +321,20 @@ def run_interactive(
         output_fn("")
         output_fn(render_decision_card(build_decision_card(decision, advice, lang=lang), lang=lang))
 
-        while True:
-            output_fn("")
-            if selected_runtime is not None:
-                output_fn(t("wizard.actions_selected", lang=lang, runtime=selected_runtime.label))
-            else:
-                output_fn(t("wizard.actions", lang=lang))
-            answer = input_fn(t("wizard.confirm", lang=lang)).strip().casefold()
-
-            if answer in {"x", "q", "exit"}:
-                return GuidedSessionResult(
-                    "exit",
-                    selected_runtime.agent if selected_runtime else None,
-                    selected_runtime.model if selected_runtime else None,
-                )
-
-            if answer in {"d", "details"}:
-                output_fn("")
-                output_fn(render(decision, expert=True, show_commands=True, lang=lang))
-                continue
-
-            if answer in {"a", "adjust", "c", "change"}:
-                selected_runtime = _select_runtime(
-                    root,
-                    input_fn=input_fn,
-                    output_fn=output_fn,
-                    current=selected_runtime,
-                    lang=lang,
-                )
-                continue
-
-            if answer not in {"", "y", "yes", "confirm", "ok"}:
-                output_fn(t("wizard.choose", lang=lang))
-                continue
-
-            break
+        confirmation, selected_runtime = _confirm_current_decision(
+            root,
+            decision,
+            selected_runtime=selected_runtime,
+            input_fn=input_fn,
+            output_fn=output_fn,
+            lang=lang,
+        )
+        if confirmation == "exit":
+            return GuidedSessionResult(
+                "exit",
+                selected_runtime.agent if selected_runtime else None,
+                selected_runtime.model if selected_runtime else None,
+            )
 
         if advice.action != "prepare":
             if advice.action == "review":
@@ -331,21 +357,33 @@ def run_interactive(
             output_fn(t("session.reinspect", lang=lang))
             continue
 
-        if selected_runtime is None:
-            selected_runtime = _select_runtime(
-                root,
-                input_fn=input_fn,
-                output_fn=output_fn,
-                lang=lang,
-            )
-        if selected_runtime is None:
-            continue
+        while True:
+            if selected_runtime is None:
+                selected_runtime = _select_runtime(
+                    root,
+                    input_fn=input_fn,
+                    output_fn=output_fn,
+                    lang=lang,
+                )
+            if selected_runtime is None:
+                confirmation, selected_runtime = _confirm_current_decision(
+                    root,
+                    decision,
+                    selected_runtime=None,
+                    input_fn=input_fn,
+                    output_fn=output_fn,
+                    lang=lang,
+                    retry=True,
+                )
+                if confirmation == "exit":
+                    return GuidedSessionResult("execution-failed")
+                continue
 
-        output_fn("")
-        output_fn(t("session.executing", lang=lang, runtime=selected_runtime.label))
-        progress = _ProgressDisplay(output_fn=output_fn, lang=lang, runtime=selected_runtime.label)
-        progress.start()
-        try:
+            output_fn("")
+            output_fn(t("session.executing", lang=lang, runtime=selected_runtime.label))
+            progress = _ProgressDisplay(output_fn=output_fn, lang=lang, runtime=selected_runtime.label)
+            progress.start()
+            execution_error: BaseException | None = None
             try:
                 result = execute_guided_preparation(
                     root,
@@ -355,13 +393,29 @@ def run_interactive(
                     progress_fn=progress.update,
                 )
             except (OSError, RuntimeError, ValueError) as error:
-                failed_runtimes.add((selected_runtime.agent, selected_runtime.model))
-                output_fn(t("session.execution_failed", lang=lang, error=str(error)))
-                output_fn(t("session.execution_recovery", lang=lang))
-                selected_runtime = None
-                continue
-        finally:
-            progress.stop()
+                execution_error = error
+            finally:
+                progress.stop()
+
+            if execution_error is None:
+                break
+
+            failed_runtimes.add((selected_runtime.agent, selected_runtime.model))
+            output_fn(t("session.execution_failed", lang=lang, error=str(execution_error)))
+            output_fn(t("session.execution_retry_same_decision", lang=lang))
+            selected_runtime = None
+            confirmation, selected_runtime = _confirm_current_decision(
+                root,
+                decision,
+                selected_runtime=None,
+                input_fn=input_fn,
+                output_fn=output_fn,
+                lang=lang,
+                retry=True,
+            )
+            if confirmation == "exit":
+                return GuidedSessionResult("execution-failed")
+
         previous_execution_fingerprint = _decision_fingerprint(decision)
         previous_execution_result_path = result.result_path
         output_fn(t("session.execution_complete", lang=lang, runtime=result.runtime))

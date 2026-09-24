@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 
 from agora_ai_sdlc.guided import GuidedDecision
 from agora_ai_sdlc.wizard import build_wizard_view, load_answers, render_wizard, save_answer
@@ -7,25 +6,25 @@ from agora_ai_sdlc.wizard import build_wizard_view, load_answers, render_wizard,
 
 def decision(**changes):
     values = {
-        "swarm":"delivery",
-        "work":"issue-26",
-        "title":"Implement idempotent retry",
-        "method":"ai-sdlc",
-        "actor":"project:developer",
-        "role":"developer",
-        "state":"inception",
-        "target":"construction",
-        "gate":"inception-approved",
-        "blockers":("blocked",),
-        "messages":("Resolve clarification.",),
-        "missing_artifacts":(),
-        "missing_evidence":(),
-        "missing_approvals":(),
-        "unsatisfied_criteria":(),
-        "git_issues":(),
-        "clarification_issues":("clarification-not-run",),
-        "ready_for_human_approval":False,
-        "ready_to_transition":False,
+        "swarm": "delivery",
+        "work": "issue-26",
+        "title": "Implement idempotent retry",
+        "method": "ai-sdlc",
+        "actor": "project:developer",
+        "role": "developer",
+        "state": "inception",
+        "target": "construction",
+        "gate": "inception-approved",
+        "blockers": ("blocked",),
+        "messages": ("Resolve clarification.",),
+        "missing_artifacts": (),
+        "missing_evidence": (),
+        "missing_approvals": (),
+        "unsatisfied_criteria": (),
+        "git_issues": (),
+        "clarification_issues": ("clarification-not-run",),
+        "ready_for_human_approval": False,
+        "ready_to_transition": False,
     }
     values.update(changes)
     return GuidedDecision(**values)

@@ -276,7 +276,10 @@ def run_interactive(
 
         while True:
             output_fn("")
-            output_fn(t("wizard.actions", lang=lang))
+            if selected_runtime is not None:
+                output_fn(t("wizard.actions_selected", lang=lang, runtime=selected_runtime.label))
+            else:
+                output_fn(t("wizard.actions", lang=lang))
             answer = input_fn(t("wizard.confirm", lang=lang)).strip().casefold()
 
             if answer in {"x", "q", "exit"}:

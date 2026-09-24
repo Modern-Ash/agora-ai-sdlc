@@ -111,6 +111,10 @@ def test_uncertain_laya_never_suppresses_normal_escalation(monkeypatch):
     monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.build_execution_bundle", lambda *args, **kwargs: object())
     monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.advise_execution", lambda *args, **kwargs: Evaluation())
     monkeypatch.setattr(
+        "agora_ai_sdlc.workflow_advisor.select_execution_context",
+        lambda *args, **kwargs: context_selection(),
+    )
+    monkeypatch.setattr(
         "agora_ai_sdlc.workflow_advisor._free_runtime",
         lambda root: (_ for _ in ()).throw(AssertionError("uncertain result must not auto-select")),
     )

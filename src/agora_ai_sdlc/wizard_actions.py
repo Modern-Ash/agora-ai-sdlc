@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from agora.model import AddApprovalInput, TransitionWorkInput
+from agora.model import AddApprovalInput, TransitionWorkInput, WorkActorInput
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.guided import GuidedDecision
@@ -28,6 +28,19 @@ def _actor_id(decision: GuidedDecision) -> str:
 def next_in_session_action(decision: GuidedDecision) -> str:
     """Return the action Enter should perform at a non-generative node."""
 
+    if (
+        decision.state == "operations"
+        and decision.target == "completed"
+        and decision.gate == "completion"
+        and decision.unsatisfied_criteria
+        and not (
+            decision.missing_artifacts
+            or decision.missing_evidence
+            or decision.clarification_issues
+            or decision.git_issues
+        )
+    ):
+        return "accept-criteria"
     if decision.missing_evidence and not (
         decision.missing_artifacts or decision.clarification_issues or decision.unsatisfied_criteria
     ):
@@ -75,6 +88,20 @@ def execute_in_session_action(
         return WizardActionResult("verification_ok")
 
     workspace = workspace_factory(cwd=root)
+
+    if action == "accept-criteria":
+        actor = _actor_id(decision)
+        for criterion in decision.unsatisfied_criteria:
+            workspace.satisfy_criterion(
+                WorkActorInput(
+                    swarm_id=decision.swarm,
+                    work_id=decision.work,
+                    actor_id=actor,
+                ),
+                criterion,
+                stage="accepted",
+            )
+        return WizardActionResult("criteria_accepted", (("count", len(decision.unsatisfied_criteria)),))
 
     if action == "approve":
         actor = _actor_id(decision)

@@ -1,6 +1,6 @@
 # AI-SDLC 0.2.0 protocol
 
-The operating pattern remains: **plan -> clarify -> human decision -> execute -> validate**. AI drafts a plan from the Intent and proposes the next refinement; humans validate meaningful decisions before execution. No phase advances without its gate.
+The operating pattern remains: **plan -> clarify -> human decision -> execute -> validate**. AI drafts a plan from the Intent and proposes the next refinement; humans validate meaningful decisions before execution. By contract, no phase advances without its gate.
 
 ## Phases
 

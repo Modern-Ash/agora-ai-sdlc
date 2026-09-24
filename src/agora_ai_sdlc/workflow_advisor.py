@@ -93,10 +93,7 @@ def advise_workflow(
         )
 
     needs_preparation = bool(
-        decision.missing_artifacts
-        or decision.clarification_issues
-        or decision.unsatisfied_criteria
-        or decision.blocked
+        decision.missing_artifacts or decision.clarification_issues or decision.unsatisfied_criteria or decision.blocked
     )
     if not needs_preparation:
         if decision.ready_to_transition and decision.target and not decision.blockers:

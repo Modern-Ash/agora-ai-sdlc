@@ -37,6 +37,7 @@ class GuidedDecision:
     clarification_issues: tuple[str, ...] = ()
     ready_for_human_approval: bool = False
     ready_to_transition: bool = False
+    observed_artifacts: tuple[str, ...] = ()
 
     @property
     def blocked(self) -> bool:
@@ -173,6 +174,12 @@ def inspect_next(
     git_issues = tuple(gate.get("git_issues") or parsed.get("git", ()))
     clarification_issues = parsed.get("clarifications", ())
 
+    try:
+        work_record = workspace.show_work(str(task.swarm_id or ""), str(task.work_id or ""))
+        observed_artifacts = tuple(getattr(work_record, "artifact_kinds", ()) or ())
+    except (AttributeError, OSError, ValueError, FileNotFoundError):
+        observed_artifacts = ()
+
     messages = _humanize(
         blockers,
         lang=lang,
@@ -203,6 +210,7 @@ def inspect_next(
         clarification_issues=clarification_issues,
         ready_for_human_approval=bool(details.get("ready_for_human_approval", False)),
         ready_to_transition=bool(details.get("ready_to_complete", not blockers)),
+        observed_artifacts=observed_artifacts,
     )
 
 
@@ -217,7 +225,7 @@ def command_plan(decision: GuidedDecision) -> tuple[tuple[str, str], ...]:
     if construction_needs_executor:
         commands.append(
             (
-                (f"aisdlc continue --swarm {decision.swarm} --work {decision.work} --run"),
+                f"aisdlc continue --swarm {decision.swarm} --work {decision.work} --run",
                 (
                     "Launch the assigned governed Construction executor with the deterministic "
                     "execution bundle; it must stop before approval or lifecycle transition."
@@ -275,12 +283,6 @@ def command_plan(decision: GuidedDecision) -> tuple[tuple[str, str], ...]:
             )
         )
 
-    commands.append(
-        (
-            f"agora-ai-sdlc continue --swarm {decision.swarm} --work {decision.work}",
-            "Re-read authoritative state after mutations and present the next human decision.",
-        )
-    )
     return tuple(commands)
 
 

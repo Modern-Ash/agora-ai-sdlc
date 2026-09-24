@@ -32,12 +32,19 @@ Modernization templates also use structured `behaviors`, `slice-ids`, `slice-id`
 | clarification | CLR | any | clarification.md |
 | unit-of-work | UOW | intent | unit-of-work.md |
 | requirements | REQ | unit-of-work | requirements.md |
-| domain-model | DOM | requirements | domain-model.md |
-| architecture | ARC | requirements | architecture.md |
-| threat-model | THR | architecture | threat-model.md |
-| test-strategy | TST | requirements | test-strategy.md |
-| implementation-plan | IMP | architecture, test-strategy | implementation-plan.md |
-| deployment-plan | DEP | implementation-plan | deployment-plan.md |
+| user-stories | UST | requirements, unit-of-work | user-stories.md |
+| nfr | NFR | requirements, unit-of-work | nfr.md |
+| risk-register | RSK | requirements, nfr, unit-of-work | risk-register.md |
+| measurement-criteria | MCR | requirements, user-stories, unit-of-work | measurement-criteria.md |
+| prfaq | PRF | intent, unit-of-work | prfaq.md |
+| domain-model | DOM | requirements, user-stories | domain-model.md |
+| logical-design | LOG | domain-model, nfr, risk-register | logical-design.md |
+| architecture | ARC | requirements, domain-model, logical-design | architecture.md |
+| threat-model | THR | architecture, logical-design | threat-model.md |
+| test-strategy | TST | requirements, user-stories, nfr | test-strategy.md |
+| implementation-plan | IMP | architecture, logical-design, test-strategy | implementation-plan.md |
+| deployment-unit | DPU | implementation-plan, test-strategy, logical-design | deployment-unit.md |
+| deployment-plan | DEP | implementation-plan, deployment-unit | deployment-plan.md |
 | rollback-procedure | RBK | deployment-plan | rollback-procedure.md |
 | operational-readiness | OPR | deployment-plan | operational-readiness.md |
 | learning-record | LRN | any | learning-record.md |
@@ -61,7 +68,7 @@ Modernization templates also use structured `behaviors`, `slice-ids`, `slice-id`
 | cutover-plan | CUT | migration-plan, equivalence-report | cutover-plan.md |
 | stabilization-report | STB | cutover-plan | stabilization-report.md |
 
-Chain: intent -> unit of work -> requirements (criteria) -> architecture / test strategy (coverage) -> implementation plan (code and test references) -> deployment plan.
+Canonical AI-SDLC enrichment chain: intent -> unit of work -> requirements/user stories -> NFR/risk/measurement -> domain model -> logical design -> test strategy -> implementation plan -> deployment unit -> deployment plan. `architecture` remains a compatible broader design artifact and may bridge existing profiles while `logical-design` expresses the AI-SDLC construction concept explicitly.
 
 ## Deterministic checks
 

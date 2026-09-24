@@ -6,12 +6,16 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from agora_ai_sdlc.construction_executor import launch_construction_executor
+from agora_ai_sdlc.decision_card import build_decision_card, render_decision_card
 from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice, select_executor_model
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next, render
+from agora_ai_sdlc.guided_execution import execute_guided_preparation
 from agora_ai_sdlc.i18n import t
 from agora_ai_sdlc.opencode_runner import list_available_models, list_ollama_agent_models
 from agora_ai_sdlc.runtime_discovery import discover_runtimes
+from agora_ai_sdlc.wizard import build_wizard_view, render_wizard, save_answer
+from agora_ai_sdlc.wizard_actions import execute_in_session_action
+from agora_ai_sdlc.workflow_advisor import advise_workflow
 
 
 @dataclass(frozen=True)
@@ -49,8 +53,10 @@ def _select_runtime(
 def _render_review(decision: GuidedDecision, output_fn: Callable[[str], None], *, lang: str = "en") -> None:
     output_fn("")
     output_fn(t("session.review", lang=lang))
-    output_fn(f"  Work: {decision.swarm}/{decision.work}")
-    output_fn(f"  Stage: {decision.state or 'unknown'} -> {decision.target or '-'}")
+    output_fn(f"  {t('session.work', lang=lang)}: {decision.swarm}/{decision.work}")
+    output_fn(
+        f"  {t('session.stage', lang=lang)}: {decision.state or t('guided.unknown', lang=lang)} -> {decision.target or '-'}"
+    )
     output_fn(f"  {t('session.gate', lang=lang)}: {decision.gate or '-'}")
     if decision.missing_artifacts:
         output_fn(f"  {t('session.missing_artifacts', lang=lang)}: " + ", ".join(decision.missing_artifacts))
@@ -92,28 +98,71 @@ def run_interactive(
     output_fn: Callable[[str], None] = print,
     lang: str = "en",
 ) -> GuidedSessionResult:
-    """Run a human-driven guided loop. Core remains authoritative and no approval is automated."""
+    """Run one continuous, transparent delivery wizard over authoritative Core state."""
 
     selected_runtime: ExecutorRecoveryChoice | None = None
+    failed_runtimes: set[tuple[str, str | None]] = set()
 
     while True:
         decision = inspect_next(root, swarm=swarm, work=work, lang=lang)
-        output_fn(render(decision, show_actions=False, lang=lang))
-
         if decision is None:
+            output_fn("Agora AI-SDLC")
+            output_fn("")
+            output_fn(t("guided.none", lang=lang))
             return GuidedSessionResult(
                 "clear",
                 selected_runtime.agent if selected_runtime else None,
                 selected_runtime.model if selected_runtime else None,
             )
 
+        view = build_wizard_view(root, decision)
         output_fn("")
-        if selected_runtime is not None:
-            output_fn(t("session.active", lang=lang, runtime=selected_runtime.label))
-        output_fn(t("session.menu", lang=lang))
-        output_fn(t("session.menu2", lang=lang))
+        output_fn(render_wizard(view, lang=lang))
 
-        answer = input_fn(t("session.select", lang=lang)).strip().casefold()
+        # Material ambiguity is handled as part of the same wizard. No prompt
+        # engineering or secondary command is exposed to the user.
+        if view.questions:
+            question = view.questions[0]
+            output_fn("")
+            output_fn(t("wizard.question_title", lang=lang))
+            output_fn(f"  {question.text}")
+            reason = (
+                t("wizard.question_material_reason", lang=lang)
+                if question.reason == "This answer removes a material ambiguity before AI enriches the next artifact."
+                else question.reason
+            )
+            output_fn(f"  {t('wizard.why', lang=lang)}: {reason}")
+            answer = input_fn(t("wizard.answer", lang=lang)).strip()
+            if answer.casefold() in {"x", "q", "exit"}:
+                return GuidedSessionResult(
+                    "exit",
+                    selected_runtime.agent if selected_runtime else None,
+                    selected_runtime.model if selected_runtime else None,
+                )
+            if answer.casefold() in {"d", "details"}:
+                output_fn("")
+                output_fn(render(decision, expert=True, show_commands=True, lang=lang))
+                continue
+            if not answer:
+                output_fn(t("wizard.answer_required", lang=lang))
+                continue
+            path = save_answer(root, decision.work, question, answer)
+            output_fn(t("wizard.answer_saved", lang=lang, path=str(path.relative_to(root))))
+            output_fn(t("wizard.recalculate", lang=lang))
+            continue
+
+        advice = advise_workflow(root, decision)
+        if selected_runtime is None and advice.recommended_runtime is not None:
+            recommended_key = (advice.recommended_runtime.agent, advice.recommended_runtime.model)
+            if recommended_key not in failed_runtimes:
+                selected_runtime = advice.recommended_runtime
+
+        output_fn("")
+        output_fn(render_decision_card(build_decision_card(decision, advice, lang=lang), lang=lang))
+
+        output_fn("")
+        output_fn(t("wizard.actions", lang=lang))
+        answer = input_fn(t("wizard.confirm", lang=lang)).strip().casefold()
 
         if answer in {"x", "q", "exit"}:
             return GuidedSessionResult(
@@ -124,14 +173,10 @@ def run_interactive(
 
         if answer in {"d", "details"}:
             output_fn("")
-            output_fn(render(decision, expert=True, lang=lang))
+            output_fn(render(decision, expert=True, show_commands=True, lang=lang))
             continue
 
-        if answer in {"r", "review"}:
-            _render_review(decision, output_fn, lang=lang)
-            continue
-
-        if answer in {"c", "change"}:
+        if answer in {"a", "adjust", "c", "change"}:
             selected_runtime = _select_runtime(
                 root,
                 input_fn=input_fn,
@@ -141,60 +186,51 @@ def run_interactive(
             )
             continue
 
-        if answer in {"p", "prepare"}:
-            if selected_runtime is None:
-                selected_runtime = _select_runtime(
-                    root,
-                    input_fn=input_fn,
-                    output_fn=output_fn,
-                    lang=lang,
-                )
-            if selected_runtime is None:
-                continue
-            if decision.state == "construction":
-                if not decision.actor:
-                    output_fn("Construction has no assigned responsible actor.")
-                    continue
-                try:
-                    execution = launch_construction_executor(
-                        root,
-                        swarm_id=decision.swarm,
-                        work_id=decision.work,
-                        actor_reference=decision.actor,
-                        runtime_id=selected_runtime.agent,
-                        model=selected_runtime.model,
-                    )
-                except (OSError, ValueError) as error:
-                    output_fn(str(error))
-                    continue
-                output_fn("")
-                output_fn(f"Construction session: {execution.session_id}")
-                output_fn(f"Construction status: {execution.status}")
-                if execution.output:
-                    output_fn(execution.output)
-                output_fn(f"Durable result: {execution.result_path}")
-                continue
-
-            _render_prepare_handoff(decision, selected_runtime, output_fn, lang=lang)
-            output_fn("")
-            output_fn(t("session.followup", lang=lang))
-            follow_up = input_fn(t("session.select", lang=lang)).strip().casefold()
-            if follow_up in {"x", "q", "exit"}:
-                return GuidedSessionResult(
-                    "exit",
-                    selected_runtime.agent,
-                    selected_runtime.model,
-                )
-            if follow_up in {"c", "change"}:
-                selected_runtime = _select_runtime(
-                    root,
-                    input_fn=input_fn,
-                    output_fn=output_fn,
-                    current=selected_runtime,
-                    lang=lang,
-                )
-            elif follow_up in {"r", "review"}:
-                _render_review(decision, output_fn, lang=lang)
+        if answer not in {"", "y", "yes", "confirm", "ok"}:
+            output_fn(t("wizard.choose", lang=lang))
             continue
 
-        output_fn(t("session.choose", lang=lang))
+        if advice.action != "prepare":
+            if advice.action == "review":
+                _render_review(decision, output_fn, lang=lang)
+                output_fn("")
+                output_fn(t("wizard.review_boundary", lang=lang))
+                continue
+            try:
+                action_result = execute_in_session_action(root, decision)
+            except (OSError, RuntimeError, ValueError, PermissionError) as error:
+                output_fn(t("wizard.node_action_failed", lang=lang, error=str(error)))
+                continue
+            output_fn("")
+            summary = t(f"wizard.action_result.{action_result.kind}", lang=lang, **dict(action_result.details))
+            output_fn(t("wizard.node_action_complete", lang=lang, summary=summary))
+            output_fn(t("session.reinspect", lang=lang))
+            continue
+
+        if selected_runtime is None:
+            selected_runtime = _select_runtime(
+                root,
+                input_fn=input_fn,
+                output_fn=output_fn,
+                lang=lang,
+            )
+        if selected_runtime is None:
+            continue
+
+        output_fn("")
+        output_fn(t("session.executing", lang=lang, runtime=selected_runtime.label))
+        try:
+            result = execute_guided_preparation(
+                root,
+                decision,
+                runtime_id=selected_runtime.agent,
+                model=selected_runtime.model,
+            )
+        except (OSError, RuntimeError, ValueError) as error:
+            failed_runtimes.add((selected_runtime.agent, selected_runtime.model))
+            output_fn(t("session.execution_failed", lang=lang, error=str(error)))
+            output_fn(t("session.execution_recovery", lang=lang))
+            selected_runtime = None
+            continue
+        output_fn(t("session.execution_complete", lang=lang, runtime=result.runtime))
+        output_fn(t("session.reinspect", lang=lang))

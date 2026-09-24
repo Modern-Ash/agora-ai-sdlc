@@ -275,6 +275,25 @@ def build_deterministic_inception(
         plan_lines.append(f"- implement-{index:02d}: execute — satisfy AC-{index:03d}: {criterion}")
     plan_lines.append("- verify: execute — run targeted verification and collect evidence before review.")
 
+    story_lines = (
+        [f"- US-{index:03d} candidate: {criterion}" for index, criterion in enumerate(criteria, start=1)]
+        if criteria
+        else ["- No User Story candidate can be derived until acceptance criteria are clarified."]
+    )
+    nfr_lines = (
+        [f"- Explicit constraint/NFR candidate: {item}" for item in issue.constraints]
+        if issue.constraints
+        else ["- No explicit NFR was found in the source; enrich only if the Intent requires one."]
+    )
+    measurement_lines = (
+        [
+            f"- MC-{index:03d}: prove AC-{index:03d} with observable verification evidence for: {criterion}"
+            for index, criterion in enumerate(criteria, start=1)
+        ]
+        if criteria
+        else ["- Measurement criteria require clarified acceptance criteria."]
+    )
+
     unit_name = re.sub(r"[^a-z0-9]+", "-", issue.title.casefold()).strip("-") or work_id
     bolt_lines = [
         "- prepare-contract: sequential — confirm scope, repository facts and deterministic acceptance trace.",
@@ -323,6 +342,18 @@ def build_deterministic_inception(
         "",
         *plan_lines,
         "",
+        "## User Stories",
+        "",
+        *story_lines,
+        "",
+        "## Non-functional requirements",
+        "",
+        *nfr_lines,
+        "",
+        "## Measurement Criteria",
+        "",
+        *measurement_lines,
+        "",
         "## Proposed Units",
         "",
         f"- UOW candidate: {unit_name} — one cohesive delivery unit for the governed issue.",
@@ -334,6 +365,10 @@ def build_deterministic_inception(
         "## Acceptance criteria trace",
         "",
         *_trace(criteria),
+        "",
+        "## Risk Register",
+        "",
+        *risk_lines,
         "",
         "## Risks, constraints and dependencies",
         "",

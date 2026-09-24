@@ -66,6 +66,17 @@ def run_doctor(root: Path) -> tuple[tuple[DoctorCheck, ...], tuple[RuntimeDiscov
         checks.append(DoctorCheck("agora-core", False, "not installed"))
 
     checks.append(DoctorCheck("agora-ai-sdlc", True, __version__))
+    try:
+        laya_version = metadata.version("laya")
+        checks.append(DoctorCheck("laya-system1", True, f"{laya_version} · local Decision Plane available"))
+    except metadata.PackageNotFoundError:
+        checks.append(
+            DoctorCheck(
+                "laya-system1",
+                False,
+                'optional · install "agora-ai-sdlc[full]" for local routing and Context Economy',
+            )
+        )
     checks.append(_tool_check("git"))
     checks.append(_tool_check("gh"))
 
@@ -128,6 +139,6 @@ def render_doctor(
             state += f" · {t('doctor.service', lang=lang)} {runtime.service}"
         lines.append(f"{marker} {runtime.name:<15} {state}")
 
-    overall = all(check.ok for check in checks if check.id != "gh")
+    overall = all(check.ok for check in checks if check.id not in {"gh", "laya-system1"})
     lines.extend(["", t("doctor.ready" if overall else "doctor.attention", lang=lang)])
     return "\n".join(lines)

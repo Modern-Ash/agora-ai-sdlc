@@ -1,13 +1,13 @@
 # AI-SDLC 0.2.0 protocol
 
-The operating pattern remains: **plan -> clarify -> human decision -> execute -> validate**.
+The operating pattern remains: **plan -> clarify -> human decision -> execute -> validate**. AI drafts a plan from the Intent and proposes the next refinement; humans validate meaningful decisions before execution. By contract, no phase advances without its gate.
 
 ## Phases
 
 | Phase | Base roles | Purpose |
 | --- | --- | --- |
-| inception | product-owner, developer | frame Intent, elaborate requirements, Units and design inputs, then approve construction |
-| construction | developer | design, implement and verify the approved work |
+| inception | product-owner, developer | clarify Intent; validate Level 1 Plan, Stories/criteria, NFRs, risks, Measurement Criteria, Units and suggested Bolts |
+| construction | developer | Domain Design -> Logical Design -> implementation/tests -> Deployment Unit, with brownfield semantic elevation first when needed |
 | operations | developer, product-owner | deploy, observe, remediate through governed decisions and accept the revision |
 | completed | product-owner | terminal Agora record of accepted work |
 
@@ -24,6 +24,20 @@ The operating pattern remains: **plan -> clarify -> human decision -> execute ->
 
 Rework transitions are deliberately ungated in this candidate pack. Core records the transition history durably; higher-assurance profiles may add evidence/policy obligations outside the base method.
 
-## Deferred capabilities
+## Flavor capabilities used by this pack
 
-First-class recursive plans, adaptive pathway selection and executable Bolt plans are not claimed by 0.2.0 itself. They are provided by the flavor (issues #99, #100 and #101; see `docs/method/bolts.md`).
+The method gate requires Level 1 `plan` and `bolt-plan` artifact kinds. Recursive plan validation, adaptive pathway selection, executable Bolt semantics, Context Graph traceability and the continuous wizard are implemented by the AI-SDLC flavor around this Core Method Pack. They enrich execution without changing the three canonical phase names.
+
+
+## Core artifact semantics
+
+- An **Intent** states the outcome to achieve.
+- A **Unit of Work** is a bounded slice of cohesive value derived from the Intent.
+- **Bolts** are short hours/days build-validation iterations over a Unit; they may be sequential or parallel.
+- The Level 1 Plan is progressively decomposed while preserving human validation and traceability.
+- Persisted artifacts form context memory for later steps.
+
+
+## Governance behavior
+
+Fail closed when a gate reports missing evidence or missing approval. Agora Core remains authoritative for lifecycle state and the wizard may explain blockers but cannot fabricate their satisfaction.

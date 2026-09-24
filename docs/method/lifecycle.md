@@ -1,5 +1,75 @@
 # AI-SDLC lifecycle
 
+> New AI-SDLC installations use Method Pack **0.2.0**, the three-phase AI-DLC contract described below.
+> Method Pack 0.1.0 remains packaged for existing projects and compatibility; its six-state lifecycle is
+> documented later in this page.
+
+## Method Pack 0.2.0 — AI-DLC faithful lifecycle
+
+The canonical delivery phases are:
+
+```text
+Inception -> Construction -> Operations -> completed
+```
+
+`completed` is an Agora terminal record, not a fourth AI-DLC phase. The continuous Agora Flow wizard
+keeps the user inside these phases and presents dynamic substeps rather than requiring separate
+methodology commands.
+
+| Transition | Base roles | Gate |
+|---|---|---|
+| inception -> construction | product-owner, developer | inception-approved |
+| construction -> operations | developer | construction-verified |
+| operations -> completed | product-owner | completion |
+| construction -> inception | developer | rework / recorded transition |
+| operations -> construction | developer | rework / recorded transition |
+
+### Inception -> Construction
+
+The `inception-approved` gate requires the durable AI-DLC Inception contract:
+
+- Intent;
+- Level 1 Plan;
+- requirements and User Stories;
+- NFRs;
+- Risk Register;
+- Measurement Criteria;
+- cohesive Units;
+- suggested Bolts;
+- resolved material clarifications;
+- Product Owner and Developer validation.
+
+PRFAQ remains optional. Domain Design and Logical Design are intentionally deferred to Construction.
+
+### Construction -> Operations
+
+The `construction-verified` gate requires:
+
+- Domain Design (`domain-model`);
+- Logical Design;
+- implementation plan;
+- test strategy;
+- operations-ready Deployment Unit;
+- verified criteria;
+- successful test-suite evidence;
+- Developer validation.
+
+For brownfield work, static/dynamic semantic elevation precedes Domain Design in the flavor workflow.
+
+### Operations
+
+Operations covers deployment readiness, rollout, observability, remediation recommendations and
+learning. Completion remains human-accountable and requires the operational evidence defined by the
+Method Pack.
+
+Human validation is continuous across these steps: the wizard treats each meaningful enrichment as a
+checkpoint rather than deferring review to a final phase.
+
+See [AI-DLC method compatibility](ai-dlc-compatibility.md) and the
+[continuous Agora Flow wizard](agora-flow-wizard.md).
+
+## Method Pack 0.1.0 — compatibility lifecycle
+
 States: `readiness -> intent -> inception -> construction -> operations -> completed`. Definitions live in [registry/methods/ai-sdlc/transitions](../../registry/methods/ai-sdlc/transitions) and [gates](../../registry/methods/ai-sdlc/gates).
 
 | Transition | Roles | Gate |

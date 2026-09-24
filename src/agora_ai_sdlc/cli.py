@@ -9,7 +9,7 @@ from pathlib import Path
 
 from agora_ai_sdlc import __version__
 from agora_ai_sdlc.depth_profiles import DEFAULT, ProfileError, asset_root, resolve
-from agora_ai_sdlc.i18n import SUPPORTED_LANGUAGES, resolve_language
+from agora_ai_sdlc.i18n import SUPPORTED_LANGUAGES, resolve_language, t
 from agora_ai_sdlc.starter import apply as apply_starter
 from agora_ai_sdlc.starter import interactive as interactive_starter
 
@@ -54,6 +54,17 @@ def main(argv: list[str] | None = None) -> int:
     context.add_argument("--strict", action="store_true")
     context.add_argument("--content", action="store_true", help="include document text")
     context.add_argument("--json", action="store_true")
+    context.add_argument(
+        "--laya", action="store_true", help="semantically prune deterministic candidates with local Laya"
+    )
+    context.add_argument("--objective", help="task objective supplied to Laya relevance decisions")
+    context.add_argument("--acceptance", action="append", default=[], help="acceptance criterion; may be repeated")
+    context.add_argument(
+        "--confidence-threshold",
+        type=float,
+        default=0.90,
+        help="minimum Laya confidence; uncertain artifacts fail open and stay in context",
+    )
     bolt_validate = sub.add_parser(
         "bolt-validate", help="Validate a Bolt plan and print Unit -> Bolt -> evidence trace"
     )
@@ -74,7 +85,7 @@ def main(argv: list[str] | None = None) -> int:
     install.add_argument("--config", help="Read a reproducible YAML/JSON install config")
     install.add_argument("--write-config", help="Write the resolved install config without applying")
     install.add_argument("--yes", action="store_true", help="Apply without interactive confirmation")
-    start = sub.add_parser("start", help="Start AI-SDLC work from a real issue and stop at human plan review")
+    start = sub.add_parser("start", help="Start AI-SDLC work and enter the continuous Agora Flow wizard")
     start.add_argument("--issue", type=int, required=True, help="Issue number to use as the candidate Intent source")
     start.add_argument("--project", help="GitHub owner/repository; inferred from origin when omitted")
     start.add_argument(
@@ -96,6 +107,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     start.add_argument("--lang", choices=SUPPORTED_LANGUAGES, help="Presentation language")
     start.add_argument("--ui-file", help="Write human progress to a new file, separate from agent output")
+    start.add_argument(
+        "--no-wizard", action="store_true", help="Stop after Start/Inception instead of entering the interactive wizard"
+    )
     guided = sub.add_parser("continue", help="Show the next governed decision in human-friendly AI-SDLC language")
     guided.add_argument("--root", default=".", help="Project root")
     guided.add_argument("--swarm", help="Limit to one delivery swarm")
@@ -143,6 +157,15 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Do not persist EXECUTION_BUNDLE.json/.md under .agora",
     )
+    decision = sub.add_parser(
+        "decision",
+        help="Run advisory local Laya decisions over the deterministic execution bundle",
+    )
+    decision.add_argument("--root", default=".", help="Project root")
+    decision.add_argument("--swarm", help="Limit to one delivery swarm")
+    decision.add_argument("--work", help="Limit to one work item")
+    decision.add_argument("--threshold", type=float, default=0.90, help="confidence required to avoid escalation")
+    decision.add_argument("--json", action="store_true", help="Print machine-readable decision output")
     status = sub.add_parser("status", help="Show rich local/Core iteration status without invoking an LLM")
     status.add_argument("--root", default=".", help="Project root")
     status.add_argument("--swarm", help="Limit to one delivery swarm")
@@ -161,6 +184,18 @@ def main(argv: list[str] | None = None) -> int:
     starter.add_argument("--home", required=True)
     starter.add_argument("--yes", action="store_true", help="Apply the preview non-interactively")
     args = parser.parse_args(argv)
+    if args.command is None:
+        if sys.stdin.isatty() and sys.stdout.isatty():
+            from agora_ai_sdlc.guided_session import run_interactive
+
+            try:
+                run_interactive(Path("."), lang=resolve_language())
+            except (OSError, ValueError) as error:
+                print(error, file=sys.stderr)
+                return 2
+            return 0
+        parser.print_help()
+        return 0
     if args.command in {"observe", "skill"}:
         from agora_ai_sdlc.observation_cli import dispatch
 
@@ -265,26 +300,62 @@ def main(argv: list[str] | None = None) -> int:
         from agora_ai_sdlc.context_graph import ContextError, context_bundle, graph_from_directory
 
         try:
-            bundle = context_bundle(
-                graph_from_directory(Path(args.artifacts)),
-                args.id,
-                direction=args.direction,
-                max_depth=args.depth,
-                max_tokens=args.max_tokens,
-                strict=args.strict,
-            )
-        except (OSError, ContextError) as error:
+            graph = graph_from_directory(Path(args.artifacts))
+            selection = None
+            if args.laya:
+                from agora_ai_sdlc.context_selection import select_context_with_laya
+                from agora_ai_sdlc.laya_provider import LayaDecisionProvider
+
+                selection = select_context_with_laya(
+                    graph,
+                    args.id,
+                    provider=LayaDecisionProvider(),
+                    objective=args.objective,
+                    acceptance_criteria=tuple(args.acceptance),
+                    direction=args.direction,
+                    max_depth=args.depth,
+                    max_tokens=args.max_tokens,
+                    confidence_threshold=args.confidence_threshold,
+                )
+                bundle = selection.selected
+            else:
+                bundle = context_bundle(
+                    graph,
+                    args.id,
+                    direction=args.direction,
+                    max_depth=args.depth,
+                    max_tokens=args.max_tokens,
+                    strict=args.strict,
+                )
+        except (OSError, ContextError, ValueError, RuntimeError) as error:
             print(error, file=sys.stderr)
             return 2
         if args.json:
-            print(json.dumps(bundle.snapshot(include_text=args.content), sort_keys=True))
+            payload = bundle.snapshot(include_text=args.content)
+            if selection is not None:
+                payload["decision_plane"] = {
+                    "provider": "laya",
+                    "classifications": dict(selection.classifications),
+                    "confidences": dict(selection.confidences),
+                    "escalated": list(selection.escalated),
+                    "metrics": selection.metrics.snapshot(),
+                }
+            print(json.dumps(payload, sort_keys=True))
         else:
             for item in bundle.items:
                 print(f"{item.distance} {item.relation} {item.id} ({item.kind}) {item.path} ~{item.tokens}t")
                 if args.content:
                     print(bundle.text[item.id])
             if bundle.omitted:
-                print(f"omitted (budget): {', '.join(bundle.omitted)}")
+                label = "omitted (Laya/budget)" if selection is not None else "omitted (budget)"
+                print(f"{label}: {', '.join(bundle.omitted)}")
+            if selection is not None:
+                metrics = selection.metrics
+                print(
+                    f"laya decisions={metrics.decisions} escalated={metrics.escalated} "
+                    f"context_tokens={metrics.candidate_context_tokens}->{metrics.selected_context_tokens} "
+                    f"saved={metrics.context_tokens_saved}"
+                )
         return 0
     if args.command == "bolt-validate":
         from agora_ai_sdlc.bolts import BoltError, parse_bolt_plan, trace
@@ -302,6 +373,53 @@ def main(argv: list[str] | None = None) -> int:
                 f"construction_evidence_complete={summary['construction_evidence_complete']}"
             )
         return 0
+    if args.command == "decision":
+        from agora_ai_sdlc.execution_bundle import build_execution_bundle
+        from agora_ai_sdlc.execution_decisions import advise_execution
+        from agora_ai_sdlc.laya_provider import LayaDecisionProvider
+
+        try:
+            bundle = build_execution_bundle(
+                Path(args.root).expanduser(),
+                swarm=args.swarm,
+                work=args.work,
+                persist=False,
+            )
+            evaluation = advise_execution(
+                bundle,
+                provider=LayaDecisionProvider(),
+                confidence_threshold=args.threshold,
+            )
+        except (OSError, ValueError, RuntimeError) as error:
+            print(error, file=sys.stderr)
+            return 2
+
+        payload = {
+            "authoritative": False,
+            "provider": evaluation.result.provider,
+            "model": evaluation.result.model,
+            "latency_ms": evaluation.result.latency_ms,
+            "accepted_advisory": list(evaluation.accepted),
+            "escalated": list(evaluation.escalated),
+            "answers": {
+                name: {
+                    "type": answer.type,
+                    "value": answer.value,
+                    "confidence": answer.confidence,
+                    "probabilities": dict(answer.probabilities),
+                }
+                for name, answer in evaluation.result.answers.items()
+            },
+        }
+        if args.json:
+            print(json.dumps(payload, sort_keys=True))
+        else:
+            print("Laya advisory decision plane (non-authoritative)")
+            for name, answer in evaluation.result.answers.items():
+                suffix = "ESCALATE" if name in evaluation.escalated else "confident"
+                print(f"- {name}: {answer.value} confidence={answer.confidence:.3f} {suffix}")
+        return 0
+
     if args.command == "runtimes":
         from agora_ai_sdlc.runtime_discovery import discover_runtimes, render_runtimes
 
@@ -417,6 +535,26 @@ def main(argv: list[str] | None = None) -> int:
                     channel.write(render_start(result, lang=language, details=args.details))
                 else:
                     print(render_start(result, lang=language, details=args.details))
+
+                enter_wizard = (
+                    not args.json
+                    and not args.ui_file
+                    and not args.prepare_only
+                    and not args.no_wizard
+                    and sys.stdin.isatty()
+                    and sys.stdout.isatty()
+                )
+                if enter_wizard:
+                    from agora_ai_sdlc.guided_session import run_interactive
+
+                    print()
+                    print(t("wizard.start_continuous", lang=language))
+                    run_interactive(
+                        Path(result.workspace_root),
+                        swarm=args.swarm,
+                        work=result.work_id,
+                        lang=language,
+                    )
         except KeyboardInterrupt:
             print("Start cancelled by user.", file=sys.stderr)
             return 130
@@ -502,14 +640,27 @@ def main(argv: list[str] | None = None) -> int:
         except (OSError, ValueError) as error:
             print(error, file=sys.stderr)
             return 2
+        advice = None
+        if decision is not None:
+            from agora_ai_sdlc.workflow_advisor import advise_workflow
+
+            advice = advise_workflow(root, decision)
         if args.json:
-            print(json.dumps(decision.snapshot() if decision is not None else {"status": "clear"}, sort_keys=True))
+            payload = decision.snapshot() if decision is not None else {"status": "clear"}
+            if advice is not None:
+                payload["workflow_advice"] = advice.snapshot()
+            print(json.dumps(payload, sort_keys=True))
         else:
-            print(
+            rendered = (
                 render(decision, expert=args.expert, show_commands=args.commands)
                 if language == "en"
                 else render(decision, expert=args.expert, show_commands=args.commands, lang=language)
             )
+            if advice is not None:
+                rendered += "\n\nRecommended now: " + advice.summary
+                if advice.recommended_runtime is not None:
+                    rendered += "\nLocal/free default: " + advice.recommended_runtime.label
+            print(rendered)
         return 0
     if args.command == "verify":
         from agora_ai_sdlc.verification import VerificationError, build_verification_report, render_verification

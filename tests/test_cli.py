@@ -97,15 +97,15 @@ def test_conformance_derive_aws_original_uses_repository_rules(capsys):
     payload = json.loads(capsys.readouterr().out)
     assert payload["profile"]["id"] == "aws-original"
     assert payload["facts_source"] == "derived:aws-original-rules/v1"
-    assert payload["overall_status"] == "PARTIAL"
-    assert any(item["status"] == "PARTIAL" for item in payload["results"])
+    assert payload["overall_status"] == "PASS"
+    assert not any(item["status"] == "PARTIAL" for item in payload["results"])
     assert any(item["status"] == "PASS" for item in payload["results"])
     assert not any(item["status"] == "FAIL" for item in payload["results"])
 
 
 def test_conformance_derive_strict_and_provider_errors(tmp_path, capsys):
     assert main(["conformance", "aws-original", "--derive", "--root", str(ROOT), "--strict"]) == 0
-    assert "Overall: PARTIAL" in capsys.readouterr().out
+    assert "Overall: PASS" in capsys.readouterr().out
 
     facts = tmp_path / "facts.yaml"
     _write_conformance_facts(facts)
@@ -278,13 +278,13 @@ def test_guided_continue_cli_hides_core_blockers_by_default(monkeypatch, capsys)
     decision = _guided_decision()
     monkeypatch.setattr("agora_ai_sdlc.guided.inspect_next", lambda *args, **kwargs: decision)
 
-    assert main(["continue"]) == 0
+    assert main(["continue", "--lang", "en"]) == 0
     output = capsys.readouterr().out
     assert "Objective: Deliver first governed outcome" in output
     assert "Prepare the required project evidence" in output
     assert "missing-artifacts" not in output
 
-    assert main(["continue", "--expert"]) == 0
+    assert main(["continue", "--expert", "--lang", "en"]) == 0
     expert = capsys.readouterr().out
     assert "missing-artifacts=[readiness-assessment]" in expert
     assert "Structured decision" in expert
@@ -294,12 +294,12 @@ def test_guided_continue_cli_can_show_commands_and_json(monkeypatch, capsys):
     decision = _guided_decision()
     monkeypatch.setattr("agora_ai_sdlc.guided.inspect_next", lambda *args, **kwargs: decision)
 
-    assert main(["continue", "--commands"]) == 0
+    assert main(["continue", "--commands", "--lang", "en"]) == 0
     commands = capsys.readouterr().out
     assert "Underlying command bundle" in commands
     assert "agora artifact add" in commands
 
-    assert main(["continue", "--json"]) == 0
+    assert main(["continue", "--json", "--lang", "en"]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["gate"] == "readiness-approved"
     assert payload["missing_artifacts"] == ["readiness-assessment"]
@@ -323,10 +323,10 @@ def test_runtimes_cli_human_and_json(monkeypatch, capsys):
     monkeypatch.setattr("agora_ai_sdlc.runtime_discovery.discover_runtimes", lambda *args, **kwargs: discovered)
     monkeypatch.setattr("agora_ai_sdlc.runtime_discovery.render_runtimes", lambda items: "runtime-report")
 
-    assert main(["runtimes"]) == 0
+    assert main(["runtimes", "--lang", "en"]) == 0
     assert capsys.readouterr().out.strip() == "runtime-report"
 
-    assert main(["runtimes", "--json"]) == 0
+    assert main(["runtimes", "--json", "--lang", "en"]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload[0]["id"] == "codex"
     assert payload[0]["configured"] is True
@@ -353,10 +353,10 @@ def test_doctor_cli_human_and_json(monkeypatch, capsys):
     monkeypatch.setattr("agora_ai_sdlc.doctor.run_doctor", lambda root: (checks, runtimes))
     monkeypatch.setattr("agora_ai_sdlc.doctor.render_doctor", lambda c, r: "doctor-report")
 
-    assert main(["doctor"]) == 0
+    assert main(["doctor", "--lang", "en"]) == 0
     assert capsys.readouterr().out.strip() == "doctor-report"
 
-    assert main(["doctor", "--json"]) == 0
+    assert main(["doctor", "--json", "--lang", "en"]) == 0
     payload = json.loads(capsys.readouterr().out)
     assert payload["checks"][0]["id"] == "project"
     assert payload["runtimes"][0]["service"] == "responsive"
@@ -372,7 +372,7 @@ def test_continue_uses_interactive_loop_on_tty(monkeypatch):
         lambda root, swarm=None, work=None: called.update(root=str(root), swarm=swarm, work=work),
     )
 
-    assert main(["continue", "--swarm", "delivery", "--work", "first-work"]) == 0
+    assert main(["continue", "--swarm", "delivery", "--work", "first-work", "--lang", "en"]) == 0
     assert called == {"root": ".", "swarm": "delivery", "work": "first-work"}
 
 
@@ -387,7 +387,7 @@ def test_continue_non_interactive_flag_skips_session(monkeypatch, capsys):
 
     monkeypatch.setattr("agora_ai_sdlc.guided_session.run_interactive", fail_if_called)
 
-    assert main(["continue", "--non-interactive"]) == 0
+    assert main(["continue", "--non-interactive", "--lang", "en"]) == 0
     output = capsys.readouterr().out
     assert "Objective: Deliver first governed outcome" in output
 

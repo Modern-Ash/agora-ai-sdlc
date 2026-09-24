@@ -11,9 +11,13 @@ REQUIRED_SECTIONS = (
     "Intent interpretation",
     "Material clarifications",
     "Level 1 Plan",
+    "User Stories",
+    "Non-functional requirements",
+    "Measurement Criteria",
     "Proposed Units",
     "Suggested Bolts",
     "Acceptance criteria trace",
+    "Risk Register",
     "Risks, constraints and dependencies",
     "Source facts and proposed decisions",
     "Files created or modified",
@@ -84,13 +88,20 @@ def validate_inception_output(output: str, handoff_path: Path) -> InceptionValid
     objective = _objective(handoff_path)
     terms = _objective_terms(objective)
     if terms:
-        normalized = output.casefold()
-        matched = {term for term in terms if re.search(rf"\b{re.escape(term)}\b", normalized)}
+        grounding_sections = (
+            "intent interpretation",
+            "level 1 plan",
+            "proposed units",
+            "acceptance criteria trace",
+            "source facts and proposed decisions",
+        )
+        grounding_text = "\n".join(sections.get(name, "") for name in grounding_sections).casefold()
+        matched = {term for term in terms if re.search(rf"\b{re.escape(term)}\b", grounding_text)}
         required = min(2, max(1, math.ceil(len(terms) * 0.3)))
         if len(matched) < required:
             violations.append(
                 "output is not grounded in the handoff objective "
-                f"(matched {len(matched)}/{required} required objective terms)"
+                f"(matched {len(matched)}/{required} required objective terms in core semantic sections)"
             )
 
     return InceptionValidation(valid=not violations, violations=tuple(violations))

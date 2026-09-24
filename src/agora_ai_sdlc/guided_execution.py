@@ -1,0 +1,179 @@
+"""Governed execution of one guided, non-authoritative AI-SDLC preparation step."""
+
+from __future__ import annotations
+
+import shlex
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+
+from agora.model import StartSessionInput
+from agora.workspace import AgoraWorkspace
+
+from agora_ai_sdlc.execution_bundle import build_execution_bundle
+from agora_ai_sdlc.execution_context import persist_execution_context, select_execution_context
+from agora_ai_sdlc.executor_launch import ExecutorLaunchError, load_executor_adapters
+from agora_ai_sdlc.guided import GuidedDecision
+from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
+from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
+from agora_ai_sdlc.wizard import load_answers
+
+
+@dataclass(frozen=True)
+class GuidedExecutionResult:
+    session_id: str
+    status: str
+    result_path: str
+    runtime: str
+
+
+def _runtime(root: Path, runtime_id: str) -> RuntimeDiscovery:
+    for item in discover_runtimes(root):
+        if item.id == runtime_id and item.installed and item.responsive:
+            return item
+    raise ExecutorLaunchError(f"Selected runtime {runtime_id!r} is no longer responsive")
+
+
+def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> str:
+    skill = root / ".agora" / "skills" / "agora-ai-sdlc-guided" / "SKILL.md"
+    parts = [
+        "Execute exactly one safe guided AI-SDLC preparation iteration for the current governed Work.",
+        f"Project root: {root.resolve()}.",
+        f"Work: {decision.swarm}/{decision.work}. Stage: {decision.state or 'unknown'}.",
+        f"Read and follow the guided skill at {skill}.",
+    ]
+    if bundle_path:
+        parts.append(
+            f"Use the bounded execution context at {bundle_path}. "
+            "Treat its selected paths as the preferred reading set; protected/uncertain paths are retained deliberately."
+        )
+    if decision.messages:
+        parts.append("Current obligations: " + " | ".join(decision.messages))
+    answers = load_answers(root, decision.work)
+    if answers:
+        resolved = " | ".join(f"{key}={value}" for key, value in sorted(answers.items()))
+        parts.append(
+            "Human clarification answers collected by the Agora wizard: "
+            + resolved
+            + ". Treat these as explicit user-provided context; do not ask them again."
+        )
+    parts.extend(
+        [
+            (
+                "Be proactive: inspect only the bounded relevant context, create or update the non-authoritative "
+                "artifacts/evidence needed for the next gate, and run safe deterministic verification when useful."
+            ),
+            "Use existing Agora/Core commands and repository conventions instead of inventing lifecycle state.",
+            "Do not record human approval, do not change a human-owned decision, do not merge, deploy, or bypass a gate.",
+            "Do not perform unrelated refactors. Minimize context and avoid reading files that the bounded bundle does not justify.",
+            "Stop after the preparatory work is complete so Agora can re-read authoritative state.",
+        ]
+    )
+    return " ".join(parts)
+
+
+def _runner(runtime: RuntimeDiscovery, root: Path, prompt: str, model: str | None) -> str:
+    adapter = load_executor_adapters().get(runtime.id)
+    if adapter is None or adapter.kind != "agent":
+        raise ExecutorLaunchError(f"Runtime {runtime.id!r} is not a repository executor")
+    executable = runtime.executable or runtime.command
+    values = {
+        "executable": executable,
+        "python": sys.executable,
+        "root": str(root.resolve()),
+        "model": model or "",
+        "prompt": prompt,
+    }
+    argv = [part.format(**values) for part in adapter.argv]
+    if runtime.id == "opencode" and not model:
+        try:
+            index = argv.index("--model")
+        except ValueError:
+            pass
+        else:
+            if index + 1 < len(argv) and argv[index + 1] == "":
+                del argv[index : index + 2]
+    return shlex.join(argv)
+
+
+def execute_guided_preparation(
+    root: Path,
+    decision: GuidedDecision,
+    *,
+    runtime_id: str,
+    model: str | None = None,
+    workspace_factory=AgoraWorkspace,
+) -> GuidedExecutionResult:
+    """Run one bounded executor iteration and return to Core for re-inspection."""
+
+    root = root.resolve()
+    runtime = _runtime(root, runtime_id)
+    bundle = build_execution_bundle(
+        root,
+        swarm=decision.swarm,
+        work=decision.work,
+        persist=True,
+    )
+    lean_path = None
+    try:
+        lean = select_execution_context(
+            root,
+            bundle,
+            provider=LayaDecisionProvider(),
+        )
+        lean_path = persist_execution_context(root, decision.work, lean)
+    except (LayaUnavailable, OSError, RuntimeError, ValueError):
+        lean = None
+    prompt = _prompt(root, decision, str(lean_path) if lean_path is not None else bundle.markdown_path)
+    runner = _runner(runtime, root, prompt, model)
+    workspace = workspace_factory(cwd=root)
+
+    safe_stage = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in (decision.state or "step"))
+    base_id = f"ai-sdlc-guided-{decision.work}-{safe_stage}"
+    session_id = base_id
+    existing = {getattr(item, "id", "") for item in workspace.list_sessions()}
+    suffix = 2
+    while session_id in existing:
+        session_id = f"{base_id}-{suffix}"
+        suffix += 1
+
+    actor_id = (decision.actor or decision.role or "developer").removeprefix("project:")
+    fields = getattr(StartSessionInput, "__dataclass_fields__", {})
+    kwargs = {
+        "actor_id": actor_id,
+        "swarm_id": decision.swarm,
+        "id": session_id,
+        "work_id": decision.work,
+        "runner": runner,
+        "launch": True,
+    }
+
+    # Runtime selection is not an authority handoff. The Work's assigned actor
+    # remains responsible even when Flow launches a different CLI/runtime.
+    # Setting executor_id to a synthetic ai-<runtime> identity caused Core to
+    # reject valid runtime switches when that actor was not registered.
+    if "executor_id" in fields:
+        assigned = (decision.actor or "").removeprefix("project:")
+        if assigned:
+            kwargs["executor_id"] = assigned
+    if "runtime_version" in fields and runtime.version:
+        kwargs["runtime_version"] = runtime.version
+    if "timeout_seconds" in fields:
+        kwargs["timeout_seconds"] = 600
+
+    try:
+        result = workspace.start_session(StartSessionInput(**kwargs))
+    except (OSError, RuntimeError, ValueError) as error:
+        raise ExecutorLaunchError(f"Guided executor {runtime.name} failed: {error}") from error
+
+    if getattr(result, "status", None) != "completed":
+        raise ExecutorLaunchError(
+            f"Guided executor {runtime.name} ended with unexpected status {getattr(result, 'status', None)!r}"
+        )
+    path = Path(result.path)
+    return GuidedExecutionResult(
+        session_id=result.id,
+        status=result.status,
+        result_path=str(path / "RESULT.md"),
+        runtime=runtime.name,
+    )

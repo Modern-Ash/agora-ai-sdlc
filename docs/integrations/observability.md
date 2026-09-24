@@ -16,7 +16,7 @@ The profile stores only normalized fields, fingerprints, and bounded references.
 
 ## Control bands
 
-The reviewed profile supplies the inputs for Core's deterministic control-band API. Core classifies a value as `normal`, `diagnose`, or `propose`. A `propose` finding creates a draft Intent whose diagnosis and remediation must pass normal Agora gates. Neither the profile nor Core's evaluation executes deployment, rollback, incident, or production mutation operations.
+The reviewed profile supplies the inputs for Core's deterministic control-band API. Core classifies a value as `normal`, `diagnose`, or `propose`. A `propose` finding creates a draft Intent whose diagnosis and remediation must pass normal Agora gates. This profile does not execute production remediation. Neither the profile nor Core's evaluation executes deployment, rollback, incident, or production mutation operations.
 
 The installed neutral observability Tool Pack also declares incident writes. This read-only profile intentionally exposes only metric query and service-health reads; incident creation, update, and resolution are outside this profile.
 

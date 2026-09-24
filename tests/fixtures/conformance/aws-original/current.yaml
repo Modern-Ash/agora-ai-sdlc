@@ -5,26 +5,26 @@ expected:
     - ai-initiated-planning
     - bolts
     - brownfield-semantic-elevation
+    - deployment-units
     - domain-design
     - forward-backward-traceability
     - human-validation
     - intent
     - level-1-plan
-    - non-functional-requirements
-    - operations-observability
-    - persistent-context
-    - quality-reviewer
-    - recursive-planning
-    - units
-  PARTIAL:
-    - deployment-units
     - logical-design
     - measurement-criteria
     - minimal-roles
+    - non-functional-requirements
     - operations-governed-remediation
+    - operations-observability
+    - persistent-context
+    - prfaq
+    - quality-reviewer
+    - recursive-planning
     - risk-register
     - three-phase-lifecycle
+    - units
     - user-stories
+  PARTIAL: []
   FAIL: []
-  NOT_APPLICABLE:
-    - prfaq
+  NOT_APPLICABLE: []

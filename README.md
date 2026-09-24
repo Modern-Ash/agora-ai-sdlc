@@ -19,15 +19,21 @@ agora-ai-sdlc install /path/to/project --config ai-sdlc-install.yaml --yes
 
 The installer selects adoption profile, governance depth, language/framework, optional integrations, AI runtimes and human/AI role execution. See [Project installer](docs/installer.md).
 
-After bootstrap, use the guided AI-SDLC workflow:
+Start a new governed delivery from the existing entry point; on an interactive terminal it flows directly into the same wizard:
 
 ```bash
-aisdlc continue
+aisdlc start --issue 26
 ```
 
-On a real terminal, `continue` is interactive: it waits for a menu selection, can choose or change among
-responsive detected runtimes, and keeps the selected assistant active for the session. In non-TTY
-contexts it falls back to one-shot output.
+For an already-started Work, resume the same continuous wizard with the bare entry point:
+
+```bash
+aisdlc
+```
+
+`aisdlc continue` remains available for Expert CLI, scripting and one-shot inspection.
+
+On a real terminal, the wizard proposes the next AI-DLC step, asks only material clarification questions, explains what it knows and what it will do, and accepts Enter as the happy-path confirmation. Runtime/model selection appears only when execution actually needs it. In non-TTY contexts it falls back to one-shot structured output.
 
 It renders a decision card with objective, method, current/next stage, responsible role, gate readiness,
 satisfied/missing obligations, the human/AI responsibility boundary, and the recommended next action.
@@ -45,6 +51,83 @@ agora-ai-sdlc continue --non-interactive  # force one-shot output on a terminal
 The default view deliberately avoids raw `missing-artifacts=[...]` style output. The command bundle is
 advisory: human approvals still require explicit confirmation, and every mutation remains an Agora Core
 operation. Agora Core remains the lifecycle authority.
+
+## Three interaction surfaces
+
+Agora AI-SDLC exposes the same governed Work through three complementary surfaces. They share the
+same Agora Core state, artifacts, evidence, gates and authority model; only the amount of orchestration
+changes.
+
+### 1. Agora Flow — automagic adoption mode
+
+For practitioners who should practice AI-DLC without memorizing CLI commands:
+
+```bash
+aisdlc start --issue 26   # first entry
+aisdlc                    # resume later
+```
+
+After `start`, the interactive session remains inside the continuous wizard. Each workflow node explains
+the current state and proposes the next action; Enter confirms it. Verification, explicit approvals and
+Core-authorized transitions can be executed from that same session. The UI does not instruct the user
+to exit and run another `aisdlc ...` command.
+
+### 2. Expert CLI
+
+Experienced users keep the complete command surface and may compose operations directly:
+
+```bash
+aisdlc continue --expert
+aisdlc context ...
+aisdlc execution-bundle ...
+aisdlc verify ...
+aisdlc decision ...
+agora work transition ...
+agora approval add ...
+```
+
+Flow is therefore an adoption layer, not a restriction or replacement for Agora Core/AI-SDLC commands.
+
+### 3. Automation / machine surface
+
+CI, IDEs and agents can consume the same state non-interactively through JSON and the underlying
+Core APIs. Human-friendly Flow decisions never create a separate shadow workflow.
+
+## Local decision plane (Laya)
+
+AI-SDLC can use the free, Apache-2.0 [Laya](https://github.com/NandhaKishorM/laya)
+runtime as its only System-1 decision engine before escalating work to a generative model. Laya is advisory only;
+Agora Core remains authoritative for lifecycle state, evidence, approvals and transitions.
+
+```bash
+# lightweight Core/wizard
+pip install agora-ai-sdlc
+
+# full local Decision Plane (recommended for token/context savings)
+pip install "agora-ai-sdlc[full]"
+```
+
+The normal Automagic workflow is `aisdlc start ...` once and `aisdlc` to resume; users do not invoke Laya directly. If Laya is unavailable, the wizard fails open to deterministic/generative behavior rather than blocking delivery.
+
+The Context Graph stays deterministic: Laya can prune candidates but cannot introduce unrelated
+artifacts. Low-confidence decisions fail open and remain on the normal generative/human escalation
+path. See [Local Decision Plane with Laya](docs/decision-plane-laya.md).
+
+See [AI-DLC method compatibility](docs/method/ai-dlc-compatibility.md) for the canonical method mapping and the explicit Agora extensions.
+
+## Continuous delivery wizard
+
+The normal user experience is a single continuous wizard:
+
+```bash
+aisdlc
+```
+
+Agora shows the current delivery step, the facts it is using, open gaps, evidence, the proposed next
+action and exactly what will happen after confirmation. Material ambiguities are asked inline and the
+answers are persisted as explicit Work context, so agents do not ask the same question again. The
+happy path uses `Enter` to confirm, `A` to adjust, `D` for full governance/details and `X` to stop.
+No prompt text or second command is required for the normal workflow.
 
 ## Detect local AI runtimes
 
@@ -76,12 +159,18 @@ This repository was previously named with a trailing dot (`agora-ai-sdlc.`). Git
 
 ```bash
 uv sync
-uv run python scripts/verify_all.py   # full verification
+uv run python scripts/install_git_hooks.py  # once per clone/worktree setup
+uv run python scripts/verify_commit.py      # fast commit gate
+uv run python scripts/verify_all.py         # full pre-push / CI verification
 uv run pytest
 uv run agora-ai-sdlc --version
 uv run agora-ai-sdlc self-test --json
 uv build
 ```
+
+The installed `pre-commit` hook blocks Python syntax, Ruff lint/format and staged-diff errors before a
+commit is created. The `pre-push` hook runs the complete project verification before code reaches a PR.
+The hooks intentionally reuse repository scripts rather than maintaining a second CI rule set.
 
 ## Executable samples
 

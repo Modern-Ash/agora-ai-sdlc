@@ -11,13 +11,13 @@ Goal: stay as close to the published AI-DLC method as possible while keeping thi
 | AI initiates and directs the conversation; humans approve at critical junctures | aligned | [Protocol](../../registry/methods/ai-sdlc/PROTOCOL.md): plan, clarify, human decision, execute, validate; clarifications and gates enforced by Core |
 | Human validation at each step catches errors early | aligned | Gates require evidence and accountable approvals before each forward transition |
 | Persist every artifact as durable context memory, with backward and forward traceability | aligned | Markdown artifacts in Git with `traces-to` links and the [traceability engine](../method/artifacts.md) |
-| Three phases: Inception, Construction, Operations | partial | Same phases, plus extra `readiness` and `intent` states before Inception and a terminal `completed` state |
-| Retain user stories as the contract between humans and AI | gap | Acceptance criteria and `requirements` exist; there is no user-story artifact |
-| Design techniques integral to the method (a DDD flavor first) | partial | `domain-model` and `architecture` templates exist; no technique-specific flavor or Domain/Logical Design split |
+| Three phases: Inception, Construction, Operations | aligned | Method Pack 0.2.0 uses `inception -> construction -> operations -> completed`; `completed` is only the Core terminal record |
+| Retain user stories as the contract between humans and AI | aligned | First-class `user-stories` artifact plus acceptance criteria traceability |
+| Design techniques integral to the method (a DDD flavor first) | aligned | Construction now distinguishes `domain-model` (Domain Design) and `logical-design`; broader architecture/ADR artifacts remain compatible |
 | Minimal roles (Product Owner and developers) | deliberate difference | Nine roles for governance and segregation of duties; small teams may hold several |
-| No hard-wired workflow: AI proposes a Level 1 Plan per pathway, recursively decomposed | gap | Fixed six-state lifecycle; no plan artifact tied to a pathway |
-| Bolts replace sprints (hours or days), Units of Work replace epics | partial | Both are defined terms; Bolts are entries of the first-class `bolt-plan` artifact |
-| Retain risk practices (Risk Register) | partial | `risks` sections in intent and architecture; no organization risk-register linkage |
+| No hard-wired workflow: AI proposes a Level 1 Plan per pathway, recursively decomposed | aligned | Method Pack 0.2.0 keeps only the three phases; first-class recursive `plan`, adaptive pathway policy and Bolt decomposition live in the flavor |
+| Bolts replace sprints (hours or days), Units of Work replace epics | aligned | `unit-of-work` and `bolt-plan` are first-class, traced artifacts; the 0.2 Inception gate requires both |
+| Retain risk practices (Risk Register) | aligned | First-class `risk-register` artifact is part of the 0.2 Inception contract |
 | Brown-field: elevate code to static and dynamic models before construction | aligned | `static-system-model` and `dynamic-system-model` artifacts; `plan-validate --artifacts` enforces them for pathways that require elevation |
 
 ## Phases, rituals and artifacts
@@ -25,21 +25,21 @@ Goal: stay as close to the published AI-DLC method as possible while keeping thi
 | AI-DLC element | Status | Agora AI-SDLC | Proposed action |
 | --- | --- | --- | --- |
 | Intent | aligned | `product-intent` artifact, state `intent` | none |
-| Mob Elaboration (collaborative elaboration of Intent into stories, criteria and Units) | gap | not defined | document the ritual as a facilitated session recorded through Core sessions and gates |
-| User stories and acceptance criteria | partial | acceptance criteria in Core; `requirements` template | add a `user-stories` artifact template |
-| Non-functional requirements | aligned | `requirements` has a mandatory section | none |
-| PRFAQ (optional) | gap | not defined | add an optional `prfaq` template |
-| Risk descriptions (matching an organization's Risk Register) | partial | risks in `product-intent` and `architecture` | add a `risk-register` template with an external-reference field |
-| Measurement criteria traced to the business intent | partial | `Success measures` in `product-intent` | add a `measurement-criteria` template and trace it from stories |
+| Mob Elaboration (collaborative elaboration of Intent into stories, criteria and Units) | aligned | continuous wizard drives clarification and progressive Inception enrichment in one governed session | wizard is the executable facilitation surface |
+| User stories and acceptance criteria | aligned | `user-stories`, requirements criteria and deterministic traceability | — |
+| Non-functional requirements | aligned | first-class `nfr` artifact, linked into Logical Design and test strategy | — |
+| PRFAQ (optional) | aligned | optional `prfaq` artifact/template; not required by the Inception gate | — |
+| Risk descriptions (matching an organization's Risk Register) | aligned | first-class `risk-register` artifact and Inception gate obligation | — |
+| Measurement criteria traced to the business intent | aligned | first-class `measurement-criteria` artifact traced from requirements/stories/Unit | — |
 | Units and suggested Bolts | aligned | `bolt-plan` artifact, `agora_ai_sdlc.bolts` | — |
-| Mob Construction (collocated teams exchanging integration specifications) | gap | not defined | document the ritual; integration specifications as Unit artifacts |
+| Mob Construction (collocated teams exchanging integration specifications) | partial | continuous Construction wizard and governed sessions implement the interaction pattern; physical co-location is intentionally not required | document team ritual guidance separately |
 | Domain Design | aligned | `domain-model` template | none |
-| Logical Design with architecture decision records | partial | `architecture` has Decisions | add a `logical-design` template covering non-functional patterns and ADR links |
+| Logical Design with architecture decision records | aligned | first-class `logical-design` artifact with NFR mapping, trade-offs and decisions; architecture/ADRs remain compatible | — |
 | Code and unit tests generated, executed and analyzed | aligned | build evidence and `test-suite` evidence at `build-verified` | none |
-| Deployment Units tested for function, security and non-functional requirements | partial | `deployment-plan`, `test-strategy`, security-scan and deployment evidence | add a `deployment-units` template |
+| Deployment Units tested for function, security and non-functional requirements | aligned | first-class `deployment-unit` plus test/security/deployment evidence contracts | — |
 | Operations: telemetry analysis, runbooks, human-approved actions | aligned | operational-evidence profile and control bands | none |
 | Context-memory folder layout for plans, requirements, stories and designs | gap | artifacts live at project-chosen paths | publish a recommended layout in [artifacts](../method/artifacts.md) |
-| Plans with checkboxes, approved before execution | partial | `implementation-plan` template | add a `plan` template with approval checkpoints |
+| Plans with checkboxes, approved before execution | aligned | recursive `plan` artifacts and 0.2 Inception gate require the Level 1 Plan before Construction | — |
 
 ## Deliberate differences
 
@@ -47,9 +47,7 @@ These additions are outside the published method and remain: evidence-based gate
 
 ## Open alignment decisions
 
-1. **Phase grouping.** The lowest-risk way to match the three-phase model is presentation: group `readiness`, `intent` and `inception` as the Inception phase, `construction` as Construction, and `operations` and `completed` as Operations, while Core keeps the six states for gate enforcement.
-2. **Lifecycle shape.** Collapsing `readiness` and `intent` into Inception would match the method exactly but changes Method Pack states, gates, samples and the Studio contract, so it needs an explicit decision and a new Method Pack major version.
-3. **Roles.** Reducing the role set toward Product Owner and developers would change authority matrices and segregation controls; keep the current roles unless the adopting team chooses a smaller profile.
+1. **Mob Construction ritual.** The workflow mechanics are implemented, but the paper's co-located team ritual is a facilitation practice rather than a Core lifecycle requirement; document it as adoption guidance rather than enforcing physical co-location.\n2. **Role extensions.** Method Pack 0.2.0 keeps Product Owner + Developer as the base roles while profiles may add quality/security/governance roles without changing the base method.\n3. **Promotion evidence.** Keep 0.1.0 available for existing projects; validate the enriched 0.2.0 gates, wizard and samples before declaring a release-level fidelity claim.
 
 
 ## Machine-readable fidelity rules

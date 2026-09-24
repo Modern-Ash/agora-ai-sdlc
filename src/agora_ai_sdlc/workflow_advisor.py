@@ -1,0 +1,235 @@
+"""Proactive workflow advice for the guided AI-SDLC experience.
+
+Laya is used as a local, cheap classifier below the UX. Agora Core remains the
+source of truth and all authority-bearing steps remain explicit.
+"""
+
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+from pathlib import Path
+
+from agora_ai_sdlc.execution_bundle import build_execution_bundle
+from agora_ai_sdlc.execution_context import select_execution_context
+from agora_ai_sdlc.execution_decisions import advise_execution
+from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice, recovery_choices
+from agora_ai_sdlc.guided import GuidedDecision
+from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
+
+
+@dataclass(frozen=True)
+class WorkflowAdvice:
+    action: str
+    summary: str
+    needs_runtime: bool
+    reasoning_tier: str | None = None
+    confidence: float | None = None
+    source: str = "deterministic"
+    recommended_runtime: ExecutorRecoveryChoice | None = None
+    escalation_required: bool = False
+    context_candidates: int = 0
+    context_selected: int = 0
+    context_tokens_before: int = 0
+    context_tokens_after: int = 0
+    context_tokens_saved: int = 0
+    context_reduction_ratio: float = 0.0
+    context_escalated: tuple[str, ...] = ()
+    security_review: str | None = None
+    security_confidence: float | None = None
+    change_risk: str | None = None
+    change_risk_confidence: float | None = None
+    validation_focus: str | None = None
+    validation_focus_confidence: float | None = None
+
+    def snapshot(self) -> dict:
+        data = asdict(self)
+        if self.recommended_runtime is not None:
+            data["recommended_runtime"] = {
+                "agent": self.recommended_runtime.agent,
+                "model": self.recommended_runtime.model,
+                "label": self.recommended_runtime.label,
+            }
+        return data
+
+
+def _free_runtime(root: Path) -> ExecutorRecoveryChoice | None:
+    """Prefer an already available local/free executor without prompting."""
+
+    try:
+        choices = recovery_choices(root)
+    except (OSError, RuntimeError, ValueError):
+        return None
+    for marker in ("[local]", "[free]"):
+        for choice in choices:
+            if marker in choice.label.casefold():
+                return choice
+    return None
+
+
+def advise_workflow(
+    root: Path,
+    decision: GuidedDecision,
+    *,
+    confidence_threshold: float = 0.90,
+) -> WorkflowAdvice:
+    """Choose the simplest next interaction and use Laya only where it adds value."""
+
+    # Authority-bearing decisions never go through Laya.
+    if decision.ready_for_human_approval and decision.missing_approvals:
+        return WorkflowAdvice(
+            action="approve",
+            summary="Review the completed evidence and explicitly confirm the required human approval in this wizard.",
+            needs_runtime=False,
+        )
+
+    # Verification is deterministic and cheaper than any model call.
+    if decision.missing_evidence and not (
+        decision.missing_artifacts or decision.clarification_issues or decision.unsatisfied_criteria
+    ):
+        return WorkflowAdvice(
+            action="verify",
+            summary="Run deterministic verification now, persist the evidence, then re-read Core automatically.",
+            needs_runtime=False,
+        )
+
+    needs_preparation = bool(
+        decision.missing_artifacts or decision.clarification_issues or decision.unsatisfied_criteria or decision.blocked
+    )
+    if not needs_preparation:
+        if decision.ready_to_transition and decision.target and not decision.blockers:
+            return WorkflowAdvice(
+                action="transition",
+                summary=f"Advance the Work to {decision.target} and continue from the next Core node.",
+                needs_runtime=False,
+            )
+        return WorkflowAdvice(
+            action="review",
+            summary="The governed step is ready for the responsible actor; inspect the evidence at this node.",
+            needs_runtime=False,
+        )
+
+    tier = None
+    confidence = None
+    source = "deterministic"
+    escalation = False
+    context_candidates = 0
+    context_selected = 0
+    context_tokens_before = 0
+    context_tokens_after = 0
+    context_tokens_saved = 0
+    context_reduction_ratio = 0.0
+    context_escalated: tuple[str, ...] = ()
+    security_review = None
+    security_confidence = None
+    change_risk = None
+    change_risk_confidence = None
+    validation_focus = None
+    validation_focus_confidence = None
+
+    try:
+        bundle = build_execution_bundle(
+            root,
+            swarm=decision.swarm,
+            work=decision.work,
+            persist=False,
+        )
+        provider = LayaDecisionProvider()
+        evaluated = advise_execution(
+            bundle,
+            provider=provider,
+            confidence_threshold=confidence_threshold,
+        )
+        answer = evaluated.result.answers.get("reasoning_tier")
+        if answer is not None:
+            tier = str(answer.value)
+            confidence = answer.confidence
+            source = "laya"
+            escalation = "reasoning_tier" in evaluated.escalated
+        security = evaluated.result.answers.get("security_review")
+        if security is not None:
+            security_review = str(security.value)
+            security_confidence = security.confidence
+        risk = evaluated.result.answers.get("change_risk")
+        if risk is not None:
+            change_risk = str(risk.value)
+            change_risk_confidence = risk.confidence
+        focus = evaluated.result.answers.get("validation_focus")
+        if focus is not None:
+            validation_focus = str(focus.value)
+            validation_focus_confidence = focus.confidence
+
+        selected = select_execution_context(
+            root,
+            bundle,
+            provider=provider,
+            confidence_threshold=confidence_threshold,
+        )
+        context_candidates = len(selected.candidate_paths)
+        context_selected = len(selected.selected_paths)
+        context_tokens_before = selected.candidate_tokens
+        context_tokens_after = selected.selected_tokens
+        context_tokens_saved = selected.saved_tokens
+        context_reduction_ratio = selected.reduction_ratio
+        context_escalated = selected.escalated_paths
+    except (LayaUnavailable, OSError, RuntimeError, ValueError):
+        pass
+
+    recommended = None
+    # Token-saving default: automatically preselect only local/free executors.
+    # Paid/configured providers still require the user's explicit runtime choice.
+    if source == "laya" and tier in {"local", "standard"} and not escalation:
+        recommended = _free_runtime(root)
+
+    if tier == "human" and not escalation:
+        return WorkflowAdvice(
+            action="review",
+            summary="The next step needs human judgement; stay in this wizard and inspect the evidence/options.",
+            needs_runtime=False,
+            reasoning_tier=tier,
+            confidence=confidence,
+            source=source,
+            context_candidates=context_candidates,
+            context_selected=context_selected,
+            context_tokens_before=context_tokens_before,
+            context_tokens_after=context_tokens_after,
+            context_tokens_saved=context_tokens_saved,
+            context_reduction_ratio=context_reduction_ratio,
+            context_escalated=context_escalated,
+            security_review=security_review,
+            security_confidence=security_confidence,
+            change_risk=change_risk,
+            change_risk_confidence=change_risk_confidence,
+            validation_focus=validation_focus,
+            validation_focus_confidence=validation_focus_confidence,
+        )
+
+    if escalation:
+        summary = "The local decision model is uncertain; prepare with an agent and keep the normal review boundary."
+    elif recommended is not None:
+        summary = "Prepare the missing non-authoritative work with the available local/free assistant."
+    else:
+        summary = "Prepare the missing non-authoritative work; choose an assistant only when execution starts."
+
+    return WorkflowAdvice(
+        action="prepare",
+        summary=summary,
+        needs_runtime=True,
+        reasoning_tier=tier,
+        confidence=confidence,
+        source=source,
+        recommended_runtime=recommended,
+        escalation_required=escalation,
+        context_candidates=context_candidates,
+        context_selected=context_selected,
+        context_tokens_before=context_tokens_before,
+        context_tokens_after=context_tokens_after,
+        context_tokens_saved=context_tokens_saved,
+        context_reduction_ratio=context_reduction_ratio,
+        context_escalated=context_escalated,
+        security_review=security_review,
+        security_confidence=security_confidence,
+        change_risk=change_risk,
+        change_risk_confidence=change_risk_confidence,
+        validation_focus=validation_focus,
+        validation_focus_confidence=validation_focus_confidence,
+    )

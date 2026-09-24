@@ -4,7 +4,7 @@ id: "inception-approved"
 require-all-criteria: true
 required-criterion-stage: "elaborated"
 require-required-artifacts: true
-required-artifacts: ["intent", "unit-of-work", "requirements"]
+required-artifacts: ["intent", "plan", "requirements", "user-stories", "nfr", "risk-register", "measurement-criteria", "unit-of-work", "bolt-plan"]
 require-successful-evidence: false
 required-approval-roles: ["product-owner", "developer"]
 require-resolved-clarifications: true
@@ -12,6 +12,4 @@ require-resolved-clarifications: true
 
 # inception-approved
 
-Construction starts only after Intent, Unit of Work and requirements are registered, criteria are elaborated, clarifications are resolved and Product Owner plus Developer approve.
-
-Level 1 Plan and richer Inception artifacts are added by later compatibility work; this candidate gate does not claim them yet.
+Construction starts only after the Intent has been progressively enriched into the core AI-SDLC Inception contract: an approved Level 1 Plan, requirements and User Stories, explicit NFRs and risks, Measurement Criteria, cohesive Units and suggested Bolts. Criteria must be elaborated, clarifications resolved, and Product Owner plus Developer must validate the proposal.\n\nPRFAQ remains optional, matching the method definition.

@@ -50,6 +50,47 @@ The default view deliberately avoids raw `missing-artifacts=[...]` style output.
 advisory: human approvals still require explicit confirmation, and every mutation remains an Agora Core
 operation. Agora Core remains the lifecycle authority.
 
+## Three interaction surfaces
+
+Agora AI-SDLC exposes the same governed Work through three complementary surfaces. They share the
+same Agora Core state, artifacts, evidence, gates and authority model; only the amount of orchestration
+changes.
+
+### 1. Agora Flow — automagic adoption mode
+
+For practitioners who should practice AI-DLC without memorizing CLI commands:
+
+```bash
+aisdlc start --issue 26   # first entry
+aisdlc                    # resume later
+```
+
+After `start`, the interactive session remains inside the continuous wizard. Each workflow node explains
+the current state and proposes the next action; Enter confirms it. Verification, explicit approvals and
+Core-authorized transitions can be executed from that same session. The UI does not instruct the user
+to exit and run another `aisdlc ...` command.
+
+### 2. Expert CLI
+
+Experienced users keep the complete command surface and may compose operations directly:
+
+```bash
+aisdlc continue --expert
+aisdlc context ...
+aisdlc execution-bundle ...
+aisdlc verify ...
+aisdlc decision ...
+agora work transition ...
+agora approval add ...
+```
+
+Flow is therefore an adoption layer, not a restriction or replacement for Agora Core/AI-SDLC commands.
+
+### 3. Automation / machine surface
+
+CI, IDEs and agents can consume the same state non-interactively through JSON and the underlying
+Core APIs. Human-friendly Flow decisions never create a separate shadow workflow.
+
 ## Local decision plane (Laya)
 
 AI-SDLC can use the free, Apache-2.0 [Laya](https://github.com/NandhaKishorM/laya)

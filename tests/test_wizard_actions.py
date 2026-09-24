@@ -62,3 +62,46 @@ def test_final_acceptance_records_accepted_stage_with_responsible_actor(tmp_path
     assert calls[0].actor == "project:product-owner"
     assert calls[0].criterion == "source-issue"
     assert calls[0].stage == "accepted"
+
+
+def test_verified_criterion_records_deployed_stage_with_assigned_ai_developer(tmp_path):
+    calls = []
+
+    class Workspace:
+        def satisfy_criterion(self, data, criterion_id, *, stage=None):
+            calls.append(
+                SimpleNamespace(
+                    swarm=data.swarm_id,
+                    work=data.work_id,
+                    actor=data.actor_id,
+                    criterion=criterion_id,
+                    stage=stage,
+                )
+            )
+
+    decision = final_acceptance_decision()
+    decision = GuidedDecision(
+        **{
+            **decision.snapshot(),
+            "criterion_statuses": (
+                ("source-issue", ("elaborated", "designed", "built", "verified")),
+            ),
+            "developer_actor": "project:ai-developer",
+            "developer_actor_kind": "ai-agent",
+        }
+    )
+
+    assert next_in_session_action(decision) == "mark-deployed"
+
+    result = execute_in_session_action(
+        tmp_path,
+        decision,
+        workspace_factory=lambda cwd: Workspace(),
+    )
+
+    assert result.kind == "criteria_deployed"
+    assert result.details == (("count", 1), ("actor", "project:ai-developer"))
+    assert len(calls) == 1
+    assert calls[0].actor == "project:ai-developer"
+    assert calls[0].criterion == "source-issue"
+    assert calls[0].stage == "deployed"

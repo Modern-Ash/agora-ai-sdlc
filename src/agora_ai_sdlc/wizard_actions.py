@@ -68,8 +68,7 @@ def execute_in_session_action(
         failed = [
             item
             for item in checks
-            if str(getattr(item, "status", getattr(item, "result", ""))).casefold()
-            in {"failed", "failure", "error"}
+            if str(getattr(item, "status", getattr(item, "result", ""))).casefold() in {"failed", "failure", "error"}
         ]
         if failed:
             return WizardActionResult(
@@ -86,11 +85,7 @@ def execute_in_session_action(
     if action == "approve":
         actor = _actor_id(decision)
         actor_role = (decision.role or "").strip()
-        eligible = [
-            role
-            for role in decision.missing_approvals
-            if not actor_role or role == actor_role
-        ]
+        eligible = [role for role in decision.missing_approvals if not actor_role or role == actor_role]
         if not eligible:
             raise ValueError(
                 "The current responsible actor cannot satisfy the outstanding approval role(s): "

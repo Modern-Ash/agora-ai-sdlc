@@ -15,7 +15,7 @@ from agora_ai_sdlc.verification import build_verification_report
 @dataclass(frozen=True)
 class WizardActionResult:
     kind: str
-    summary: str
+    details: tuple[tuple[str, object], ...] = ()
 
 
 def _actor_id(decision: GuidedDecision) -> str:
@@ -71,14 +71,8 @@ def execute_in_session_action(
             if str(getattr(item, "status", getattr(item, "result", ""))).casefold() in {"failed", "failure", "error"}
         ]
         if failed:
-            return WizardActionResult(
-                "verification",
-                f"Deterministic verification completed with {len(failed)} failing check(s); Core will be re-read.",
-            )
-        return WizardActionResult(
-            "verification",
-            "Deterministic verification completed and evidence was persisted; Core will be re-read.",
-        )
+            return WizardActionResult("verification_failed", (("count", len(failed)),))
+        return WizardActionResult("verification_ok")
 
     workspace = workspace_factory(cwd=root)
 
@@ -101,10 +95,7 @@ def execute_in_session_action(
                 note="Explicitly confirmed in Agora Flow wizard",
             )
         )
-        return WizardActionResult(
-            "approval",
-            f"Recorded explicit {role} approval by {actor}; Core will be re-read before any transition.",
-        )
+        return WizardActionResult("approval", (("role", role), ("actor", actor)))
 
     if action == "transition":
         actor = _actor_id(decision)
@@ -116,12 +107,6 @@ def execute_in_session_action(
                 target_state=decision.target or "",
             )
         )
-        return WizardActionResult(
-            "transition",
-            f"Transitioned Work to {decision.target}; the wizard will continue from the new Core node.",
-        )
+        return WizardActionResult("transition", (("target", decision.target or ""),))
 
-    return WizardActionResult(
-        "review",
-        "No state-changing action was executed; the current evidence remains available for review.",
-    )
+    return WizardActionResult("review")

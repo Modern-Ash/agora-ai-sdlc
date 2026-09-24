@@ -161,17 +161,63 @@ def run_interactive(
             output_fn("  1. " + t("wizard.plan_review", lang=lang))
             output_fn("  2. " + t("wizard.plan_human_boundary", lang=lang))
 
+        output_fn("")
+        output_fn(t("wizard.intelligence", lang=lang))
+        output_fn(
+            "  • "
+            + t(
+                "wizard.decision_source",
+                lang=lang,
+                source=("Laya (local System-1)" if advice.source == "laya" else "deterministic/Core"),
+            )
+        )
         if advice.source == "laya" and advice.reasoning_tier is not None:
             confidence = f"{advice.confidence:.2f}" if advice.confidence is not None else "-"
-            output_fn("")
             output_fn(
-                t(
+                "  • "
+                + t(
                     "wizard.decision_signal",
                     lang=lang,
                     tier=advice.reasoning_tier,
                     confidence=confidence,
                 )
             )
+
+        candidates = getattr(advice, "context_candidates", 0)
+        selected = getattr(advice, "context_selected", 0)
+        before = getattr(advice, "context_tokens_before", 0)
+        after = getattr(advice, "context_tokens_after", 0)
+        saved = getattr(advice, "context_tokens_saved", 0)
+        if candidates:
+            output_fn(
+                "  • "
+                + t(
+                    "wizard.context_files",
+                    lang=lang,
+                    candidates=candidates,
+                    selected=selected,
+                )
+            )
+            output_fn(
+                "  • "
+                + t(
+                    "wizard.context_tokens",
+                    lang=lang,
+                    before=before,
+                    after=after,
+                    saved=saved,
+                )
+            )
+            escalated = getattr(advice, "context_escalated", ())
+            if escalated:
+                output_fn(
+                    "  • "
+                    + t(
+                        "wizard.context_fail_open",
+                        lang=lang,
+                        count=len(escalated),
+                    )
+                )
 
         output_fn("")
         output_fn(t("wizard.actions", lang=lang))

@@ -12,7 +12,12 @@ PACKAGES = {
     "modernization.md": "legacy-modernization",
     "regulated-readiness.md": "regulated-readiness",
 }
-REFERENCE_DOCS = {"ai-dlc-adoption.md", "reference-architecture.md", "security-and-responsibility.md", "statement-of-work-template.md"}
+REFERENCE_DOCS = {
+    "ai-dlc-adoption.md",
+    "reference-architecture.md",
+    "security-and-responsibility.md",
+    "statement-of-work-template.md",
+}
 REQUIRED_HEADINGS = {
     "Customer problem",
     "Entry criteria and prerequisites",

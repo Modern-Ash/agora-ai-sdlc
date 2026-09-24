@@ -87,11 +87,13 @@ def advise_workflow(
 
     # Final acceptance of already-delivered criteria is a human authority boundary,
     # not another generative preparation step.
+    criterion_statuses = dict(decision.criterion_statuses)
     final_criterion_acceptance = (
         decision.state == "operations"
         and decision.target == "completed"
         and decision.gate == "completion"
         and bool(decision.unsatisfied_criteria)
+        and all("deployed" in criterion_statuses.get(item, ()) for item in decision.unsatisfied_criteria)
         and not (
             decision.missing_artifacts
             or decision.missing_evidence

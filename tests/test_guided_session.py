@@ -172,7 +172,6 @@ def test_failed_runtime_is_not_reselected_automatically(monkeypatch):
 
     def select(*args, **kwargs):
         calls["select"] += 1
-        return None
 
     monkeypatch.setattr("agora_ai_sdlc.guided_session._select_runtime", select)
 

@@ -24,6 +24,30 @@ aisdlc continue
 
 The user remains in the same session while Agora re-reads Core after each confirmed action.
 
+## Interaction surfaces, not separate workflows
+
+Agora Flow is the **automagic adoption surface**. It is designed for practitioners who need to use the
+method correctly without learning the command topology first. After the initial `start`, normal work
+continues node-to-node inside one session.
+
+Expert users are intentionally not constrained by this UX. They may use `aisdlc` and `agora` commands
+directly, inspect or mutate authorized Core state, compose scripts, or invoke individual diagnostics.
+Automation clients may consume JSON/Core APIs.
+
+All three surfaces observe and mutate the same governed Work. There is no "wizard state machine"
+parallel to Core.
+
+```text
+                    Agora Core Work
+                          │
+           ┌──────────────┼──────────────┐
+           │              │              │
+     Agora Flow       Expert CLI     Automation/API
+     automagic         explicit        machine
+```
+
+The wizard's job is to remove navigation friction, not to hide or remove expert capabilities.
+
 ## Two-level progress
 
 The first level is the canonical AI-DLC lifecycle:

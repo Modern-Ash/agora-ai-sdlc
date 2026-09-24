@@ -40,6 +40,8 @@ class GuidedDecision:
     ready_to_transition: bool = False
     observed_artifacts: tuple[str, ...] = ()
     criterion_statuses: tuple[tuple[str, tuple[str, ...]], ...] = ()
+    developer_actor: str | None = None
+    developer_actor_kind: str | None = None
 
     @property
     def blocked(self) -> bool:
@@ -209,6 +211,22 @@ def inspect_next(
         observed_artifacts = ()
         criterion_statuses = ()
 
+    developer_actor = None
+    developer_actor_kind = None
+    try:
+        swarm_record = workspace.show_swarm(str(task.swarm_id or ""))
+        developer_actor = (getattr(swarm_record, "assignments", {}) or {}).get("developer")
+        if developer_actor:
+            actor_record = next(
+                (actor for actor in workspace.list_actors() if getattr(actor, "reference", None) == developer_actor),
+                None,
+            )
+            if actor_record is not None:
+                developer_actor_kind = str(getattr(actor_record, "kind", "") or "") or None
+    except (AttributeError, OSError, ValueError, FileNotFoundError):
+        developer_actor = None
+        developer_actor_kind = None
+
     messages = _humanize(
         blockers,
         lang=lang,
@@ -241,6 +259,8 @@ def inspect_next(
         ready_to_transition=bool(details.get("ready_to_complete", not blockers)),
         observed_artifacts=observed_artifacts,
         criterion_statuses=criterion_statuses,
+        developer_actor=developer_actor,
+        developer_actor_kind=developer_actor_kind,
     )
 
 

@@ -88,6 +88,35 @@ def advise_workflow(
     # Final acceptance of already-delivered criteria is a human authority boundary,
     # not another generative preparation step.
     criterion_statuses = dict(decision.criterion_statuses)
+    pending_deployment = tuple(
+        item for item in decision.unsatisfied_criteria if "deployed" not in criterion_statuses.get(item, ())
+    )
+    final_criterion_deployment = (
+        decision.state == "operations"
+        and decision.target == "completed"
+        and decision.gate == "completion"
+        and bool(pending_deployment)
+        and all("verified" in criterion_statuses.get(item, ()) for item in pending_deployment)
+        and not (
+            decision.missing_artifacts
+            or decision.missing_evidence
+            or decision.clarification_issues
+            or decision.git_issues
+        )
+    )
+    if final_criterion_deployment:
+        if decision.developer_actor and decision.developer_actor_kind == "ai-agent":
+            return WorkflowAdvice(
+                action="mark-deployed",
+                summary="Record the already-evidenced deployment stage with the assigned AI developer, then re-read Core.",
+                needs_runtime=False,
+            )
+        return WorkflowAdvice(
+            action="review",
+            summary="The remaining deployed criterion stage requires the assigned developer actor; stay at the human boundary.",
+            needs_runtime=False,
+        )
+
     final_criterion_acceptance = (
         decision.state == "operations"
         and decision.target == "completed"

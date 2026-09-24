@@ -59,8 +59,10 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
         )
     parts.extend(
         [
-            "Be proactive: inspect only the bounded relevant context, create or update the non-authoritative "
-            "artifacts/evidence needed for the next gate, and run safe deterministic verification when useful.",
+            (
+                "Be proactive: inspect only the bounded relevant context, create or update the non-authoritative "
+                "artifacts/evidence needed for the next gate, and run safe deterministic verification when useful."
+            ),
             "Use existing Agora/Core commands and repository conventions instead of inventing lifecycle state.",
             "Do not record human approval, do not change a human-owned decision, do not merge, deploy, or bypass a gate.",
             "Do not perform unrelated refactors. Minimize context and avoid reading files that the bounded bundle does not justify.",

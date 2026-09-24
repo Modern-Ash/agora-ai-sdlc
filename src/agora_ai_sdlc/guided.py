@@ -37,6 +37,7 @@ class GuidedDecision:
     clarification_issues: tuple[str, ...] = ()
     ready_for_human_approval: bool = False
     ready_to_transition: bool = False
+    observed_artifacts: tuple[str, ...] = ()
 
     @property
     def blocked(self) -> bool:
@@ -173,6 +174,12 @@ def inspect_next(
     git_issues = tuple(gate.get("git_issues") or parsed.get("git", ()))
     clarification_issues = parsed.get("clarifications", ())
 
+    try:
+        work_record = workspace.show_work(str(task.swarm_id or ""), str(task.work_id or ""))
+        observed_artifacts = tuple(getattr(work_record, "artifact_kinds", ()) or ())
+    except (OSError, ValueError, FileNotFoundError):
+        observed_artifacts = ()
+
     messages = _humanize(
         blockers,
         lang=lang,
@@ -203,6 +210,7 @@ def inspect_next(
         clarification_issues=clarification_issues,
         ready_for_human_approval=bool(details.get("ready_for_human_approval", False)),
         ready_to_transition=bool(details.get("ready_to_complete", not blockers)),
+        observed_artifacts=observed_artifacts,
     )
 
 

@@ -2,6 +2,7 @@ import time
 from types import SimpleNamespace
 
 import pytest
+from agora_ai_sdlc.executor_launch import ExecutorLaunchError
 from agora_ai_sdlc.guided import GuidedDecision
 from agora_ai_sdlc.guided_execution import _start_session_with_heartbeat, execute_guided_preparation
 
@@ -152,7 +153,7 @@ exit-code: 1
             (path / "SUMMARY.md").write_text("# failed\n", encoding="utf-8")
             raise RuntimeError(f"Session runner exited with code 1: {data.id} (nonzero-exit)")
 
-    with pytest.raises(Exception, match="Bash tool permission denied") as captured:
+    with pytest.raises(ExecutorLaunchError, match="Bash tool permission denied") as captured:
         execute_guided_preparation(
             tmp_path,
             decision(),

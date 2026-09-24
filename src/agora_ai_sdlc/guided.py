@@ -117,8 +117,7 @@ def _preferred_target(state: str | None, target_states: list[str] | tuple[str, .
     forward = [
         target
         for target in targets
-        if target.casefold() in _LIFECYCLE_ORDER
-        and _LIFECYCLE_ORDER.index(target.casefold()) > current_index
+        if target.casefold() in _LIFECYCLE_ORDER and _LIFECYCLE_ORDER.index(target.casefold()) > current_index
     ]
     if not forward:
         return targets[0]

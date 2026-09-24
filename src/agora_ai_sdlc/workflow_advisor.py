@@ -89,9 +89,7 @@ def advise_workflow(
     # not another generative preparation step.
     criterion_statuses = dict(decision.criterion_statuses)
     pending_deployment = tuple(
-        item
-        for item in decision.unsatisfied_criteria
-        if "deployed" not in criterion_statuses.get(item, ())
+        item for item in decision.unsatisfied_criteria if "deployed" not in criterion_statuses.get(item, ())
     )
     final_criterion_deployment = (
         decision.state == "operations"

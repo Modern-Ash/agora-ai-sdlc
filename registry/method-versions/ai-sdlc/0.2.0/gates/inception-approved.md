@@ -12,4 +12,4 @@ require-resolved-clarifications: true
 
 # inception-approved
 
-Construction starts only after the Intent has been progressively enriched into the core AI-DLC Inception contract: an approved Level 1 Plan, requirements and User Stories, explicit NFRs and risks, Measurement Criteria, cohesive Units and suggested Bolts. Criteria must be elaborated, clarifications resolved, and Product Owner plus Developer must validate the proposal.\n\nPRFAQ remains optional, matching the method definition.
+Construction starts only after the Intent has been progressively enriched into the core AI-SDLC Inception contract: an approved Level 1 Plan, requirements and User Stories, explicit NFRs and risks, Measurement Criteria, cohesive Units and suggested Bolts. Criteria must be elaborated, clarifications resolved, and Product Owner plus Developer must validate the proposal.\n\nPRFAQ remains optional, matching the method definition.

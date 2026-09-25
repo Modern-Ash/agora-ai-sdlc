@@ -424,6 +424,7 @@ def run_interactive(
             output_fn(t("session.reinspect", lang=lang))
             continue
 
+        restart_before_execution = False
         while True:
             if selected_runtime is None:
                 selected_runtime = _select_runtime(
@@ -445,6 +446,13 @@ def run_interactive(
                 if confirmation == "exit":
                     return GuidedSessionResult("execution-failed")
                 continue
+
+            current_decision = inspect_next(root, swarm=swarm, work=work, lang=lang)
+            if current_decision is None or _decision_fingerprint(current_decision) != _decision_fingerprint(decision):
+                output_fn("")
+                output_fn(t("session.reinspect", lang=lang))
+                restart_before_execution = True
+                break
 
             output_fn("")
             output_fn(t("session.executing", lang=lang, runtime=selected_runtime.label))
@@ -486,6 +494,9 @@ def run_interactive(
             )
             if confirmation == "exit":
                 return GuidedSessionResult("execution-failed")
+
+        if restart_before_execution:
+            continue
 
         previous_execution_fingerprint = _decision_fingerprint(decision)
         previous_execution_result_path = result.result_path

@@ -34,6 +34,7 @@ def test_guided_prompt_requests_safe_durable_progress_milestones(monkeypatch, tm
     assert "$AGORA_SESSION_ID" in prompt
     assert "$AGORA_EXECUTOR" in prompt
     assert "never report chain-of-thought" in prompt
+    assert "--swarm delivery --work issue-26" in prompt
 
 
 def test_runtime_switch_does_not_invent_executor_actor(monkeypatch, tmp_path):
@@ -52,7 +53,12 @@ def test_runtime_switch_does_not_invent_executor_actor(monkeypatch, tmp_path):
     monkeypatch.setattr("agora_ai_sdlc.guided_execution._runtime", lambda *args, **kwargs: runtime)
     monkeypatch.setattr(
         "agora_ai_sdlc.guided_execution.build_execution_bundle",
-        lambda *args, **kwargs: SimpleNamespace(markdown_path=str(tmp_path / "EXECUTION_BUNDLE.md")),
+        lambda *args, **kwargs: SimpleNamespace(
+            markdown_path=str(tmp_path / "EXECUTION_BUNDLE.md"),
+            swarm="delivery",
+            work="issue-26",
+            stage="inception",
+        ),
     )
     monkeypatch.setattr(
         "agora_ai_sdlc.guided_execution.select_execution_context",
@@ -133,7 +139,12 @@ def test_guided_executor_failure_surfaces_durable_diagnostic(monkeypatch, tmp_pa
     monkeypatch.setattr("agora_ai_sdlc.guided_execution._runtime", lambda *args, **kwargs: runtime)
     monkeypatch.setattr(
         "agora_ai_sdlc.guided_execution.build_execution_bundle",
-        lambda *args, **kwargs: SimpleNamespace(markdown_path=str(tmp_path / "EXECUTION_BUNDLE.md")),
+        lambda *args, **kwargs: SimpleNamespace(
+            markdown_path=str(tmp_path / "EXECUTION_BUNDLE.md"),
+            swarm="delivery",
+            work="issue-26",
+            stage="inception",
+        ),
     )
     monkeypatch.setattr(
         "agora_ai_sdlc.guided_execution.select_execution_context",
@@ -206,3 +217,54 @@ def test_construction_prompt_requires_observable_governed_progress(monkeypatch, 
     assert "missing evidence=test-suite" in prompt
     assert "unsatisfied criteria=source-issue" in prompt
     assert "Never record human approval or perform a lifecycle transition" in prompt
+    assert "Construction phase guidance" in prompt
+
+
+def test_guided_executor_refuses_scope_mismatch_before_runtime(monkeypatch, tmp_path):
+    runtime = SimpleNamespace(
+        id="claude",
+        name="Claude Code",
+        installed=True,
+        responsive=True,
+        executable="/usr/bin/claude",
+        command="claude",
+        version="1.0",
+    )
+    monkeypatch.setattr("agora_ai_sdlc.guided_execution._runtime", lambda *args, **kwargs: runtime)
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_execution.build_execution_bundle",
+        lambda *args, **kwargs: SimpleNamespace(
+            markdown_path=str(tmp_path / "EXECUTION_BUNDLE.md"),
+            swarm="issue-99-delivery",
+            work="issue-26",
+            stage="inception",
+        ),
+    )
+
+    with pytest.raises(ExecutorLaunchError, match="scope changed before launch"):
+        execute_guided_preparation(tmp_path, decision(), runtime_id="claude")
+
+
+def test_guided_executor_refuses_phase_mismatch_before_runtime(monkeypatch, tmp_path):
+    runtime = SimpleNamespace(
+        id="claude",
+        name="Claude Code",
+        installed=True,
+        responsive=True,
+        executable="/usr/bin/claude",
+        command="claude",
+        version="1.0",
+    )
+    monkeypatch.setattr("agora_ai_sdlc.guided_execution._runtime", lambda *args, **kwargs: runtime)
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_execution.build_execution_bundle",
+        lambda *args, **kwargs: SimpleNamespace(
+            markdown_path=str(tmp_path / "EXECUTION_BUNDLE.md"),
+            swarm="delivery",
+            work="issue-26",
+            stage="construction",
+        ),
+    )
+
+    with pytest.raises(ExecutorLaunchError, match="phase changed before launch"):
+        execute_guided_preparation(tmp_path, decision(), runtime_id="claude")

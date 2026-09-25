@@ -215,3 +215,33 @@ def test_verified_final_criterion_with_human_developer_stays_at_review_boundary(
 
     assert advice.action == "review"
     assert advice.needs_runtime is False
+
+
+def test_construction_progresses_evidenced_criterion_stage_without_llm(monkeypatch):
+    monkeypatch.setattr(
+        "agora_ai_sdlc.workflow_advisor.build_execution_bundle",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("criterion progression must not call Laya")),
+    )
+
+    advice = advise_workflow(
+        Path("."),
+        decision(
+            state="construction",
+            target="operations",
+            gate="construction-verified",
+            blockers=("unsatisfied=[source-issue]",),
+            messages=("Complete criteria.",),
+            missing_artifacts=(),
+            missing_evidence=(),
+            missing_approvals=(),
+            unsatisfied_criteria=("source-issue",),
+            criterion_statuses=(("source-issue", ("elaborated", "designed")),),
+            developer_actor="project:ai-developer",
+            developer_actor_kind="ai-agent",
+            next_criterion_stage="built",
+        ),
+    )
+
+    assert advice.action == "advance-criterion"
+    assert advice.source == "deterministic"
+    assert advice.needs_runtime is False

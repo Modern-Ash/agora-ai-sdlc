@@ -1,7 +1,5 @@
 import json
 from pathlib import Path
-from types import SimpleNamespace
-
 import yaml
 from agora.workspace import AgoraWorkspace
 

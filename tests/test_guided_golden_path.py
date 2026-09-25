@@ -147,7 +147,13 @@ def test_single_aisdlc_flow_reaches_completed_without_side_commands_or_loops(mon
     def answer(prompt: str) -> str:
         prompts.append(prompt)
         if len(prompts) > 40:
-            raise AssertionError(f"golden path exceeded 40 user prompts; latest={prompt!r}")
+            raise AssertionError(
+                "golden path exceeded 40 user prompts; "
+                f"latest_prompt={prompt!r}; "
+                f"recent_actions={actions[-12:]!r}; "
+                f"recent_decisions={decisions[-4:]!r}; "
+                f"recent_output={outputs[-20:]!r}"
+            )
         if "Respuesta" in prompt:
             return "No hay ambigüedad material; usar el criterio y alcance definidos en el Work."
         return ""

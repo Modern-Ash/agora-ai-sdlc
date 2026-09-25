@@ -38,7 +38,6 @@ from agora_ai_sdlc.start_preflight import (
     StartPreparationResult,
     ensure_start_ready,
     isolate_dirty_work,
-    resolve_start_swarm,
 )
 
 
@@ -426,20 +425,14 @@ def prepare_start(
         root,
         runtime,
         swarm_id=swarm,
+        issue=issue,
         workspace_factory=workspace_factory,
     )
     root = prepared.root
     notify("start.project-ready")
     workspace = workspace_factory(cwd=root)
     preflight_actions = list(prepared.actions)
-    resolved_swarm = resolve_start_swarm(
-        workspace,
-        root,
-        f"ai-{runtime.id}",
-        swarm,
-        issue,
-        preflight_actions,
-    )
+    resolved_swarm = prepared.swarm_id or swarm
 
     issue_url = f"https://github.com/{project}/issues/{issue}"
     work_record = _ensure_issue_work(

@@ -459,6 +459,7 @@ def _ensure_metadata(
     *,
     integrations: tuple[str, ...] = ("github",),
     delivery_target: str = "pull-request",
+    pathway: str = "brownfield",
 ) -> None:
     target = root / "ai-sdlc" / "project.yaml"
     if target.is_file():
@@ -469,7 +470,7 @@ def _ensure_metadata(
         "project": {"id": root.name, "name": root.name, "mode": "existing"},
         "language": "unknown",
         "framework": None,
-        "pathway": "brownfield",
+        "pathway": pathway,
         "integrations": list(integrations),
         "profile": DEFAULT_PROFILE,
         "depth": adoption_profiles()[DEFAULT_PROFILE],
@@ -616,6 +617,7 @@ def ensure_start_ready(
     require_git: bool = True,
     integrations: tuple[str, ...] = ("github",),
     delivery_target: str = "pull-request",
+    pathway: str = "brownfield",
     workspace_factory=AgoraWorkspace,
 ) -> StartPreparationResult:
     """Prepare the minimum safe AI-SDLC project state required by Start."""
@@ -678,6 +680,7 @@ def ensure_start_ready(
         actions,
         integrations=integrations,
         delivery_target=delivery_target,
+        pathway=pathway,
     )
 
     return StartPreparationResult(root=root, actions=tuple(actions), swarm_id=resolved_swarm)

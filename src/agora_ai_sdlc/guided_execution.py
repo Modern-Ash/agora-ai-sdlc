@@ -55,6 +55,24 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
         )
     if decision.messages:
         parts.append("Current obligations: " + " | ".join(decision.messages))
+    if decision.state == "construction":
+        exact = []
+        if decision.missing_artifacts:
+            exact.append("missing artifacts=" + ", ".join(decision.missing_artifacts))
+        if decision.missing_evidence:
+            exact.append("missing evidence=" + ", ".join(decision.missing_evidence))
+        if decision.unsatisfied_criteria:
+            exact.append("unsatisfied criteria=" + ", ".join(decision.unsatisfied_criteria))
+        if exact:
+            parts.append(
+                "Construction completion contract: " + "; ".join(exact) + ". "
+                "A successful CLI process alone is not progress. Before exiting successfully, ensure Agora Core "
+                "can observe at least one reduction in the current non-human governed obligations. "
+                "Persist the corresponding repository artifact/evidence first, register it through existing Agora/Core "
+                "commands, and only record a criterion stage when the implemented work and verification actually support it. "
+                "Never record human approval or perform a lifecycle transition. "
+                "If no governed obligation can be safely reduced, report failure instead of claiming completion."
+            )
     answers = load_answers(root, decision.work)
     if answers:
         resolved = " | ".join(f"{key}={value}" for key, value in sorted(answers.items()))

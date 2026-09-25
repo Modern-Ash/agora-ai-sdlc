@@ -454,6 +454,12 @@ def _ensure_metadata(root: Path, runtime: RuntimeDiscovery, actions: list[str]) 
         ],
         "role_execution": {"developer": runtime.id},
         "method": {"id": METHOD_ID, "version": METHOD_VERSION},
+        "delivery_target": {
+            "type": "pull-request",
+            "require_ci": True,
+            "require_independent_review": True,
+            "merge_authority": "human",
+        },
     }
     target.write_text(yaml.safe_dump(payload, sort_keys=False, allow_unicode=True), encoding="utf-8")
     actions.append("metadata.created")

@@ -551,6 +551,47 @@ def _ensure_delivery_swarm(
         actions.append("swarm.developer-assigned")
 
 
+def resolve_start_swarm(
+    workspace: AgoraWorkspace,
+    root: Path,
+    runtime_actor: str,
+    requested_swarm: str,
+    issue: int,
+    actions: list[str],
+) -> str:
+    """Resolve a ready/running swarm for one Start invocation without mutating terminal history."""
+
+    try:
+        swarm = workspace.show_swarm(requested_swarm)
+    except FileNotFoundError:
+        _ensure_delivery_swarm(workspace, root, runtime_actor, requested_swarm, actions)
+        return requested_swarm
+
+    if swarm.status in {"ready", "running"}:
+        return requested_swarm
+
+    if requested_swarm != "delivery":
+        raise StartPreparationError(
+            f"Swarm {requested_swarm!r} is {swarm.status!r}; Start will not silently replace an explicitly selected swarm."
+        )
+
+    resolved = f"issue-{issue}-delivery"
+    try:
+        candidate = workspace.show_swarm(resolved)
+    except FileNotFoundError:
+        candidate = None
+
+    if candidate is not None and candidate.status not in {"ready", "running"}:
+        raise StartPreparationError(
+            f"Automatic issue swarm {resolved!r} already exists with terminal status {candidate.status!r}."
+        )
+
+    _ensure_delivery_swarm(workspace, root, runtime_actor, resolved, actions)
+    actions.append(f"swarm.resolved:{requested_swarm}->{resolved}")
+    return resolved
+
+
+
 def ensure_start_ready(
     root: Path,
     runtime: RuntimeDiscovery,

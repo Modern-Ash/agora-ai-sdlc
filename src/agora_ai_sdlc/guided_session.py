@@ -320,11 +320,23 @@ def run_interactive(
                     result=previous_execution_result_path or "-",
                 )
             )
-            return GuidedSessionResult(
-                "no-progress",
-                selected_runtime.agent if selected_runtime else None,
-                selected_runtime.model if selected_runtime else None,
+            if selected_runtime is not None:
+                failed_runtimes.add((selected_runtime.agent, selected_runtime.model))
+            selected_runtime = None
+            previous_execution_fingerprint = None
+            previous_execution_result_path = None
+            confirmation, selected_runtime = _confirm_current_decision(
+                root,
+                decision,
+                selected_runtime=None,
+                input_fn=input_fn,
+                output_fn=output_fn,
+                lang=lang,
+                retry=True,
             )
+            if confirmation == "exit":
+                return GuidedSessionResult("exit")
+            continue
 
         previous_execution_fingerprint = None
         previous_execution_result_path = None

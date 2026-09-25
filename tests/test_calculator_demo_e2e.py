@@ -3,6 +3,7 @@ from pathlib import Path
 from agora_ai_sdlc.brief_flow import prepare_brief_start
 from agora_ai_sdlc.construction_reconciliation import (
     CONSTRUCTION_ARTIFACTS,
+    prepare_construction_scaffold,
     reconcile_construction_execution,
 )
 from agora_ai_sdlc.guided import inspect_next
@@ -57,19 +58,7 @@ Calculate the final price after applying a percentage discount.
     )
 
 
-def _write_construction_outputs(root: Path, work: str) -> None:
-    construction = root / ".agora" / "ai-sdlc" / "construction" / work
-    construction.mkdir(parents=True, exist_ok=True)
-    bodies = {
-        "DOMAIN-MODEL.md": "# Domain Model\n\nPrice and percentage are value inputs; discounted price is the deterministic result.\n",
-        "LOGICAL-DESIGN.md": "# Logical Design\n\nA pure calculateDiscount function validates inputs and returns the discounted price.\n",
-        "IMPLEMENTATION-PLAN.md": "# Implementation Plan\n\nImplement one TypeScript function and focused node:test acceptance coverage.\n",
-        "TEST-STRATEGY.md": "# Test Strategy\n\nCover nominal, zero, full discount and invalid-boundary cases.\n",
-        "DEPLOYMENT-UNIT.md": "# Deployment Unit\n\nLocal TypeScript source, package scripts and tests; no external services.\n",
-    }
-    for _, filename in CONSTRUCTION_ARTIFACTS:
-        (construction / filename).write_text(bodies[filename], encoding="utf-8")
-
+def _write_product_outputs(root: Path) -> None:
     (root / "src").mkdir()
     (root / "tests").mkdir()
     (root / "src" / "discount.ts").write_text(
@@ -159,17 +148,21 @@ def test_calculator_brief_happy_path_reaches_completed(monkeypatch, tmp_path: Pa
         "deployment-unit",
     }
 
-    _write_construction_outputs(root, result.work_id)
-    reconciled = reconcile_construction_execution(root, construction)
+    scaffold = prepare_construction_scaffold(root, construction)
+    assert set(scaffold.generated_artifacts) == {kind for kind, _ in CONSTRUCTION_ARTIFACTS}
+    assert set(scaffold.registered_artifacts) == {kind for kind, _ in CONSTRUCTION_ARTIFACTS}
+    assert scaffold.criterion_stages == ("designed",)
+    assert Path(scaffold.task_path).is_file()
 
-    assert set(reconciled.registered_artifacts) == {
-        "domain-model",
-        "logical-design",
-        "implementation-plan",
-        "test-strategy",
-        "deployment-unit",
-    }
-    assert set(reconciled.criterion_stages) == {"designed", "built", "verified"}
+    prepared_construction = inspect_next(root, swarm=result.swarm_id, work=result.work_id)
+    assert prepared_construction is not None
+    assert prepared_construction.missing_artifacts == ()
+
+    _write_product_outputs(root)
+    reconciled = reconcile_construction_execution(root, prepared_construction)
+
+    assert reconciled.registered_artifacts == ()
+    assert set(reconciled.criterion_stages) == {"built", "verified"}
     assert reconciled.verification_passed is True
     assert reconciled.verification_report is not None
 

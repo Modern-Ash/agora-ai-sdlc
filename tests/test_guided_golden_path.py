@@ -101,6 +101,8 @@ def _materialize_phase(root: Path, state: str) -> None:
 
 
 def test_single_aisdlc_flow_reaches_completed_without_side_commands_or_loops(monkeypatch, golden_life):
+    """Product invariant: one guided aisdlc session must carry the normal delivery flow end to end."""
+
     root = golden_life.root
     outputs: list[str] = []
     prepare_states: list[str] = []

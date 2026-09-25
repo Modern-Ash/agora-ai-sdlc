@@ -45,6 +45,7 @@ class StartPreparationError(ValueError):
 class StartPreparationResult:
     root: Path
     actions: tuple[str, ...]
+    swarm_id: str | None = None
 
 
 def _run_git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -597,6 +598,7 @@ def ensure_start_ready(
     runtime: RuntimeDiscovery,
     *,
     swarm_id: str = "delivery",
+    issue: int | None = None,
     workspace_factory=AgoraWorkspace,
 ) -> StartPreparationResult:
     """Prepare the minimum safe AI-SDLC project state required by Start."""
@@ -636,7 +638,18 @@ def ensure_start_ready(
     _ensure_github_pr_adapter(workspace, root, actions)
 
     runtime_actor = _ensure_actors(workspace, runtime, actions)
-    _ensure_delivery_swarm(workspace, root, runtime_actor, swarm_id, actions)
+    if issue is None:
+        _ensure_delivery_swarm(workspace, root, runtime_actor, swarm_id, actions)
+        resolved_swarm = swarm_id
+    else:
+        resolved_swarm = resolve_start_swarm(
+            workspace,
+            root,
+            runtime_actor,
+            swarm_id,
+            issue,
+            actions,
+        )
     _ensure_metadata(root, runtime, actions)
 
-    return StartPreparationResult(root=root, actions=tuple(actions))
+    return StartPreparationResult(root=root, actions=tuple(actions), swarm_id=resolved_swarm)

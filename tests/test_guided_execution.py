@@ -233,7 +233,14 @@ def test_construction_prompt_requires_observable_governed_progress(monkeypatch, 
         lambda root, work: "npm test: failed exit=1 diagnostic=expected 90 but got 100",
     )
 
+    guidance = tmp_path / ".agora" / "skills" / "agora-ai-sdlc-guided" / "references" / "construction.md"
+    guidance.parent.mkdir(parents=True)
+    guidance.write_text("# Construction\n\nImplement and verify bounded product changes.\n", encoding="utf-8")
+
     retry_prompt = _prompt(tmp_path, current, "repo://EXECUTION_BUNDLE.md")
+    assert "Host-supplied Construction phase guidance" in retry_prompt
+    assert "Implement and verify bounded product changes" in retry_prompt
+    assert "Do not discover or glob .agora paths" in retry_prompt
     assert "Host-supplied Construction task" in retry_prompt
     assert "Create product code and tests" in retry_prompt
     assert "Host-supplied deterministic verification diagnosis" in retry_prompt

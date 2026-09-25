@@ -26,6 +26,7 @@ from agora_ai_sdlc.executor_launch import (
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
+from agora_ai_sdlc.verification import persisted_verification_diagnostic
 from agora_ai_sdlc.wizard import load_answers
 
 
@@ -85,15 +86,26 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
             exact.append("unsatisfied criteria=" + ", ".join(decision.unsatisfied_criteria))
         artifact_root = root / ".agora" / "ai-sdlc" / "construction" / decision.work
         task_path = artifact_root / "CONSTRUCTION-TASK.md"
-        verification_path = root / ".agora" / "ai-sdlc" / "verification" / decision.work / "VERIFICATION.json"
-        if verification_path.is_file():
+        task_text = ""
+        try:
+            task_text = task_path.read_text(encoding="utf-8").strip()
+        except OSError:
+            task_text = ""
+        if task_text:
             parts.append(
-                f"A prior deterministic verification report exists at {verification_path}. "
-                "Read it before editing and repair the concrete failed, blocked, unavailable, or missing test/build condition it reports."
+                "Host-supplied Construction task (authoritative for this repair iteration):\n"
+                + task_text[:8000]
+            )
+
+        diagnostic = persisted_verification_diagnostic(root, decision.work)
+        if diagnostic:
+            parts.append(
+                "Host-supplied deterministic verification diagnosis. Repair this concrete condition before finishing:\n"
+                + diagnostic
             )
         parts.append(
             "Construction completion contract: " + ("; ".join(exact) if exact else "implementation pending") + ". "
-            f"Read and execute the concrete task at {task_path}. "
+            f"The concrete task is persisted at {task_path}, and its content is supplied above when available. "
             "Agora Flow has already materialized and registered the governance/design artifacts. "
             "Your responsibility in this iteration is implementation only: create actual product source files and executable "
             "automated tests outside .agora/, plus the minimal idiomatic build/test configuration needed to run them. "

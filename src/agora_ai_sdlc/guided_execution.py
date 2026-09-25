@@ -354,7 +354,9 @@ def execute_guided_preparation(
         lean = None
     prompt = _prompt(root, decision, str(lean_path) if lean_path is not None else bundle.markdown_path)
     runner = _runner(runtime, root, prompt, model)
-    repair_diagnostic = persisted_verification_diagnostic(root, decision.work) if decision.state == "construction" else None
+    repair_diagnostic = (
+        persisted_verification_diagnostic(root, decision.work) if decision.state == "construction" else None
+    )
     before_snapshot = project_file_snapshot(root) if decision.state == "construction" else {}
     workspace = workspace_factory(cwd=root)
 
@@ -431,9 +433,7 @@ def execute_guided_preparation(
         changed_this_iteration = diff_project_file_snapshots(before_snapshot, after_snapshot)
         relevant_changes = _construction_relevant_changes(changed_this_iteration)
         governed_progress = bool(
-            reconciliation.registered_artifacts
-            or reconciliation.criterion_stages
-            or reconciliation.verification_passed
+            reconciliation.registered_artifacts or reconciliation.criterion_stages or reconciliation.verification_passed
         )
         if not relevant_changes and not governed_progress:
             diagnostic = repair_diagnostic or persisted_verification_diagnostic(root, decision.work)

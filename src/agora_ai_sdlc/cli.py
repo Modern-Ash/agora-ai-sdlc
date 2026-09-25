@@ -86,7 +86,9 @@ def main(argv: list[str] | None = None) -> int:
     install.add_argument("--write-config", help="Write the resolved install config without applying")
     install.add_argument("--yes", action="store_true", help="Apply without interactive confirmation")
     start = sub.add_parser("start", help="Start AI-SDLC work and enter the continuous Agora Flow wizard")
-    start.add_argument("--issue", type=int, required=True, help="Issue number to use as the candidate Intent source")
+    source = start.add_mutually_exclusive_group(required=True)
+    source.add_argument("--issue", type=int, help="Issue number to use as the candidate Intent source")
+    source.add_argument("--brief", help="Local Intent Brief Markdown file; runs without Git/GitHub")
     start.add_argument("--project", help="GitHub owner/repository; inferred from origin when omitted")
     start.add_argument(
         "--agent", choices=["codex", "claude", "opencode", "ollama"], help="AI runtime for Level 1 Plan preparation"
@@ -478,6 +480,54 @@ def main(argv: list[str] | None = None) -> int:
         language = resolve_language(args.lang)
         selected_agent = args.agent or ("opencode" if args.model else None)
         selected_model = args.model
+
+        if args.brief:
+            from agora_ai_sdlc.brief_flow import prepare_brief_start, render_brief_start
+            from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice
+            from agora_ai_sdlc.guided_session import run_interactive
+
+            try:
+                result = prepare_brief_start(
+                    Path(args.root),
+                    brief=Path(args.brief),
+                    agent=selected_agent,
+                    model=selected_model,
+                    swarm=args.swarm,
+                    actor=args.actor,
+                )
+                if args.json:
+                    print(json.dumps(result.snapshot(), sort_keys=True))
+                    return 0
+                print(render_brief_start(result, lang=language))
+                enter_wizard = (
+                    not args.prepare_only
+                    and not args.no_wizard
+                    and sys.stdin.isatty()
+                    and sys.stdout.isatty()
+                )
+                if enter_wizard:
+                    runtime_label = result.runtime_name
+                    if result.runtime_model:
+                        runtime_label += f" · {result.runtime_model}"
+                    else:
+                        runtime_label += " · configured model"
+                    print()
+                    print(t("wizard.start_continuous", lang=language))
+                    run_interactive(
+                        Path(result.workspace_root),
+                        swarm=result.swarm_id,
+                        work=result.work_id,
+                        initial_runtime=ExecutorRecoveryChoice(
+                            agent=result.runtime_id,
+                            model=result.runtime_model,
+                            label=runtime_label,
+                        ),
+                        lang=language,
+                    )
+                return 0
+            except (OSError, StartFlowError, ValueError, PermissionError) as error:
+                print(safe_text(str(error), max_chars=1024), file=sys.stderr)
+                return 2
         interactive_recovery = (
             not args.json and not args.ui_file and not args.prepare_only and sys.stdin.isatty() and sys.stderr.isatty()
         )

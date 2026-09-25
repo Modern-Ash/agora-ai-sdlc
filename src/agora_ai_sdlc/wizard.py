@@ -413,9 +413,7 @@ def build_wizard_view(root: Path, decision: GuidedDecision) -> WizardView:
         current = _step(decision, phase)
     step_index = steps.index(current)
     phase_steps_complete = (
-        phase == "inception"
-        and decision.ready_for_human_approval
-        and not _has_open_technical_obligations(decision)
+        phase == "inception" and decision.ready_for_human_approval and not _has_open_technical_obligations(decision)
     )
 
     facts = []

@@ -268,6 +268,28 @@ def test_dirty_issue_workspace_is_reused_on_second_start(tmp_path):
     assert second == first
 
 
+def test_start_preflight_resolves_completed_default_swarm_to_issue_swarm(tmp_path, monkeypatch):
+    monkeypatch.setenv("AGORA_HOME", str(tmp_path / "home"))
+    project = tmp_path / "project"
+    project.mkdir()
+    _repo(project)
+
+    ensure_start_ready(project, _runtime("codex"))
+    workspace = AgoraWorkspace(cwd=project)
+    swarm_file = Path(workspace.show_swarm("delivery").path) / "SWARM.md"
+    swarm_file.write_text(
+        swarm_file.read_text(encoding="utf-8").replace('status: "ready"', 'status: "completed"', 1),
+        encoding="utf-8",
+    )
+
+    result = ensure_start_ready(project, _runtime("codex"), issue=15)
+
+    assert result.swarm_id == "issue-15-delivery"
+    assert "swarm.resolved:delivery->issue-15-delivery" in result.actions
+    assert workspace.show_swarm("delivery").status == "completed"
+    assert workspace.show_swarm("issue-15-delivery").status == "ready"
+
+
 def test_non_git_directory_fails_with_actionable_message(tmp_path):
     with pytest.raises(StartPreparationError, match="not inside a Git work tree"):
         isolate_dirty_work(tmp_path, 14)

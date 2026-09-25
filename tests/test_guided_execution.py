@@ -222,7 +222,7 @@ def test_construction_prompt_requires_observable_governed_progress(monkeypatch, 
     assert "actual product source files and executable" in prompt
     assert "Do NOT run Agora/Core mutation commands" in prompt
     assert "Agora Flow host owns registration" in prompt
-    assert "Construction phase guidance" in prompt
+    assert "Agora Flow supplies the required Construction guidance directly in this prompt" in prompt
 
     task = tmp_path / ".agora" / "ai-sdlc" / "construction" / "issue-26" / "CONSTRUCTION-TASK.md"
     task.parent.mkdir(parents=True)

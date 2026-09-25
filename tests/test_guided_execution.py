@@ -5,7 +5,12 @@ import pytest
 
 from agora_ai_sdlc.executor_launch import ExecutorLaunchError
 from agora_ai_sdlc.guided import GuidedDecision
-from agora_ai_sdlc.guided_execution import _prompt, _start_session_with_heartbeat, execute_guided_preparation
+from agora_ai_sdlc.guided_execution import (
+    _construction_relevant_changes,
+    _prompt,
+    _start_session_with_heartbeat,
+    execute_guided_preparation,
+)
 
 
 def decision() -> GuidedDecision:
@@ -222,6 +227,8 @@ def test_construction_prompt_requires_observable_governed_progress(monkeypatch, 
     assert "actual product source files and executable" in prompt
     assert "Do NOT run Agora/Core mutation commands" in prompt
     assert "Agora Flow host owns registration" in prompt
+    assert "Success checklist before exiting" in prompt
+    assert "never exit successfully after inspection-only or no-op work" in prompt
     assert "Agora Flow supplies the required Construction guidance directly in this prompt" in prompt
 
     task = tmp_path / ".agora" / "ai-sdlc" / "construction" / "issue-26" / "CONSTRUCTION-TASK.md"
@@ -302,3 +309,112 @@ def test_guided_executor_refuses_phase_mismatch_before_runtime(monkeypatch, tmp_
 
     with pytest.raises(ExecutorLaunchError, match="phase changed before launch"):
         execute_guided_preparation(tmp_path, decision(), runtime_id="claude")
+
+
+def test_construction_relevant_changes_ignore_docs_but_keep_code_tests_and_build_files():
+    assert _construction_relevant_changes(
+        (
+            "README.md",
+            "docs/notes.md",
+            "src/discount.ts",
+            "tests/discount.test.ts",
+            "package.json",
+        )
+    ) == (
+        "src/discount.ts",
+        "tests/discount.test.ts",
+        "package.json",
+    )
+
+
+def test_guided_construction_executor_fails_closed_on_successful_noop(monkeypatch, tmp_path):
+    current = GuidedDecision(
+        swarm="delivery",
+        work="issue-26",
+        title="Deliver issue",
+        method="ai-sdlc",
+        actor="project:ai-codex",
+        role="developer",
+        state="construction",
+        target="operations",
+        gate="construction-verified",
+        blockers=("unsatisfied=[source-issue]", "missing-evidence-types=[test-suite]"),
+        messages=("Repair failed verification.",),
+        missing_artifacts=(),
+        missing_evidence=("test-suite",),
+        missing_approvals=(),
+        unsatisfied_criteria=("source-issue",),
+        git_issues=(),
+        clarification_issues=(),
+        criterion_statuses=(("source-issue", ("elaborated", "designed", "built")),),
+        developer_actor="project:ai-codex",
+        developer_actor_kind="ai-agent",
+    )
+
+    runtime = SimpleNamespace(
+        id="claude",
+        name="Claude Code",
+        installed=True,
+        responsive=True,
+        executable="/usr/bin/claude",
+        command="claude",
+        version="1.0",
+    )
+    monkeypatch.setattr("agora_ai_sdlc.guided_execution._runtime", lambda *args, **kwargs: runtime)
+    monkeypatch.setattr("agora_ai_sdlc.guided_execution.prepare_construction_scaffold", lambda *args, **kwargs: None)
+    monkeypatch.setattr("agora_ai_sdlc.guided_execution.inspect_next", lambda *args, **kwargs: current)
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_execution.build_execution_bundle",
+        lambda *args, **kwargs: SimpleNamespace(
+            markdown_path=None,
+            swarm="delivery",
+            work="issue-26",
+            stage="construction",
+        ),
+    )
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_execution.select_execution_context",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("Laya unavailable in test")),
+    )
+    monkeypatch.setattr("agora_ai_sdlc.guided_execution._runner", lambda *args, **kwargs: "claude -p test")
+    monkeypatch.setattr("agora_ai_sdlc.guided_execution.load_answers", lambda *args, **kwargs: {})
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_execution.persisted_verification_diagnostic",
+        lambda *args, **kwargs: "npm test: failed exit=1 diagnostic=expected 90 but got 100",
+    )
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_execution.project_file_snapshot",
+        lambda root: {"src/discount.ts": "same"},
+    )
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_execution.reconcile_construction_execution",
+        lambda *args, **kwargs: SimpleNamespace(
+            registered_artifacts=(),
+            criterion_stages=(),
+            verification_passed=False,
+        ),
+    )
+
+    class Workspace:
+        def __init__(self, cwd):
+            self.cwd = cwd
+
+        def list_sessions(self):
+            return []
+
+        def start_session(self, data):
+            return SimpleNamespace(
+                id=data.id,
+                status="completed",
+                path=str(tmp_path / ".agora" / "sessions" / data.id),
+            )
+
+    with pytest.raises(ExecutorLaunchError, match="produced no observable source/test/build-config repair") as captured:
+        execute_guided_preparation(
+            tmp_path,
+            current,
+            runtime_id="claude",
+            workspace_factory=Workspace,
+        )
+
+    assert "expected 90 but got 100" in str(captured.value)

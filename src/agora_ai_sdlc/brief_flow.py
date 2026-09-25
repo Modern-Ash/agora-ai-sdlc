@@ -12,7 +12,10 @@ from agora.workspace import AgoraWorkspace
 from agora_ai_sdlc.deterministic_clarification import record_zero_question_clarification
 from agora_ai_sdlc.deterministic_inception import build_deterministic_inception
 from agora_ai_sdlc.inception_handoff import write_inception_handoff
-from agora_ai_sdlc.inception_materialization import materialize_deterministic_inception
+from agora_ai_sdlc.inception_materialization import (
+    materialize_deterministic_inception,
+    materialize_deterministic_inception_outputs,
+)
 from agora_ai_sdlc.local_delivery import capture_local_baseline
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
 from agora_ai_sdlc.start_flow import StartFlowError, _select_runtime
@@ -193,8 +196,18 @@ def prepare_brief_start(
         issue=deterministic.issue,
         pathway="new-product",
     )
+    deterministic_output_actions: tuple[str, ...] = ()
     clarification_actions: tuple[str, ...] = ()
     if not deterministic.semantic_gaps:
+        deterministic_output_actions = materialize_deterministic_inception_outputs(
+            root,
+            workspace=workspace,
+            swarm_id=resolved_swarm,
+            work_id=work_record.id,
+            actor_id=materialized.actor_id,
+            intent_path=intent.path,
+            deterministic_output=deterministic.output,
+        )
         clarification = record_zero_question_clarification(
             workspace=workspace,
             swarm_id=resolved_swarm,
@@ -225,6 +238,7 @@ def prepare_brief_start(
         output_path=str(output_path),
         preflight_actions=tuple(prepared.actions)
         + tuple(getattr(materialized, "actions", ()) or ())
+        + deterministic_output_actions
         + clarification_actions,
     )
 

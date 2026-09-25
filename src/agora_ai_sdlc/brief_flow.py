@@ -248,7 +248,7 @@ def render_brief_start(result: BriefStartResult, *, lang: str = "en") -> str:
     lines = [
         "Agora Flow | Brief",
         "",
-        f"{'Brief' if es else 'Brief'}: {result.source_title}",
+        f"Brief: {result.source_title}",
         f"✓ {'Fuente' if es else 'Source'}: {result.source_ref}",
         f"✓ {'Work gobernado' if es else 'Governed Work'}: {result.swarm_id}/{result.work_id}",
         f"✓ {'IA seleccionada' if es else 'Selected AI'}: {result.runtime_name}",
@@ -257,7 +257,7 @@ def render_brief_start(result: BriefStartResult, *, lang: str = "en") -> str:
         "",
         "INCEPTION",
         f"✓ {'Draft determinístico' if es else 'Deterministic draft'}: {result.deterministic_inception_path}",
-        f"✓ {'Handoff' if es else 'Handoff'}: {result.handoff_path}",
+        f"✓ Handoff: {result.handoff_path}",
         "",
         (
             "Revisá y aprobá la propuesta de Inception; después Agora Flow continuará con Construction."

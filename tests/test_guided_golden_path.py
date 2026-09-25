@@ -139,11 +139,16 @@ def test_single_aisdlc_flow_reaches_completed_without_side_commands_or_loops(mon
     monkeypatch.setattr("agora_ai_sdlc.guided_session.advise_workflow", advice)
     monkeypatch.setattr("agora_ai_sdlc.guided_session.execute_guided_preparation", execute)
 
+    def answer(prompt: str) -> str:
+        if "Respuesta" in prompt:
+            return "No hay ambigüedad material; usar el criterio y alcance definidos en el Work."
+        return ""
+
     result = run_interactive(
         root,
         swarm="delivery",
         work="feature",
-        input_fn=lambda prompt: "",
+        input_fn=answer,
         output_fn=outputs.append,
         lang="es",
     )

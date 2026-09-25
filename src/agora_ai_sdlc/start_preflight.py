@@ -452,7 +452,14 @@ def _ensure_project_selection(root: Path, actions: list[str]) -> None:
         actions.append("project.flavor-selected")
 
 
-def _ensure_metadata(root: Path, runtime: RuntimeDiscovery, actions: list[str]) -> None:
+def _ensure_metadata(
+    root: Path,
+    runtime: RuntimeDiscovery,
+    actions: list[str],
+    *,
+    integrations: tuple[str, ...] = ("github",),
+    delivery_target: str = "pull-request",
+) -> None:
     target = root / "ai-sdlc" / "project.yaml"
     if target.is_file():
         return
@@ -463,7 +470,7 @@ def _ensure_metadata(root: Path, runtime: RuntimeDiscovery, actions: list[str]) 
         "language": "unknown",
         "framework": None,
         "pathway": "brownfield",
-        "integrations": ["github"],
+        "integrations": list(integrations),
         "profile": DEFAULT_PROFILE,
         "depth": adoption_profiles()[DEFAULT_PROFILE],
         "runtimes": [
@@ -476,12 +483,19 @@ def _ensure_metadata(root: Path, runtime: RuntimeDiscovery, actions: list[str]) 
         ],
         "role_execution": {"developer": runtime.id},
         "method": {"id": METHOD_ID, "version": METHOD_VERSION},
-        "delivery_target": {
-            "type": "pull-request",
-            "require_ci": True,
-            "require_independent_review": True,
-            "merge_authority": "human",
-        },
+        "delivery_target": (
+            {
+                "type": "pull-request",
+                "require_ci": True,
+                "require_independent_review": True,
+                "merge_authority": "human",
+            }
+            if delivery_target == "pull-request"
+            else {
+                "type": delivery_target,
+                "merge_authority": "human",
+            }
+        ),
     }
     target.write_text(yaml.safe_dump(payload, sort_keys=False, allow_unicode=True), encoding="utf-8")
     actions.append("metadata.created")
@@ -557,7 +571,7 @@ def resolve_start_swarm(
     root: Path,
     runtime_actor: str,
     requested_swarm: str,
-    issue: int,
+    work_key: str,
     actions: list[str],
 ) -> str:
     """Resolve a ready/running swarm for one Start invocation without mutating terminal history."""
@@ -576,7 +590,7 @@ def resolve_start_swarm(
             f"Swarm {requested_swarm!r} is {swarm.status!r}; Start will not silently replace an explicitly selected swarm."
         )
 
-    resolved = f"issue-{issue}-delivery"
+    resolved = f"{work_key}-delivery"
     try:
         candidate = workspace.show_swarm(resolved)
     except FileNotFoundError:
@@ -598,11 +612,17 @@ def ensure_start_ready(
     *,
     swarm_id: str = "delivery",
     issue: int | None = None,
+    work_key: str | None = None,
+    require_git: bool = True,
+    integrations: tuple[str, ...] = ("github",),
+    delivery_target: str = "pull-request",
     workspace_factory=AgoraWorkspace,
 ) -> StartPreparationResult:
     """Prepare the minimum safe AI-SDLC project state required by Start."""
 
-    root = repository_root(root)
+    root = repository_root(root) if require_git else root.expanduser().resolve()
+    if not require_git:
+        root.mkdir(parents=True, exist_ok=True)
     actions: list[str] = []
     project_file = root / ".agora" / "project.md"
     workspace = workspace_factory(cwd=root)
@@ -632,12 +652,15 @@ def ensure_start_ready(
         actions.append("pack-lock.refreshed")
     _ensure_skill(root, actions)
 
-    _ensure_github_adapter(workspace, root, actions)
-    _ensure_repository_adapter(workspace, root, actions)
-    _ensure_github_pr_adapter(workspace, root, actions)
+    if "github" in integrations:
+        _ensure_github_adapter(workspace, root, actions)
+    if delivery_target == "pull-request":
+        _ensure_repository_adapter(workspace, root, actions)
+        _ensure_github_pr_adapter(workspace, root, actions)
 
     runtime_actor = _ensure_actors(workspace, runtime, actions)
-    if issue is None:
+    resolved_key = work_key or (f"issue-{issue}" if issue is not None else None)
+    if resolved_key is None:
         _ensure_delivery_swarm(workspace, root, runtime_actor, swarm_id, actions)
         resolved_swarm = swarm_id
     else:
@@ -646,9 +669,15 @@ def ensure_start_ready(
             root,
             runtime_actor,
             swarm_id,
-            issue,
+            resolved_key,
             actions,
         )
-    _ensure_metadata(root, runtime, actions)
+    _ensure_metadata(
+        root,
+        runtime,
+        actions,
+        integrations=integrations,
+        delivery_target=delivery_target,
+    )
 
     return StartPreparationResult(root=root, actions=tuple(actions), swarm_id=resolved_swarm)

@@ -86,9 +86,7 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
         except OSError:
             construction_guidance = ""
         if construction_guidance:
-            parts.append(
-                "Host-supplied Construction phase guidance:\n" + construction_guidance[:8000]
-            )
+            parts.append("Host-supplied Construction phase guidance:\n" + construction_guidance[:8000])
         exact = []
         if decision.missing_artifacts:
             exact.append("missing artifacts=" + ", ".join(decision.missing_artifacts))

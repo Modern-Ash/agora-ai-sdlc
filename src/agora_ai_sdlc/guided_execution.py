@@ -30,7 +30,6 @@ from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
 from agora_ai_sdlc.verification import persisted_verification_diagnostic
 from agora_ai_sdlc.wizard import load_answers
 
-
 _CONSTRUCTION_SOURCE_SUFFIXES = {
     ".ts",
     ".tsx",

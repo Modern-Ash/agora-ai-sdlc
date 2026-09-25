@@ -8,6 +8,7 @@ from pathlib import Path
 from agora.model import StartSessionInput
 from agora.workspace import AgoraWorkspace
 
+from agora_ai_sdlc.construction_reconciliation import reconcile_construction_execution
 from agora_ai_sdlc.execution_bundle import build_execution_bundle, resolve_work_workspace
 from agora_ai_sdlc.executor_launch import (
     ExecutorLaunchError,
@@ -17,6 +18,8 @@ from agora_ai_sdlc.executor_launch import (
     _session_output,
     build_runtime_runner,
 )
+from agora_ai_sdlc.guided_execution import _construction_relevant_changes
+from agora_ai_sdlc.local_delivery import diff_project_file_snapshots, project_file_snapshot
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
 
 CONSTRUCTION_TIMEOUT_SECONDS = 900
@@ -108,8 +111,15 @@ def launch_construction_executor(
     runtime_id: str | None = None,
     model: str | None = None,
     workspace_factory=AgoraWorkspace,
+    decision=None,
 ) -> ConstructionExecutionResult:
-    """Launch or reuse one governed Construction session."""
+    """Launch one governed Construction session.
+
+    A previously completed session never short-circuits a launch: the Work is
+    still in Construction, so that session produced no accepted progress.
+    When ``decision`` is given, a successful exit without a relevant
+    source/test/build delta or governed progress fails closed.
+    """
 
     root = resolve_work_workspace(root.resolve(), work_id)
     bundle = build_execution_bundle(root, swarm=swarm_id, work=work_id, persist=True)
@@ -126,8 +136,6 @@ def launch_construction_executor(
     base_id = f"ai-sdlc-construction-{work_id}"
     sessions = _matching_sessions(workspace, root, base_id)
     latest = sessions[-1] if sessions else None
-    if latest is not None and latest.status == "completed":
-        return _result(latest, reused=True)
     if latest is not None and latest.status == "running":
         raise ExecutorLaunchError(f"Construction executor session {latest.id} is already running.")
 
@@ -136,6 +144,10 @@ def launch_construction_executor(
     if latest is not None and latest.status == "failed":
         session_id = f"{base_id}-retry-{len(sessions) + 1}"
         retry_of = latest.id
+    elif latest is not None and latest.status == "completed":
+        # Core only accepts retries of failed sessions; a completed session
+        # that left the Work in Construction is superseded by a fresh run.
+        session_id = f"{base_id}-rerun-{len(sessions) + 1}"
 
     fields = getattr(StartSessionInput, "__dataclass_fields__", {})
     kwargs = {
@@ -149,12 +161,15 @@ def launch_construction_executor(
     if "timeout_seconds" in fields:
         kwargs["timeout_seconds"] = CONSTRUCTION_TIMEOUT_SECONDS
     if "executor_id" in fields:
-        kwargs["executor_id"] = f"ai-{runtime.id}"
+        # Runtime choice is not an authority handoff; a synthetic ai-<runtime>
+        # id is rejected by Core when that actor is not registered.
+        kwargs["executor_id"] = actor_reference.removeprefix("project:")
     if "retry_of" in fields and retry_of is not None:
         kwargs["retry_of"] = retry_of
     if "runtime_version" in fields and runtime.version:
         kwargs["runtime_version"] = runtime.version
 
+    before_snapshot = project_file_snapshot(root) if decision is not None else {}
     try:
         completed = workspace.start_session(StartSessionInput(**kwargs))
     except (OSError, RuntimeError, ValueError) as error:
@@ -175,4 +190,20 @@ def launch_construction_executor(
         raise ExecutorLaunchError(
             f"Construction executor {runtime.name} ended with unexpected session status {completed.status!r}"
         )
+    if decision is not None:
+        try:
+            reconciliation = reconcile_construction_execution(root, decision, workspace_factory=workspace_factory)
+        except (OSError, RuntimeError, ValueError) as error:
+            raise ExecutorLaunchError(
+                f"Construction executor {runtime.name} completed, but reconciliation failed: {error}"
+            ) from error
+        changes = diff_project_file_snapshots(before_snapshot, project_file_snapshot(root))
+        governed = bool(
+            reconciliation.registered_artifacts or reconciliation.criterion_stages or reconciliation.verification_passed
+        )
+        if not _construction_relevant_changes(changes) and not governed:
+            raise ExecutorLaunchError(
+                f"Construction executor {runtime.name} exited successfully but produced no observable "
+                "source/test/build-config change and no governed Construction progress."
+            )
     return _result(completed, reused=False)

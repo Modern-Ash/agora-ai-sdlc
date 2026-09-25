@@ -69,6 +69,15 @@ def test_scaffold_materializes_governance_before_executor(tmp_path: Path):
     assert result.criterion_stages == ("designed",)
     assert Path(result.task_path).is_file()
     assert "actual product implementation" in Path(result.task_path).read_text(encoding="utf-8")
+    domain_path = (
+        tmp_path
+        / ".agora"
+        / "ai-sdlc"
+        / "construction"
+        / "percentage-discount-calculator"
+        / "DOMAIN-MODEL.md"
+    )
+    assert "deterministic-construction/v1" in domain_path.read_text(encoding="utf-8")
     assert workspace.work.criterion_statuses["source-issue"] == ["elaborated", "designed"]
 
 

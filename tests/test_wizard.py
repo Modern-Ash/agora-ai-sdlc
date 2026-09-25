@@ -78,6 +78,46 @@ def test_wizard_presents_progress_and_full_operational_facts(tmp_path):
     assert "Missing evidence: tests" in rendered
 
 
+def test_wizard_progress_header_makes_inception_step_visually_explicit(tmp_path):
+    view = build_wizard_view(
+        tmp_path,
+        decision(
+            clarification_issues=(),
+            missing_artifacts=("plan",),
+        ),
+    )
+
+    rendered = render_wizard(view, lang="es")
+
+    assert "Inception: [████████████░░░░░░░░░░░░░░░░] 3/7 · 43%" in rendered
+    assert "PASO ACTUAL: 03 · Plan Nivel 1" in rendered
+
+
+def test_wizard_progress_header_changes_when_the_current_step_advances(tmp_path):
+    plan_view = build_wizard_view(
+        tmp_path,
+        decision(
+            clarification_issues=(),
+            missing_artifacts=("plan",),
+        ),
+    )
+    stories_view = build_wizard_view(
+        tmp_path,
+        decision(
+            clarification_issues=(),
+            missing_artifacts=("user-stories",),
+        ),
+    )
+
+    plan_rendered = render_wizard(plan_view, lang="en")
+    stories_rendered = render_wizard(stories_view, lang="en")
+
+    assert "CURRENT STEP: 03 · Level 1 Plan" in plan_rendered
+    assert "Inception: [████████████████░░░░░░░░░░░░] 4/7 · 57%" in stories_rendered
+    assert "CURRENT STEP: 04 · Stories" in stories_rendered
+    assert plan_rendered != stories_rendered
+
+
 def test_wizard_spanish_labels_do_not_hide_underlying_facts(tmp_path):
     view = build_wizard_view(tmp_path, decision(clarification_issues=(), missing_artifacts=("architecture",)))
     rendered = render_wizard(view, lang="es")

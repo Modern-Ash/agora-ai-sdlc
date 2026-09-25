@@ -164,6 +164,16 @@ def _current_branch(root: Path) -> str | None:
     return value or None
 
 
+def infer_work_from_current_branch(root: Path) -> str | None:
+    """Infer an AI-SDLC Work id from the canonical Work branch name."""
+
+    current = _current_branch(root)
+    if not current or not current.startswith("ai-sdlc/"):
+        return None
+    work = current.removeprefix("ai-sdlc/").strip()
+    return work or None
+
+
 def _next_criterion_stage(
     workspace: AgoraWorkspace,
     swarm: str,
@@ -206,14 +216,24 @@ def inspect_next(
     if work is not None:
         tasks = [item for item in tasks if item.work_id == work]
     else:
-        current = _current_branch(root)
-        if current:
-            records = {(item.swarm_id, item.id): item for item in workspace.list_work(swarm_id=swarm)}
-            branch_tasks = [
-                item for item in tasks if getattr(records.get((item.swarm_id, item.work_id)), "branch", None) == current
-            ]
-            if branch_tasks:
-                tasks = branch_tasks
+        inferred_work = infer_work_from_current_branch(root)
+        if inferred_work is not None:
+            matching_work = [item for item in tasks if item.work_id == inferred_work]
+            if matching_work:
+                tasks = matching_work
+            else:
+                return None
+        else:
+            current = _current_branch(root)
+            if current:
+                records = {(item.swarm_id, item.id): item for item in workspace.list_work(swarm_id=swarm)}
+                branch_tasks = [
+                    item
+                    for item in tasks
+                    if getattr(records.get((item.swarm_id, item.work_id)), "branch", None) == current
+                ]
+                if branch_tasks:
+                    tasks = branch_tasks
     if not tasks:
         return None
 

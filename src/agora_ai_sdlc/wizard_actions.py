@@ -43,11 +43,7 @@ def next_in_session_action(decision: GuidedDecision, *, root: Path | None = None
         and decision.developer_actor
         and decision.developer_actor_kind == "ai-agent"
         and set(decision.missing_evidence).issubset({"deployment"})
-        and not (
-            decision.missing_artifacts
-            or decision.clarification_issues
-            or decision.git_issues
-        )
+        and not (decision.missing_artifacts or decision.clarification_issues or decision.git_issues)
         and pull_request_delivery_enabled(root)
     ):
         return "submit-pr"

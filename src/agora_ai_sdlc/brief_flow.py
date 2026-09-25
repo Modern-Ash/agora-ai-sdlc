@@ -52,6 +52,32 @@ def _slug(value: str) -> str:
     return slug or "brief"
 
 
+def _ensure_project_agent_instructions(root: Path) -> Path:
+    """Install minimal provider-neutral project guidance without overwriting user instructions."""
+
+    path = root / "AGENTS.md"
+    if path.exists():
+        return path
+    path.write_text(
+        """<!-- agora-ai-sdlc:generated-agent-instructions/v1 -->
+
+# Agora Flow project instructions
+
+This workspace is governed by Agora Flow.
+
+- Treat the Intent Brief and `.agora/` contracts as the authoritative delivery context.
+- During Construction, read `.agora/ai-sdlc/construction/<work>/CONSTRUCTION-TASK.md`.
+- Persist actual product source files and executable automated tests outside `.agora/`.
+- For a new product, create the minimal idiomatic build/test configuration needed to execute the tests.
+- Do not finish an implementation task with explanation-only output.
+- Do not mutate Agora Core lifecycle state, approvals, criteria or evidence from the coding agent.
+- Git is not required when the configured delivery target is `local-artifacts`.
+""",
+        encoding="utf-8",
+    )
+    return path
+
+
 def _brief_payload(path: Path) -> dict:
     text = path.read_text(encoding="utf-8")
     title = ""
@@ -112,6 +138,7 @@ def prepare_brief_start(
         raise StartFlowError(f"Intent Brief does not exist: {brief}")
 
     payload = _brief_payload(brief)
+    _ensure_project_agent_instructions(root)
     title = str(payload["title"])
     work_id = _slug(title)
     intent_id = work_id

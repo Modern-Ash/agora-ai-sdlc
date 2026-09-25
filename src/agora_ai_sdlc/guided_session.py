@@ -237,6 +237,7 @@ def _confirm_current_decision(
     decision: GuidedDecision,
     *,
     selected_runtime: ExecutorRecoveryChoice | None,
+    runtime_relevant: bool = True,
     input_fn: Callable[[str], str],
     output_fn: Callable[[str], None],
     lang: str,
@@ -246,7 +247,7 @@ def _confirm_current_decision(
 
     while True:
         output_fn("")
-        if selected_runtime is not None:
+        if selected_runtime is not None and runtime_relevant:
             output_fn(t("wizard.actions_selected", lang=lang, runtime=selected_runtime.label))
         elif retry:
             output_fn(t("wizard.actions_retry", lang=lang))
@@ -392,6 +393,7 @@ def run_interactive(
             root,
             decision,
             selected_runtime=selected_runtime,
+            runtime_relevant=advice.action == "prepare",
             input_fn=input_fn,
             output_fn=output_fn,
             lang=lang,

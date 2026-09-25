@@ -12,7 +12,10 @@ from threading import Event, Thread
 from agora.model import StartSessionInput
 from agora.workspace import AgoraWorkspace
 
-from agora_ai_sdlc.construction_reconciliation import reconcile_construction_execution
+from agora_ai_sdlc.construction_reconciliation import (
+    prepare_construction_scaffold,
+    reconcile_construction_execution,
+)
 from agora_ai_sdlc.execution_bundle import build_execution_bundle
 from agora_ai_sdlc.execution_context import persist_execution_context, select_execution_context
 from agora_ai_sdlc.executor_launch import (
@@ -20,7 +23,7 @@ from agora_ai_sdlc.executor_launch import (
     _session_failure_diagnostic,
     load_executor_adapters,
 )
-from agora_ai_sdlc.guided import GuidedDecision
+from agora_ai_sdlc.guided import GuidedDecision, inspect_next
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
 from agora_ai_sdlc.wizard import load_answers
@@ -80,24 +83,7 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
             exact.append("missing evidence=" + ", ".join(decision.missing_evidence))
         if decision.unsatisfied_criteria:
             exact.append("unsatisfied criteria=" + ", ".join(decision.unsatisfied_criteria))
-        if exact:
-            artifact_root = root / ".agora" / "ai-sdlc" / "construction" / decision.work
-            parts.append(
-                "Construction completion contract: " + "; ".join(exact) + ". "
-                "Generate the actual product implementation and tests inside the governed project root. "
-                "When the corresponding obligations are in scope, write the Construction documents at these exact paths: "
-                f"{artifact_root / 'DOMAIN-MODEL.md'}, "
-                f"{artifact_root / 'LOGICAL-DESIGN.md'}, "
-                f"{artifact_root / 'IMPLEMENTATION-PLAN.md'}, "
-                f"{artifact_root / 'TEST-STRATEGY.md'}, "
-                f"{artifact_root / 'DEPLOYMENT-UNIT.md'}. "
-                "Each document must contain substantive, Work-specific content grounded in the approved Inception artifacts. "
-                "Do NOT run Agora/Core mutation commands such as artifact add, evidence add, approval add, "
-                "criterion-satisfy or lifecycle transition. Agora Flow host owns registration and criterion/evidence reconciliation "
-                "after this process exits. A successful CLI process alone is not progress: create observable files and product changes. "
-                "Never record human approval or perform a lifecycle transition. "
-                "If no governed obligation can be safely reduced, report failure instead of claiming completion."
-            )
+NaN
     answers = load_answers(root, decision.work)
     if answers:
         resolved = " | ".join(f"{key}={value}" for key, value in sorted(answers.items()))
@@ -216,6 +202,21 @@ def execute_guided_preparation(
 
     root = root.resolve()
     runtime = _runtime(root, runtime_id)
+
+    if decision.state == "construction":
+        prepare_construction_scaffold(
+            root,
+            decision,
+            workspace_factory=workspace_factory,
+        )
+        refreshed = inspect_next(
+            root,
+            swarm=decision.swarm,
+            work=decision.work,
+        )
+        if refreshed is not None and refreshed.state == "construction":
+            decision = refreshed
+
     bundle = build_execution_bundle(
         root,
         swarm=decision.swarm,

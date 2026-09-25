@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from agora_ai_sdlc import verification
 from agora_ai_sdlc.execution_bundle import ExecutionBundle
-from agora_ai_sdlc.verification import build_verification_report
+from agora_ai_sdlc.verification import build_verification_report, persisted_verification_failed
 
 
 def bundle(tmp_path: Path, commands=("pnpm test",)) -> ExecutionBundle:
@@ -199,3 +199,31 @@ def test_java_maven_build_is_run_before_tests(monkeypatch, tmp_path: Path):
         ("mvn", "test"),
     ]
     assert report.all_executed_commands_passed is True
+
+
+def test_persisted_verification_failed_detects_failed_or_unrunnable_execution(tmp_path: Path):
+    target = tmp_path / ".agora" / "ai-sdlc" / "verification" / "issue-14" / "VERIFICATION.json"
+    target.parent.mkdir(parents=True)
+
+    target.write_text(
+        '{"executed": true, "commands": [{"status": "failed"}]}\n',
+        encoding="utf-8",
+    )
+    assert persisted_verification_failed(tmp_path, "issue-14") is True
+
+    target.write_text(
+        '{"executed": true, "commands": []}\n',
+        encoding="utf-8",
+    )
+    assert persisted_verification_failed(tmp_path, "issue-14") is True
+
+
+def test_persisted_verification_failed_is_false_after_success(tmp_path: Path):
+    target = tmp_path / ".agora" / "ai-sdlc" / "verification" / "issue-14" / "VERIFICATION.json"
+    target.parent.mkdir(parents=True)
+    target.write_text(
+        '{"executed": true, "commands": [{"status": "passed"}, {"status": "passed"}]}\n',
+        encoding="utf-8",
+    )
+
+    assert persisted_verification_failed(tmp_path, "issue-14") is False

@@ -412,6 +412,11 @@ def build_wizard_view(root: Path, decision: GuidedDecision) -> WizardView:
     else:
         current = _step(decision, phase)
     step_index = steps.index(current)
+    phase_steps_complete = (
+        phase == "inception"
+        and decision.ready_for_human_approval
+        and not _has_open_technical_obligations(decision)
+    )
 
     facts = []
     if decision.title:
@@ -474,8 +479,8 @@ def build_wizard_view(root: Path, decision: GuidedDecision) -> WizardView:
         current_step=current,
         completed_phases=PHASE_ORDER[:phase_index],
         upcoming_phases=PHASE_ORDER[phase_index + 1 :],
-        completed_steps=steps[:step_index],
-        upcoming_steps=steps[step_index + 1 :],
+        completed_steps=steps if phase_steps_complete else steps[:step_index],
+        upcoming_steps=() if phase_steps_complete else steps[step_index + 1 :],
         facts=tuple(facts),
         gaps=tuple(gaps),
         questions=tuple(questions),
@@ -575,13 +580,17 @@ def _render_progress_header(view: WizardView, *, lang: str) -> list[str]:
     phase_name = t(f"wizard.phase.{view.phase}", lang=lang)
 
     steps = view.steps or PHASE_STEPS[view.phase]
-    step_number = len(view.completed_steps) + 1
     total_steps = len(steps)
+    phase_complete = len(view.completed_steps) >= total_steps
+    step_number = total_steps if phase_complete else len(view.completed_steps) + 1
     step_percent = round(step_number * 100 / total_steps)
     step_width = 28
     step_filled = min(step_width, round(step_width * step_number / total_steps))
     step_gauge = "█" * step_filled + "░" * (step_width - step_filled)
-    step_name = t(f"wizard.step.{view.current_step}", lang=lang)
+    if phase_complete and view.checkpoint_kind == "approval":
+        step_name = t("wizard.progress.awaiting_approval", lang=lang)
+    else:
+        step_name = t(f"wizard.step.{view.current_step}", lang=lang)
 
     kind_key = f"wizard.progress.kind.{view.checkpoint_kind or 'review'}"
     kind = t(kind_key, lang=lang)
@@ -614,7 +623,7 @@ def render_wizard(view: WizardView, *, lang: str = "en") -> str:
         "│",
         (
             f"│ {t('wizard.phase_label', lang=lang)}: {t(f'wizard.phase.{view.phase}', lang=lang)} "
-            f"· {len(view.completed_steps) + 1}/{len(view.steps or PHASE_STEPS[view.phase])}"
+            f"· {min(len(view.steps or PHASE_STEPS[view.phase]), len(view.completed_steps) + (0 if len(view.completed_steps) >= len(view.steps or PHASE_STEPS[view.phase]) else 1))}/{len(view.steps or PHASE_STEPS[view.phase])}"
         ),
         _render_step_bar(view, lang=lang),
         f"│ {t('wizard.method_guide', lang=lang)}: {t(f'wizard.help.{view.current_step}', lang=lang)}",

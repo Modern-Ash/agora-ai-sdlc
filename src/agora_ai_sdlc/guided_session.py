@@ -284,13 +284,14 @@ def run_interactive(
     *,
     swarm: str | None = None,
     work: str | None = None,
+    initial_runtime: ExecutorRecoveryChoice | None = None,
     input_fn: Callable[[str], str] = input,
     output_fn: Callable[[str], None] = print,
     lang: str = "en",
 ) -> GuidedSessionResult:
     """Run one continuous, transparent delivery wizard over authoritative Core state."""
 
-    selected_runtime: ExecutorRecoveryChoice | None = None
+    selected_runtime: ExecutorRecoveryChoice | None = initial_runtime
     failed_runtimes: set[tuple[str, str | None]] = set()
     previous_execution_fingerprint: tuple[object, ...] | None = None
     previous_execution_result_path: str | None = None

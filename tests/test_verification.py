@@ -169,3 +169,33 @@ def test_report_is_persisted_as_durable_bounded_json(monkeypatch, tmp_path: Path
     text = path.read_text(encoding="utf-8")
     assert "agora-ai-sdlc/verification-report/v1" in text
     assert "mechanically_satisfied" in text
+
+
+def test_java_maven_build_is_run_before_tests(monkeypatch, tmp_path: Path):
+    java_bundle = bundle(tmp_path, commands=("mvn test",))
+    java_bundle = ExecutionBundle(
+        **{
+            **java_bundle.__dict__,
+            "build_systems": ("Maven",),
+        }
+    )
+    (tmp_path / "mvnw").write_text("#!/bin/sh\n", encoding="utf-8")
+
+    monkeypatch.setattr(verification, "resolve_work_workspace", lambda root, work: tmp_path.resolve())
+    monkeypatch.setattr(verification, "build_execution_bundle", lambda *args, **kwargs: java_bundle)
+
+    commands = []
+
+    def fake_run(argv, **kwargs):
+        commands.append(tuple(argv))
+        return SimpleNamespace(returncode=0, stdout="ok", stderr="")
+
+    monkeypatch.setattr(verification.subprocess, "run", fake_run)
+
+    report = build_verification_report(tmp_path, work="issue-14", run=True, persist=False)
+
+    assert commands == [
+        ("./mvnw", "-q", "-DskipTests", "package"),
+        ("mvn", "test"),
+    ]
+    assert report.all_executed_commands_passed is True

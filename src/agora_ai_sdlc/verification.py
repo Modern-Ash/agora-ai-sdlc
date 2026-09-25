@@ -15,9 +15,17 @@ SCHEMA = "agora-ai-sdlc/verification-report/v1"
 MAX_OUTPUT_CHARS = 16000
 ALLOWED_COMMANDS = {
     ("mvn", "test"),
+    ("./mvnw", "test"),
+    ("mvn", "-q", "-DskipTests", "package"),
+    ("./mvnw", "-q", "-DskipTests", "package"),
+    ("gradle", "build"),
+    ("./gradlew", "build"),
     ("./gradlew", "test"),
+    ("pnpm", "build"),
     ("pnpm", "test"),
+    ("yarn", "build"),
     ("yarn", "test"),
+    ("npm", "run", "build"),
     ("npm", "test"),
     ("pytest",),
 }
@@ -148,6 +156,40 @@ def _coverage(bundle: ExecutionBundle) -> tuple[AcceptanceCoverage, ...]:
     return tuple(coverage)
 
 
+def _package_script(root: Path, name: str) -> bool:
+    package = root / "package.json"
+    if not package.is_file():
+        return False
+    try:
+        payload = json.loads(package.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    scripts = payload.get("scripts") if isinstance(payload, dict) else None
+    return isinstance(scripts, dict) and isinstance(scripts.get(name), str)
+
+
+def _build_commands(root: Path, bundle: ExecutionBundle) -> tuple[str, ...]:
+    systems = {str(item).casefold() for item in bundle.build_systems}
+    commands: list[str] = []
+
+    if any("maven" in item or item == "mvn" for item in systems):
+        executable = "./mvnw" if (root / "mvnw").is_file() else "mvn"
+        commands.append(f"{executable} -q -DskipTests package")
+
+    if any("gradle" in item for item in systems):
+        executable = "./gradlew" if (root / "gradlew").is_file() else "gradle"
+        commands.append(f"{executable} build")
+
+    if "pnpm" in systems and _package_script(root, "build"):
+        commands.append("pnpm build")
+    elif "yarn" in systems and _package_script(root, "build"):
+        commands.append("yarn build")
+    elif ("npm" in systems or "node" in systems) and _package_script(root, "build"):
+        commands.append("npm run build")
+
+    return tuple(commands)
+
+
 def _planned(command: str) -> VerificationCommand:
     argv = _argv(command)
     return VerificationCommand(
@@ -239,9 +281,8 @@ def build_verification_report(
 
     root = resolve_work_workspace(root, work)
     bundle = build_execution_bundle(root, swarm=swarm, work=work, persist=False)
-    commands = tuple(
-        _run(root, command, timeout_seconds) if run else _planned(command) for command in bundle.verification_commands
-    )
+    planned_commands = tuple(dict.fromkeys((*_build_commands(root, bundle), *bundle.verification_commands)))
+    commands = tuple(_run(root, command, timeout_seconds) if run else _planned(command) for command in planned_commands)
     executed_commands = tuple(command for command in commands if command.status != "planned")
     passed = all(command.status == "passed" for command in executed_commands) if run and executed_commands else None
 

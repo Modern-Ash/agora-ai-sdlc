@@ -158,6 +158,10 @@ def test_final_criterion_acceptance_is_human_and_never_uses_laya(monkeypatch):
 
 def test_verified_final_criterion_uses_assigned_ai_developer_without_laya(monkeypatch):
     monkeypatch.setattr(
+        "agora_ai_sdlc.workflow_advisor.pull_request_delivery_enabled",
+        lambda root: False,
+    )
+    monkeypatch.setattr(
         "agora_ai_sdlc.workflow_advisor.build_execution_bundle",
         lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("deployed stage must not call Laya")),
     )
@@ -215,3 +219,68 @@ def test_verified_final_criterion_with_human_developer_stays_at_review_boundary(
 
     assert advice.action == "review"
     assert advice.needs_runtime is False
+
+
+def test_construction_progresses_evidenced_criterion_stage_without_llm(monkeypatch):
+    monkeypatch.setattr(
+        "agora_ai_sdlc.workflow_advisor.build_execution_bundle",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("criterion progression must not call Laya")),
+    )
+
+    advice = advise_workflow(
+        Path("."),
+        decision(
+            state="construction",
+            target="operations",
+            gate="construction-verified",
+            blockers=("unsatisfied=[source-issue]",),
+            messages=("Complete criteria.",),
+            missing_artifacts=(),
+            missing_evidence=(),
+            missing_approvals=(),
+            unsatisfied_criteria=("source-issue",),
+            criterion_statuses=(("source-issue", ("elaborated", "designed")),),
+            developer_actor="project:ai-developer",
+            developer_actor_kind="ai-agent",
+            next_criterion_stage="built",
+        ),
+    )
+
+    assert advice.action == "advance-criterion"
+    assert advice.source == "deterministic"
+    assert advice.needs_runtime is False
+
+
+def test_pull_request_delivery_replaces_fake_deployment_prepare(monkeypatch):
+    monkeypatch.setattr(
+        "agora_ai_sdlc.workflow_advisor.pull_request_delivery_enabled",
+        lambda root: True,
+    )
+    monkeypatch.setattr(
+        "agora_ai_sdlc.workflow_advisor.build_execution_bundle",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("PR delivery must not call Laya")),
+    )
+
+    advice = advise_workflow(
+        Path("."),
+        decision(
+            actor="project:product-owner",
+            role="product-owner",
+            state="operations",
+            target="completed",
+            gate="completion",
+            blockers=("unsatisfied=[source-issue]", "missing-evidence-types=[deployment]"),
+            messages=("Deploy or publish.",),
+            missing_artifacts=(),
+            missing_evidence=("deployment",),
+            missing_approvals=(),
+            unsatisfied_criteria=("source-issue",),
+            criterion_statuses=(("source-issue", ("elaborated", "designed", "built", "verified")),),
+            developer_actor="project:ai-codex",
+            developer_actor_kind="ai-agent",
+        ),
+    )
+
+    assert advice.action == "submit-pr"
+    assert advice.needs_runtime is False
+    assert advice.source == "deterministic"

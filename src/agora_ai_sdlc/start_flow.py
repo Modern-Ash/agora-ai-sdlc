@@ -77,6 +77,7 @@ class StartFlowResult:
     pathway: str
     runtime_id: str
     runtime_name: str
+    runtime_model: str | None
     tool_run_id: str
     handoff_path: str
     skill_path: str
@@ -621,6 +622,7 @@ def prepare_start(
         pathway=pathway,
         runtime_id=runtime.id,
         runtime_name=runtime.name,
+        runtime_model=model,
         tool_run_id=run_id,
         handoff_path=handoff.path,
         skill_path=handoff.skill,

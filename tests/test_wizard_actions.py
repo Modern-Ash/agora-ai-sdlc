@@ -103,3 +103,44 @@ def test_verified_criterion_records_deployed_stage_with_assigned_ai_developer(tm
     assert calls[0].actor == "project:ai-developer"
     assert calls[0].criterion == "source-issue"
     assert calls[0].stage == "deployed"
+
+
+def test_construction_criterion_progression_records_next_stage_with_developer(tmp_path):
+    calls = []
+
+    class Workspace:
+        def satisfy_criterion(self, data, criterion_id, *, stage=None):
+            calls.append((data.actor_id, criterion_id, stage))
+
+    decision = GuidedDecision(
+        swarm="delivery",
+        work="issue-14",
+        title="Deliver issue",
+        method="ai-sdlc",
+        actor="project:ai-codex",
+        role="developer",
+        state="construction",
+        target="operations",
+        gate="construction-verified",
+        blockers=("unsatisfied=[source-issue]",),
+        messages=("Complete criteria.",),
+        missing_artifacts=(),
+        missing_evidence=(),
+        missing_approvals=(),
+        unsatisfied_criteria=("source-issue",),
+        git_issues=(),
+        clarification_issues=(),
+        ready_for_human_approval=False,
+        ready_to_transition=False,
+        criterion_statuses=(("source-issue", ("elaborated", "designed")),),
+        developer_actor="project:ai-codex",
+        developer_actor_kind="ai-agent",
+        next_criterion_stage="built",
+    )
+
+    assert next_in_session_action(decision) == "advance-criterion"
+    result = execute_in_session_action(tmp_path, decision, workspace_factory=lambda cwd: Workspace())
+
+    assert result.kind == "criterion_stage_advanced"
+    assert result.details == (("count", 1), ("stage", "built"), ("actor", "project:ai-codex"))
+    assert calls == [("project:ai-codex", "source-issue", "built")]

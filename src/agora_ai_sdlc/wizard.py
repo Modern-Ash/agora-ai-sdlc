@@ -13,10 +13,13 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from agora_ai_sdlc.context_graph import load_artifacts
+from agora_ai_sdlc.delivery_submission import pull_request_delivery_enabled
 from agora_ai_sdlc.guided import GuidedDecision
 from agora_ai_sdlc.i18n import t
 
 PHASE_ORDER = ("inception", "construction", "operations")
+PULL_REQUEST_STEPS = ("change-set", "pull-request", "review-delivery")
+
 PHASE_STEPS = {
     "inception": (
         "understand",
@@ -133,6 +136,8 @@ class WizardView:
     checkpoint_kind: str | None = None
     checkpoint_detail: str | None = None
     gate_ready: bool = False
+    steps: tuple[str, ...] = ()
+    delivery_target: str | None = None
 
     def snapshot(self) -> dict:
         return asdict(self)
@@ -383,8 +388,19 @@ def _visible_target(decision: GuidedDecision) -> str | None:
 def build_wizard_view(root: Path, decision: GuidedDecision) -> WizardView:
     phase = _phase(decision)
     phase_index = PHASE_ORDER.index(phase)
-    steps = PHASE_STEPS[phase]
-    current = _step(decision, phase)
+    pr_delivery = phase == "operations" and pull_request_delivery_enabled(root)
+    steps = PULL_REQUEST_STEPS if pr_delivery else PHASE_STEPS[phase]
+    if pr_delivery:
+        if decision.missing_artifacts:
+            current = "change-set"
+        elif "deployment" in decision.missing_evidence or any(
+            "verified" in stages and "deployed" not in stages for _, stages in decision.criterion_statuses
+        ):
+            current = "pull-request"
+        else:
+            current = "review-delivery"
+    else:
+        current = _step(decision, phase)
     step_index = steps.index(current)
 
     facts = []
@@ -401,6 +417,8 @@ def build_wizard_view(root: Path, decision: GuidedDecision) -> WizardView:
     if decision.role:
         owner = decision.role + (f" ({decision.actor})" if decision.actor else "")
         facts.append(f"Responsible: {owner}")
+    if pr_delivery:
+        facts.append("Delivery target: pull-request")
 
     gaps = []
     gaps.extend(f"Missing artifact: {item}" for item in decision.missing_artifacts)
@@ -459,6 +477,8 @@ def build_wizard_view(root: Path, decision: GuidedDecision) -> WizardView:
         checkpoint_kind=checkpoint_kind,
         checkpoint_detail=checkpoint_detail,
         gate_ready=gate_ready,
+        steps=steps,
+        delivery_target="pull-request" if pr_delivery else None,
     )
 
 
@@ -477,7 +497,8 @@ def _render_phase_bar(view: WizardView, *, lang: str) -> str:
 
 def _render_step_bar(view: WizardView, *, lang: str) -> str:
     values = []
-    for step in PHASE_STEPS[view.phase]:
+    steps = view.steps or PHASE_STEPS[view.phase]
+    for step in steps:
         if step in view.completed_steps:
             marker = "✓"
         elif step == view.current_step:
@@ -499,6 +520,7 @@ def _localized_dynamic(item: str, *, lang: str) -> str:
         "Next lifecycle target: ": "wizard.fact.target",
         "Decision gate: ": "wizard.fact.gate",
         "Responsible: ": "wizard.fact.responsible",
+        "Delivery target: ": "wizard.fact.delivery_target",
         "Missing artifact: ": "wizard.gap.artifact",
         "Unsatisfied criterion: ": "wizard.gap.criterion",
         "Missing evidence: ": "wizard.gap.evidence",
@@ -540,6 +562,15 @@ def _render_progress_header(view: WizardView, *, lang: str) -> list[str]:
     gauge = "█" * filled + "░" * (width - filled)
     phase_name = t(f"wizard.phase.{view.phase}", lang=lang)
 
+    steps = view.steps or PHASE_STEPS[view.phase]
+    step_number = len(view.completed_steps) + 1
+    total_steps = len(steps)
+    step_percent = round(step_number * 100 / total_steps)
+    step_width = 28
+    step_filled = min(step_width, round(step_width * step_number / total_steps))
+    step_gauge = "█" * step_filled + "░" * (step_width - step_filled)
+    step_name = t(f"wizard.step.{view.current_step}", lang=lang)
+
     kind_key = f"wizard.progress.kind.{view.checkpoint_kind or 'review'}"
     kind = t(kind_key, lang=lang)
     if kind == kind_key:
@@ -555,6 +586,8 @@ def _render_progress_header(view: WizardView, *, lang: str) -> list[str]:
             f"│ {t('wizard.progress.global', lang=lang)}: [{gauge}] "
             f"{t('wizard.progress.phase', lang=lang, current=phase_number, total=total_phases, phase=phase_name)}"
         ),
+        f"│ {phase_name}: [{step_gauge}] {step_number}/{total_steps} · {step_percent}%",
+        f"│ {t('wizard.current_step', lang=lang).upper()}: {step_number:02d} · {step_name}",
         f"│ {t('wizard.progress.checkpoint', lang=lang)} · {checkpoint}",
         f"│ {t('wizard.progress.gate', lang=lang)}: {gate} · {gate_status}",
     ]
@@ -569,7 +602,7 @@ def render_wizard(view: WizardView, *, lang: str = "en") -> str:
         "│",
         (
             f"│ {t('wizard.phase_label', lang=lang)}: {t(f'wizard.phase.{view.phase}', lang=lang)} "
-            f"· {len(view.completed_steps) + 1}/{len(PHASE_STEPS[view.phase])}"
+            f"· {len(view.completed_steps) + 1}/{len(view.steps or PHASE_STEPS[view.phase])}"
         ),
         _render_step_bar(view, lang=lang),
         f"│ {t('wizard.method_guide', lang=lang)}: {t(f'wizard.help.{view.current_step}', lang=lang)}",

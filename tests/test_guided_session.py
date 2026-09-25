@@ -394,3 +394,39 @@ def test_bare_interactive_entrypoint_handles_completed_branchless_work(monkeypat
     assert result.reason == "completed"
     assert any("Estado del ciclo en Core: completed" in line for line in outputs)
     assert any("Work completado; no quedan acciones gobernadas pendientes." in line for line in outputs)
+
+
+def test_initial_runtime_is_reused_without_prompting_for_provider(monkeypatch):
+    outputs = []
+    calls = {"inspect": 0, "execute": 0}
+    initial = SimpleNamespace(agent="codex", model=None, label="Codex · configured model")
+
+    def inspect(*args, **kwargs):
+        calls["inspect"] += 1
+        return decision() if calls["inspect"] == 1 else None
+
+    def execute(*args, **kwargs):
+        calls["execute"] += 1
+        assert kwargs["runtime_id"] == "codex"
+        assert kwargs["model"] is None
+        return SimpleNamespace(runtime="Codex", result_path="/tmp/RESULT.md")
+
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.inspect_next", inspect)
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.build_wizard_view", lambda *args, **kwargs: view())
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.advise_workflow", lambda *args, **kwargs: advice())
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_session._select_runtime",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("runtime prompt must not run")),
+    )
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.execute_guided_preparation", execute)
+
+    result = run_interactive(
+        Path("."),
+        initial_runtime=initial,
+        input_fn=lambda prompt: "",
+        output_fn=outputs.append,
+    )
+
+    assert result.reason == "clear"
+    assert calls == {"inspect": 2, "execute": 1}
+    assert any("Codex · configured model" in line for line in outputs)

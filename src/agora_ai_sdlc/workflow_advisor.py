@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from pathlib import Path
 
+from agora_ai_sdlc.delivery_submission import pull_request_delivery_enabled
 from agora_ai_sdlc.execution_bundle import build_execution_bundle
 from agora_ai_sdlc.execution_decisions import advise_execution
 from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice, recovery_choices
@@ -91,6 +92,27 @@ def advise_workflow(
     pending_deployment = tuple(
         item for item in decision.unsatisfied_criteria if "deployed" not in criterion_statuses.get(item, ())
     )
+
+    pull_request_delivery = (
+        decision.state == "operations"
+        and decision.target == "completed"
+        and decision.gate == "completion"
+        and bool(pending_deployment)
+        and all("verified" in criterion_statuses.get(item, ()) for item in pending_deployment)
+        and decision.developer_actor
+        and decision.developer_actor_kind == "ai-agent"
+        and set(decision.missing_evidence).issubset({"deployment"})
+        and not (decision.missing_artifacts or decision.clarification_issues or decision.git_issues)
+        and pull_request_delivery_enabled(root)
+    )
+    if pull_request_delivery:
+        return WorkflowAdvice(
+            action="submit-pr",
+            summary=(
+                "Publish the Work-owned change set as a governed Pull Request and record the PR as deployment evidence."
+            ),
+            needs_runtime=False,
+        )
     final_criterion_deployment = (
         decision.state == "operations"
         and decision.target == "completed"
@@ -134,6 +156,29 @@ def advise_workflow(
         return WorkflowAdvice(
             action="accept-criteria",
             summary="Explicitly accept the completed criteria as Product Owner, then re-read Core.",
+            needs_runtime=False,
+        )
+
+    criterion_progression = (
+        decision.state == "construction"
+        and bool(decision.unsatisfied_criteria)
+        and decision.next_criterion_stage in {"built", "verified"}
+        and decision.developer_actor
+        and decision.developer_actor_kind == "ai-agent"
+        and not (
+            decision.missing_artifacts
+            or decision.missing_evidence
+            or decision.clarification_issues
+            or decision.git_issues
+        )
+    )
+    if criterion_progression:
+        return WorkflowAdvice(
+            action="advance-criterion",
+            summary=(
+                f"Record the evidenced {decision.next_criterion_stage} criterion stage with the assigned developer, "
+                "then re-read Core."
+            ),
             needs_runtime=False,
         )
 

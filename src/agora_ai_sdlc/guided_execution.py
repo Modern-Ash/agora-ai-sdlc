@@ -87,8 +87,7 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
         if bundle_text:
             parts.append(
                 "Host-supplied bounded execution context. Treat its selected paths as the preferred reading set; "
-                "protected/uncertain paths are retained deliberately:\n"
-                + bundle_text[:12000]
+                "protected/uncertain paths are retained deliberately:\n" + bundle_text[:12000]
             )
         else:
             parts.append(

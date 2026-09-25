@@ -36,7 +36,7 @@ def _artifact(root: Path, workspace: AgoraWorkspace, actor: str, kind: str) -> N
     )
 
 
-def _evidence(workspace: AgoraWorkspace, actor: str, kind: str) -> None:
+def _evidence(workspace: AgoraWorkspace, actor: str, kind: str, artifact_ref: str) -> None:
     workspace.add_evidence(
         AddEvidenceInput(
             swarm_id="delivery",
@@ -44,7 +44,7 @@ def _evidence(workspace: AgoraWorkspace, actor: str, kind: str) -> None:
             actor_id=actor,
             type=kind,
             result="success",
-            artifact_refs=[],
+            artifact_refs=[artifact_ref],
         )
     )
 
@@ -87,14 +87,14 @@ def _materialize_phase(root: Path, state: str, *, workspace: AgoraWorkspace | No
             "deployment-unit",
         ):
             _artifact(root, workspace, "dev", kind)
-        _evidence(workspace, "dev", "test-suite")
+        _evidence(workspace, "dev", "test-suite", "repo://test-strategy.md")
         return
 
     if state == "operations":
         for kind in ("operational-readiness", "rollback-procedure"):
             _artifact(root, workspace, "dev", kind)
-        _evidence(workspace, "dev", "deployment")
-        _evidence(workspace, "dev", "security-scan")
+        _evidence(workspace, "dev", "deployment", "repo://operational-readiness.md")
+        _evidence(workspace, "dev", "security-scan", "repo://operational-readiness.md")
         return
 
     raise AssertionError(f"unexpected generative phase {state}")

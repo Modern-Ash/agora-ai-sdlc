@@ -224,6 +224,14 @@ def test_construction_prompt_requires_observable_governed_progress(monkeypatch, 
     assert "Agora Flow host owns registration" in prompt
     assert "Construction phase guidance" in prompt
 
+    verification = tmp_path / ".agora" / "ai-sdlc" / "verification" / "issue-26" / "VERIFICATION.json"
+    verification.parent.mkdir(parents=True)
+    verification.write_text("{}\n", encoding="utf-8")
+
+    retry_prompt = _prompt(tmp_path, current, "repo://EXECUTION_BUNDLE.md")
+    assert str(verification) in retry_prompt
+    assert "repair the concrete failed" in retry_prompt
+
 
 def test_guided_executor_refuses_scope_mismatch_before_runtime(monkeypatch, tmp_path):
     runtime = SimpleNamespace(

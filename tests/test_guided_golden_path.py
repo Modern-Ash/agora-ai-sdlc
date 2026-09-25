@@ -49,8 +49,8 @@ def _evidence(workspace: AgoraWorkspace, actor: str, kind: str) -> None:
     )
 
 
-def _materialize_phase(root: Path, state: str) -> None:
-    workspace = AgoraWorkspace(cwd=root)
+def _materialize_phase(root: Path, state: str, *, workspace: AgoraWorkspace | None = None) -> None:
+    workspace = workspace or AgoraWorkspace(cwd=root)
     if state == "inception":
         workspace.satisfy_criterion(
             WorkActorInput(swarm_id="delivery", work_id="feature", actor_id="po"),
@@ -135,7 +135,7 @@ def test_single_aisdlc_flow_reaches_completed_without_side_commands_or_loops(mon
 
     def execute(root_path, decision, **kwargs):
         prepare_states.append(decision.state)
-        _materialize_phase(root_path, decision.state)
+        _materialize_phase(root_path, decision.state, workspace=golden_life.ws)
         return SimpleNamespace(
             runtime="OpenCode",
             result_path=str(root_path / f"{decision.state}-RESULT.md"),

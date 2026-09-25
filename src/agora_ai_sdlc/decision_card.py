@@ -154,7 +154,16 @@ def build_decision_card(
     if getattr(advice, "escalation_required", False):
         risks.append(t("decision.risk.reasoning_escalated", lang=lang))
 
-    if advice.action in {"prepare", "verify", "advance-criterion", "submit-pr", "approve", "accept-criteria", "mark-deployed", "transition"}:
+    if advice.action in {
+        "prepare",
+        "verify",
+        "advance-criterion",
+        "submit-pr",
+        "approve",
+        "accept-criteria",
+        "mark-deployed",
+        "transition",
+    }:
         boundary = t("decision.return.reinspect", lang=lang)
     else:
         boundary = t("decision.return.human_validation", lang=lang)

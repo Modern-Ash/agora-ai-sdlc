@@ -83,7 +83,22 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
             exact.append("missing evidence=" + ", ".join(decision.missing_evidence))
         if decision.unsatisfied_criteria:
             exact.append("unsatisfied criteria=" + ", ".join(decision.unsatisfied_criteria))
-NaN
+        artifact_root = root / ".agora" / "ai-sdlc" / "construction" / decision.work
+        task_path = artifact_root / "CONSTRUCTION-TASK.md"
+        parts.append(
+            "Construction completion contract: " + ("; ".join(exact) if exact else "implementation pending") + ". "
+            f"Read and execute the concrete task at {task_path}. "
+            "Agora Flow has already materialized and registered the governance/design artifacts. "
+            "Your responsibility in this iteration is implementation only: create actual product source files and executable "
+            "automated tests outside .agora/, plus the minimal idiomatic build/test configuration needed to run them. "
+            "Do not merely describe code in the final response; persist the files in the governed project root. "
+            "Do NOT run Agora/Core mutation commands such as artifact add, evidence add, approval add, "
+            "criterion-satisfy or lifecycle transition. Agora Flow host owns registration and criterion/evidence reconciliation "
+            "after this process exits. A successful CLI process alone is not progress. "
+            "Never record human approval or perform a lifecycle transition. "
+            "If implementation cannot be safely produced from the approved contract, report failure instead of claiming completion."
+        )
+
     answers = load_answers(root, decision.work)
     if answers:
         resolved = " | ".join(f"{key}={value}" for key, value in sorted(answers.items()))

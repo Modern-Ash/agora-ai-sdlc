@@ -237,7 +237,14 @@ def test_construction_prompt_requires_observable_governed_progress(monkeypatch, 
     guidance.parent.mkdir(parents=True)
     guidance.write_text("# Construction\n\nImplement and verify bounded product changes.\n", encoding="utf-8")
 
-    retry_prompt = _prompt(tmp_path, current, "repo://EXECUTION_BUNDLE.md")
+    bundle = tmp_path / ".agora" / "ai-sdlc" / "execution" / "issue-26" / "EXECUTION_CONTEXT.md"
+    bundle.parent.mkdir(parents=True)
+    bundle.write_text("# Bounded Context\n\nUse src/discount.ts and tests/discount.test.ts.\n", encoding="utf-8")
+
+    retry_prompt = _prompt(tmp_path, current, str(bundle))
+    assert "Host-supplied bounded execution context" in retry_prompt
+    assert "Use src/discount.ts and tests/discount.test.ts" in retry_prompt
+    assert "do not discover hidden .agora files" in retry_prompt
     assert "Host-supplied Construction phase guidance" in retry_prompt
     assert "Implement and verify bounded product changes" in retry_prompt
     assert "Do not discover or glob .agora paths" in retry_prompt

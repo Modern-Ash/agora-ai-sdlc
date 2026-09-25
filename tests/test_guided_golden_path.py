@@ -112,11 +112,7 @@ def test_single_aisdlc_flow_reaches_completed_without_side_commands_or_loops(mon
     )
 
     def advice(root_path, decision):
-        technical_gap = bool(
-            decision.missing_artifacts
-            or decision.missing_evidence
-            or decision.clarification_issues
-        )
+        technical_gap = bool(decision.missing_artifacts or decision.missing_evidence or decision.clarification_issues)
         if technical_gap:
             actions.append("prepare")
             return WorkflowAdvice(

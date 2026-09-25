@@ -63,6 +63,20 @@ def next_in_session_action(decision: GuidedDecision) -> str:
         )
     ):
         return "accept-criteria"
+    if (
+        decision.state == "construction"
+        and decision.unsatisfied_criteria
+        and decision.next_criterion_stage in {"built", "verified"}
+        and decision.developer_actor
+        and decision.developer_actor_kind == "ai-agent"
+        and not (
+            decision.missing_artifacts
+            or decision.missing_evidence
+            or decision.clarification_issues
+            or decision.git_issues
+        )
+    ):
+        return "advance-criterion"
     if decision.missing_evidence and not (
         decision.missing_artifacts or decision.clarification_issues or decision.unsatisfied_criteria
     ):
@@ -110,6 +124,28 @@ def execute_in_session_action(
         return WizardActionResult("verification_ok")
 
     workspace = workspace_factory(cwd=root)
+
+    if action == "advance-criterion":
+        stage = decision.next_criterion_stage
+        actor = decision.developer_actor
+        if stage not in {"built", "verified"}:
+            raise ValueError("The current criterion stage is not eligible for automatic progression")
+        if not actor or decision.developer_actor_kind != "ai-agent":
+            raise ValueError("Criterion progression requires the assigned AI developer actor")
+        for criterion in decision.unsatisfied_criteria:
+            workspace.satisfy_criterion(
+                WorkActorInput(
+                    swarm_id=decision.swarm,
+                    work_id=decision.work,
+                    actor_id=actor,
+                ),
+                criterion,
+                stage=stage,
+            )
+        return WizardActionResult(
+            "criterion_stage_advanced",
+            (("count", len(decision.unsatisfied_criteria)), ("stage", stage), ("actor", actor)),
+        )
 
     if action == "mark-deployed":
         pending = tuple(

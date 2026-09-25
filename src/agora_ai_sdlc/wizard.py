@@ -129,6 +129,10 @@ class WizardView:
     brownfield: bool = False
     level_1_plan_preview: tuple[str, ...] = ()
     validation_checkpoint: str | None = None
+    gate: str | None = None
+    checkpoint_kind: str | None = None
+    checkpoint_detail: str | None = None
+    gate_ready: bool = False
 
     def snapshot(self) -> dict:
         return asdict(self)
@@ -241,6 +245,18 @@ def _validation_checkpoint(decision: GuidedDecision, phase: str, step: str) -> s
     if decision.ready_for_human_approval or decision.missing_approvals:
         return "approval-required"
     return f"{phase}:{step}"
+
+
+def _visible_checkpoint(decision: GuidedDecision, step: str) -> tuple[str, str | None, bool]:
+    if decision.missing_approvals:
+        return "approval", decision.missing_approvals[0], False
+    if decision.ready_to_transition:
+        return "transition", decision.target, True
+    if decision.clarification_issues:
+        return "clarification", None, False
+    if decision.missing_artifacts or decision.missing_evidence or decision.unsatisfied_criteria:
+        return "work", step, False
+    return "review", step, False
 
 
 def _semantic_gaps(root: Path, work: str) -> tuple[str, ...]:
@@ -416,6 +432,8 @@ def build_wizard_view(root: Path, decision: GuidedDecision) -> WizardView:
     if not decision.git_issues:
         evidence.append("Repository policy has no reported blocker.")
 
+    checkpoint_kind, checkpoint_detail, gate_ready = _visible_checkpoint(decision, current)
+
     human = []
     human.extend(f"Approval required from: {item}" for item in decision.missing_approvals)
     if decision.ready_for_human_approval and not _has_open_technical_obligations(decision):
@@ -437,6 +455,10 @@ def build_wizard_view(root: Path, decision: GuidedDecision) -> WizardView:
         brownfield=_brownfield(decision),
         level_1_plan_preview=_level_1_plan_preview(root, decision.work),
         validation_checkpoint=_validation_checkpoint(decision, phase, current),
+        gate=decision.gate,
+        checkpoint_kind=checkpoint_kind,
+        checkpoint_detail=checkpoint_detail,
+        gate_ready=gate_ready,
     )
 
 
@@ -510,9 +532,39 @@ def _localized_checkpoint(value: str, *, lang: str) -> str:
     )
 
 
+def _render_progress_header(view: WizardView, *, lang: str) -> list[str]:
+    phase_number = len(view.completed_phases) + 1
+    total_phases = len(PHASE_ORDER)
+    width = 10
+    filled = min(width, round(width * phase_number / total_phases))
+    gauge = "█" * filled + "░" * (width - filled)
+    phase_name = t(f"wizard.phase.{view.phase}", lang=lang)
+
+    kind_key = f"wizard.progress.kind.{view.checkpoint_kind or 'review'}"
+    kind = t(kind_key, lang=lang)
+    if kind == kind_key:
+        kind = (view.checkpoint_kind or "review").upper()
+    detail = view.checkpoint_detail
+    checkpoint = f"{kind} · {detail}" if detail else kind
+
+    gate_status = t("wizard.progress.ready" if view.gate_ready else "wizard.progress.pending", lang=lang)
+    gate = view.gate or "-"
+
+    return [
+        (
+            f"│ {t('wizard.progress.global', lang=lang)}: [{gauge}] "
+            f"{t('wizard.progress.phase', lang=lang, current=phase_number, total=total_phases, phase=phase_name)}"
+        ),
+        f"│ {t('wizard.progress.checkpoint', lang=lang)} · {checkpoint}",
+        f"│ {t('wizard.progress.gate', lang=lang)}: {gate} · {gate_status}",
+    ]
+
+
 def render_wizard(view: WizardView, *, lang: str = "en") -> str:
     lines = [
         "╭─ " + t("wizard.title", lang=lang),
+        *_render_progress_header(view, lang=lang),
+        "│",
         _render_phase_bar(view, lang=lang),
         "│",
         (

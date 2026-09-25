@@ -266,3 +266,35 @@ def test_pull_request_delivery_relabels_operations_steps(monkeypatch, tmp_path):
     assert "▶ Pull Request" in rendered
     assert "· Review" in rendered
     assert "Delivery target: pull-request" in rendered
+
+
+def test_inception_approval_checkpoint_shows_phase_complete(tmp_path):
+    view = build_wizard_view(
+        tmp_path,
+        decision(
+            clarification_issues=(),
+            missing_artifacts=(),
+            missing_evidence=(),
+            unsatisfied_criteria=(),
+            git_issues=(),
+            missing_approvals=("product-owner", "developer"),
+            ready_for_human_approval=True,
+            observed_artifacts=(
+                "intent",
+                "plan",
+                "user-stories",
+                "nfr",
+                "risk-register",
+                "measurement-criteria",
+                "unit-of-work",
+                "bolt-plan",
+            ),
+        ),
+    )
+
+    rendered = render_wizard(view, lang="es")
+
+    assert "Inception: [████████████████████████████] 7/7 · 100%" in rendered
+    assert "PASO ACTUAL: 07 · Esperando aprobación humana" in rendered
+    assert "✓ Bolts" in rendered
+    assert "CHECKPOINT · APROBACIÓN · product-owner" in rendered

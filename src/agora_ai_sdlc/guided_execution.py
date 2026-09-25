@@ -25,9 +25,50 @@ from agora_ai_sdlc.executor_launch import (
 )
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
+from agora_ai_sdlc.local_delivery import diff_project_file_snapshots, project_file_snapshot
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
 from agora_ai_sdlc.verification import persisted_verification_diagnostic
 from agora_ai_sdlc.wizard import load_answers
+
+
+_CONSTRUCTION_SOURCE_SUFFIXES = {
+    ".ts",
+    ".tsx",
+    ".js",
+    ".jsx",
+    ".mjs",
+    ".cjs",
+    ".py",
+    ".java",
+    ".kt",
+    ".go",
+    ".rs",
+}
+_CONSTRUCTION_BUILD_FILES = {
+    "package.json",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "pyproject.toml",
+    "requirements.txt",
+    "pom.xml",
+    "build.gradle",
+    "build.gradle.kts",
+    "settings.gradle",
+    "settings.gradle.kts",
+    "cargo.toml",
+    "go.mod",
+}
+
+
+def _construction_relevant_changes(paths: tuple[str, ...]) -> tuple[str, ...]:
+    values: list[str] = []
+    for path in paths:
+        candidate = Path(path)
+        name = candidate.name.casefold()
+        if candidate.suffix.casefold() in _CONSTRUCTION_SOURCE_SUFFIXES or name in _CONSTRUCTION_BUILD_FILES:
+            values.append(path)
+    return tuple(values)
 
 
 @dataclass(frozen=True)
@@ -142,8 +183,11 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
             "Do NOT run Agora/Core mutation commands such as artifact add, evidence add, approval add, "
             "criterion-satisfy or lifecycle transition. Agora Flow host owns registration and criterion/evidence reconciliation "
             "after this process exits. A successful CLI process alone is not progress. "
+            "Success checklist before exiting: persist a concrete source/test/build-config repair when verification is unresolved; "
+            "ensure executable automated tests exist; ensure the project exposes a deterministic build/test command; "
+            "never exit successfully after inspection-only or no-op work. "
             "Never record human approval or perform a lifecycle transition. "
-            "If implementation cannot be safely produced from the approved contract, report failure instead of claiming completion."
+            "If no safe repair can be persisted, report failure instead of claiming completion."
         )
 
     answers = load_answers(root, decision.work)
@@ -311,6 +355,8 @@ def execute_guided_preparation(
         lean = None
     prompt = _prompt(root, decision, str(lean_path) if lean_path is not None else bundle.markdown_path)
     runner = _runner(runtime, root, prompt, model)
+    repair_diagnostic = persisted_verification_diagnostic(root, decision.work) if decision.state == "construction" else None
+    before_snapshot = project_file_snapshot(root) if decision.state == "construction" else {}
     workspace = workspace_factory(cwd=root)
 
     safe_stage = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in (bundle.stage or "step"))
@@ -372,7 +418,7 @@ def execute_guided_preparation(
         )
     if decision.state == "construction":
         try:
-            reconcile_construction_execution(
+            reconciliation = reconcile_construction_execution(
                 root,
                 decision,
                 workspace_factory=workspace_factory,
@@ -381,6 +427,22 @@ def execute_guided_preparation(
             raise ExecutorLaunchError(
                 f"Guided executor {runtime.name} completed, but Construction reconciliation failed: {error}"
             ) from error
+
+        after_snapshot = project_file_snapshot(root)
+        changed_this_iteration = diff_project_file_snapshots(before_snapshot, after_snapshot)
+        relevant_changes = _construction_relevant_changes(changed_this_iteration)
+        governed_progress = bool(
+            reconciliation.registered_artifacts
+            or reconciliation.criterion_stages
+            or reconciliation.verification_passed
+        )
+        if not relevant_changes and not governed_progress:
+            diagnostic = repair_diagnostic or persisted_verification_diagnostic(root, decision.work)
+            detail = f" Deterministic verification diagnosis: {diagnostic}" if diagnostic else ""
+            raise ExecutorLaunchError(
+                f"Guided executor {runtime.name} exited successfully but produced no observable "
+                f"source/test/build-config repair and no governed Construction progress.{detail}"
+            )
 
     path = Path(result.path)
     return GuidedExecutionResult(

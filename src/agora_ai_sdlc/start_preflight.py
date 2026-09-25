@@ -334,6 +334,49 @@ def _ensure_github_adapter(workspace: AgoraWorkspace, root: Path, actions: list[
     actions.append("pack-lock.refreshed")
 
 
+def _ensure_github_pr_adapter(workspace: AgoraWorkspace, root: Path, actions: list[str]) -> None:
+    target = root / ".agora" / "tools" / "github-pull-requests"
+    if (target / "TOOL.md").is_file():
+        try:
+            contract = load_tool_contract(target)
+            if "create" in contract.operations:
+                return
+        except (OSError, ValueError):
+            pass
+
+    workspace.install_tool_adapter(
+        InstallToolAdapterInput(
+            adapter_id="github-pull-requests",
+            scope="project",
+        )
+    )
+    workspace.refresh_pack_lock(RefreshPackLockInput(scope="project"))
+    actions.append("github-pr-adapter.installed")
+    actions.append("pack-lock.refreshed")
+
+
+def _ensure_review_write_capability(workspace: AgoraWorkspace, root: Path, actions: list[str]) -> None:
+    role = root / ".agora" / "methods" / METHOD_ID / "roles" / "developer.md"
+    if not role.is_file():
+        return
+    content = role.read_text(encoding="utf-8")
+    if '"review.write"' in content:
+        return
+
+    source = asset_root("registry") / "method-versions" / METHOD_ID / METHOD_VERSION
+    packaged = source / "roles" / "developer.md"
+    if not packaged.is_file() or '"review.write"' not in packaged.read_text(encoding="utf-8"):
+        raise StartPreparationError("Packaged AI-SDLC Developer role cannot create Pull Requests")
+    workspace.install_method(
+        InstallMethodInput(
+            source=str(source),
+            scope="project",
+            force=True,
+        )
+    )
+    actions.append("method.developer-review-write-repaired")
+
+
 def _ensure_skill(root: Path, actions: list[str]) -> None:
     source = resource_root()
     destination = root / ".agora" / "skills" / "agora-ai-sdlc-guided"
@@ -514,12 +557,14 @@ def ensure_start_ready(
     pack_state_repaired = _repair_core_front_matter(root, actions)
     _ensure_project_selection(root, actions)
     _ensure_method(workspace, root, actions)
+    _ensure_review_write_capability(workspace, root, actions)
     if pack_state_repaired:
         workspace.refresh_pack_lock(RefreshPackLockInput(scope="project"))
         actions.append("pack-lock.refreshed")
     _ensure_skill(root, actions)
 
     _ensure_github_adapter(workspace, root, actions)
+    _ensure_github_pr_adapter(workspace, root, actions)
 
     runtime_actor = _ensure_actors(workspace, runtime, actions)
     _ensure_delivery_swarm(workspace, root, runtime_actor, swarm_id, actions)

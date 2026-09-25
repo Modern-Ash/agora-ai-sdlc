@@ -218,7 +218,7 @@ def submit_pull_request(
     paths = work_change_set(root, decision.work)
     commit_sha = _commit_if_needed(workspace, root, decision, actor, paths)
 
-    ahead = int((_git(root, "rev-list", "--count", f"{base}..HEAD").stdout.strip() or "0"))
+    ahead = int(_git(root, "rev-list", "--count", f"{base}..HEAD").stdout.strip() or "0")
     if ahead < 1:
         raise DeliverySubmissionError("There are no Work commits to submit as a Pull Request")
 

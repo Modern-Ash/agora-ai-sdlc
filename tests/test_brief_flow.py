@@ -3,9 +3,10 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import yaml
+from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.brief_flow import prepare_brief_start
-from agora_ai_sdlc.guided import GuidedDecision
+from agora_ai_sdlc.guided import GuidedDecision, inspect_next
 from agora_ai_sdlc.local_delivery import capture_local_baseline, publish_local_artifacts
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 
@@ -79,6 +80,36 @@ Calculate the final price after applying a percentage discount.
 
     baseline = json.loads(Path(result.baseline_path).read_text(encoding="utf-8"))
     assert "INTENT_BRIEF.md" in baseline["files"]
+
+    workspace = AgoraWorkspace(cwd=project)
+    artifact_kinds = {item.kind for item in workspace.list_work_artifacts(result.swarm_id, result.work_id)}
+    assert artifact_kinds == {
+        "intent",
+        "plan",
+        "requirements",
+        "user-stories",
+        "nfr",
+        "risk-register",
+        "measurement-criteria",
+        "unit-of-work",
+        "bolt-plan",
+    }
+    for filename in (
+        "PLAN.md",
+        "USER-STORIES.md",
+        "NFR.md",
+        "RISK-REGISTER.md",
+        "MEASUREMENT-CRITERIA.md",
+        "BOLT-PLAN.md",
+    ):
+        assert (Path(result.intent_path).parent / filename).is_file()
+
+    decision = inspect_next(project, swarm=result.swarm_id, work=result.work_id)
+    assert decision is not None
+    assert decision.state == "inception"
+    assert decision.missing_artifacts == ()
+    assert set(decision.missing_approvals) == {"product-owner", "developer"}
+    assert decision.ready_for_human_approval is True
 
 
 def test_local_delivery_copies_only_files_changed_after_baseline(tmp_path: Path):

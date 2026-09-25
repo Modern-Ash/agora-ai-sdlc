@@ -281,12 +281,8 @@ def build_verification_report(
 
     root = resolve_work_workspace(root, work)
     bundle = build_execution_bundle(root, swarm=swarm, work=work, persist=False)
-    planned_commands = tuple(
-        dict.fromkeys((*_build_commands(root, bundle), *bundle.verification_commands))
-    )
-    commands = tuple(
-        _run(root, command, timeout_seconds) if run else _planned(command) for command in planned_commands
-    )
+    planned_commands = tuple(dict.fromkeys((*_build_commands(root, bundle), *bundle.verification_commands)))
+    commands = tuple(_run(root, command, timeout_seconds) if run else _planned(command) for command in planned_commands)
     executed_commands = tuple(command for command in commands if command.status != "planned")
     passed = all(command.status == "passed" for command in executed_commands) if run and executed_commands else None
 

@@ -394,8 +394,7 @@ def build_wizard_view(root: Path, decision: GuidedDecision) -> WizardView:
         if decision.missing_artifacts:
             current = "change-set"
         elif "deployment" in decision.missing_evidence or any(
-            "verified" in stages and "deployed" not in stages
-            for _, stages in decision.criterion_statuses
+            "verified" in stages and "deployed" not in stages for _, stages in decision.criterion_statuses
         ):
             current = "pull-request"
         else:

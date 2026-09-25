@@ -12,6 +12,7 @@ from threading import Event, Thread
 from agora.model import StartSessionInput
 from agora.workspace import AgoraWorkspace
 
+from agora_ai_sdlc.construction_reconciliation import reconcile_construction_execution
 from agora_ai_sdlc.execution_bundle import build_execution_bundle
 from agora_ai_sdlc.execution_context import persist_execution_context, select_execution_context
 from agora_ai_sdlc.executor_launch import (
@@ -80,12 +81,20 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
         if decision.unsatisfied_criteria:
             exact.append("unsatisfied criteria=" + ", ".join(decision.unsatisfied_criteria))
         if exact:
+            artifact_root = root / ".agora" / "ai-sdlc" / "construction" / decision.work
             parts.append(
                 "Construction completion contract: " + "; ".join(exact) + ". "
-                "A successful CLI process alone is not progress. Before exiting successfully, ensure Agora Core "
-                "can observe at least one reduction in the current non-human governed obligations. "
-                "Persist the corresponding repository artifact/evidence first, register it through existing Agora/Core "
-                "commands, and only record a criterion stage when the implemented work and verification actually support it. "
+                "Generate the actual product implementation and tests inside the governed project root. "
+                "When the corresponding obligations are in scope, write the Construction documents at these exact paths: "
+                f"{artifact_root / 'DOMAIN-MODEL.md'}, "
+                f"{artifact_root / 'LOGICAL-DESIGN.md'}, "
+                f"{artifact_root / 'IMPLEMENTATION-PLAN.md'}, "
+                f"{artifact_root / 'TEST-STRATEGY.md'}, "
+                f"{artifact_root / 'DEPLOYMENT-UNIT.md'}. "
+                "Each document must contain substantive, Work-specific content grounded in the approved Inception artifacts. "
+                "Do NOT run Agora/Core mutation commands such as artifact add, evidence add, approval add, "
+                "criterion-satisfy or lifecycle transition. Agora Flow host owns registration and criterion/evidence reconciliation "
+                "after this process exits. A successful CLI process alone is not progress: create observable files and product changes. "
                 "Never record human approval or perform a lifecycle transition. "
                 "If no governed obligation can be safely reduced, report failure instead of claiming completion."
             )
@@ -298,6 +307,18 @@ def execute_guided_preparation(
         raise ExecutorLaunchError(
             f"Guided executor {runtime.name} ended with unexpected status {getattr(result, 'status', None)!r}"
         )
+    if decision.state == "construction":
+        try:
+            reconcile_construction_execution(
+                root,
+                decision,
+                workspace_factory=workspace_factory,
+            )
+        except (OSError, RuntimeError, ValueError) as error:
+            raise ExecutorLaunchError(
+                f"Guided executor {runtime.name} completed, but Construction reconciliation failed: {error}"
+            ) from error
+
     path = Path(result.path)
     return GuidedExecutionResult(
         session_id=result.id,

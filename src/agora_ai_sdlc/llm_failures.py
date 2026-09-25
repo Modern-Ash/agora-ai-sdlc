@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 RECOVERABLE_LLM_MARKERS = (
     "usage limit",
     "token limit",
@@ -16,7 +18,6 @@ RECOVERABLE_LLM_MARKERS = (
     "api key is missing",
     "authentication failed",
     "unauthorized",
-    "forbidden",
     "provider not found",
     "model not found",
     "provider is not configured",
@@ -46,4 +47,7 @@ def recoverable_llm_failure(text: str) -> bool:
     """Return whether a provider/runtime failure supports choosing another LLM/model."""
 
     normalized = text.casefold()
-    return any(marker in normalized for marker in RECOVERABLE_LLM_MARKERS)
+    if any(marker in normalized for marker in RECOVERABLE_LLM_MARKERS):
+        return True
+    # Match the provider status word, not identifiers such as forbidden_skips.
+    return re.search(r"(?<![a-z0-9_])forbidden(?![a-z0-9_])", normalized) is not None

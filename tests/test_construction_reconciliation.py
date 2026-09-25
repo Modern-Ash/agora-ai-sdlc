@@ -35,7 +35,6 @@ def decision() -> GuidedDecision:
     )
 
 
-
 def test_scaffold_materializes_governance_before_executor(tmp_path: Path):
     capture_local_baseline(tmp_path, "percentage-discount-calculator")
 

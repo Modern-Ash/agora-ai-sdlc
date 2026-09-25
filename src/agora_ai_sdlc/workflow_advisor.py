@@ -115,6 +115,30 @@ def advise_workflow(
             needs_runtime=False,
         )
 
+    local_operations_preparation = (
+        decision.state == "operations"
+        and decision.target == "completed"
+        and decision.gate == "completion"
+        and bool(pending_deployment)
+        and all("verified" in criterion_statuses.get(item, ()) for item in pending_deployment)
+        and decision.developer_actor
+        and decision.developer_actor_kind == "ai-agent"
+        and set(decision.missing_artifacts).issubset({"operational-readiness", "rollback-procedure"})
+        and set(decision.missing_evidence).issubset({"deployment", "security-scan"})
+        and (
+            bool(decision.missing_artifacts)
+            or "security-scan" in decision.missing_evidence
+        )
+        and not (decision.clarification_issues or decision.git_issues)
+        and local_artifacts_delivery_enabled(root)
+    )
+    if local_operations_preparation:
+        return WorkflowAdvice(
+            action="prepare-local-operations",
+            summary="Prepare local operational-readiness, rollback and security-scan evidence deterministically.",
+            needs_runtime=False,
+        )
+
     local_artifact_delivery = (
         decision.state == "operations"
         and decision.target == "completed"

@@ -430,3 +430,62 @@ def test_initial_runtime_is_reused_without_prompting_for_provider(monkeypatch):
     assert result.reason == "clear"
     assert calls == {"inspect": 2, "execute": 1}
     assert any("Codex · configured model" in line for line in outputs)
+
+
+def test_deterministic_action_confirmation_does_not_claim_llm_execution(monkeypatch):
+    outputs = []
+    calls = {"inspect": 0, "action": 0}
+    initial = SimpleNamespace(agent="opencode", model="opencode/big-pickle", label="OpenCode · opencode/big-pickle")
+
+    approval = decision(
+        state="inception",
+        target="construction",
+        gate="inception-approved",
+        actor="project:product-owner",
+        role="product-owner",
+        blockers=("missing-approvals=[product-owner]",),
+        messages=("Ask the responsible human to approve: product-owner.",),
+        missing_artifacts=(),
+        missing_evidence=(),
+        missing_approvals=("product-owner",),
+        unsatisfied_criteria=(),
+        git_issues=(),
+        clarification_issues=(),
+        ready_for_human_approval=True,
+    )
+
+    def inspect(*args, **kwargs):
+        calls["inspect"] += 1
+        return approval if calls["inspect"] == 1 else None
+
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.inspect_next", inspect)
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.build_wizard_view", lambda *args, **kwargs: view())
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_session.advise_workflow",
+        lambda *args, **kwargs: SimpleNamespace(
+            action="approve",
+            summary="Record approval.",
+            source="deterministic",
+            reasoning_tier=None,
+            confidence=None,
+            recommended_runtime=None,
+        ),
+    )
+
+    def execute_action(*args, **kwargs):
+        calls["action"] += 1
+        return SimpleNamespace(kind="approval", details=(("role", "product-owner"), ("actor", "project:product-owner")))
+
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.execute_in_session_action", execute_action)
+
+    result = run_interactive(
+        Path("."),
+        initial_runtime=initial,
+        input_fn=lambda prompt: "",
+        output_fn=outputs.append,
+    )
+
+    assert result.reason == "clear"
+    assert calls == {"inspect": 2, "action": 1}
+    assert "[Enter] Confirm  [A] Adjust  [D] Details  [X] Exit" in outputs
+    assert not any("Confirm and run with OpenCode" in line for line in outputs)

@@ -183,3 +183,26 @@ exit-code: 1
         )
 
     assert "Durable diagnostics:" in str(captured.value)
+
+
+def test_construction_prompt_requires_observable_governed_progress(monkeypatch, tmp_path):
+    monkeypatch.setattr("agora_ai_sdlc.guided_execution.load_answers", lambda *args, **kwargs: {})
+    current = GuidedDecision(
+        **{
+            **decision().snapshot(),
+            "state": "construction",
+            "target": "operations",
+            "gate": "construction-verified",
+            "missing_artifacts": ("domain-model", "implementation-plan"),
+            "missing_evidence": ("test-suite",),
+            "unsatisfied_criteria": ("source-issue",),
+        }
+    )
+
+    prompt = _prompt(tmp_path, current, "repo://EXECUTION_BUNDLE.md")
+
+    assert "A successful CLI process alone is not progress" in prompt
+    assert "missing artifacts=domain-model, implementation-plan" in prompt
+    assert "missing evidence=test-suite" in prompt
+    assert "unsatisfied criteria=source-issue" in prompt
+    assert "Never record human approval or perform a lifecycle transition" in prompt

@@ -284,7 +284,7 @@ def test_progress_display_deduplicates_repeated_heartbeat_for_non_tty():
     assert outputs[3].endswith("sigue activo · Verification completed")
 
 
-def test_successful_executor_without_core_progress_stops_instead_of_looping(monkeypatch):
+def test_successful_executor_without_core_progress_offers_in_session_recovery(monkeypatch):
     outputs = []
     calls = {"inspect": 0, "advice": 0, "execute": 0}
     runtime = SimpleNamespace(
@@ -314,12 +314,14 @@ def test_successful_executor_without_core_progress_stops_instead_of_looping(monk
     monkeypatch.setattr("agora_ai_sdlc.guided_session.advise_workflow", advise_once)
     monkeypatch.setattr("agora_ai_sdlc.guided_session.execute_guided_preparation", execute)
 
-    result = run_interactive(Path("."), input_fn=lambda prompt: "", output_fn=outputs.append)
+    answers = iter(["", "x"])
+    result = run_interactive(Path("."), input_fn=lambda prompt: next(answers), output_fn=outputs.append)
 
-    assert result.reason == "no-progress"
+    assert result.reason == "exit"
     assert calls == {"inspect": 2, "advice": 1, "execute": 1}
     assert any("no governed progress" in line for line in outputs)
     assert any("/tmp/RESULT.md" in line for line in outputs)
+    assert any("Choose another assistant and retry" in line for line in outputs)
 
 
 def test_adjusted_runtime_is_explicit_at_confirmation_boundary(monkeypatch):

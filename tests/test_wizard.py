@@ -147,3 +147,50 @@ def test_wizard_keeps_forward_target_when_progression_is_valid(tmp_path):
 
     assert "Next lifecycle target: operations" in view.facts
     assert any("Technical obligations are complete" in item for item in view.human_decisions)
+
+
+def test_wizard_progress_header_distinguishes_approval_roles_and_transition(tmp_path):
+    po_view = build_wizard_view(
+        tmp_path,
+        decision(
+            clarification_issues=(),
+            role="product-owner",
+            actor="project:product-owner",
+            missing_approvals=("product-owner", "developer"),
+            ready_for_human_approval=True,
+        ),
+    )
+    po_rendered = render_wizard(po_view, lang="es")
+
+    assert "Progreso global: [███░░░░░░░] Fase 1/3 · Inception" in po_rendered
+    assert "CHECKPOINT · APROBACIÓN · product-owner" in po_rendered
+    assert "Gate: inception-approved · PENDIENTE" in po_rendered
+
+    dev_view = build_wizard_view(
+        tmp_path,
+        decision(
+            clarification_issues=(),
+            role="developer",
+            actor="project:ai-runtime-2",
+            missing_approvals=("developer",),
+            ready_for_human_approval=True,
+        ),
+    )
+    dev_rendered = render_wizard(dev_view, lang="es")
+
+    assert "CHECKPOINT · APROBACIÓN · developer" in dev_rendered
+    assert "CHECKPOINT · APROBACIÓN · product-owner" not in dev_rendered
+
+    transition_view = build_wizard_view(
+        tmp_path,
+        decision(
+            clarification_issues=(),
+            missing_approvals=(),
+            ready_for_human_approval=False,
+            ready_to_transition=True,
+        ),
+    )
+    transition_rendered = render_wizard(transition_view, lang="es")
+
+    assert "CHECKPOINT · TRANSICIÓN · construction" in transition_rendered
+    assert "Gate: inception-approved · LISTO" in transition_rendered

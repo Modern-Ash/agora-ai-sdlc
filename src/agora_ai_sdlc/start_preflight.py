@@ -334,6 +334,27 @@ def _ensure_github_adapter(workspace: AgoraWorkspace, root: Path, actions: list[
     actions.append("pack-lock.refreshed")
 
 
+def _ensure_repository_adapter(workspace: AgoraWorkspace, root: Path, actions: list[str]) -> None:
+    target = root / ".agora" / "tools" / "repository"
+    if (target / "TOOL.md").is_file():
+        try:
+            contract = load_tool_contract(target)
+            if "commit" in contract.operations:
+                return
+        except (OSError, ValueError):
+            pass
+
+    workspace.install_tool_adapter(
+        InstallToolAdapterInput(
+            adapter_id="repository",
+            scope="project",
+        )
+    )
+    workspace.refresh_pack_lock(RefreshPackLockInput(scope="project"))
+    actions.append("repository-adapter.installed")
+    actions.append("pack-lock.refreshed")
+
+
 def _ensure_github_pr_adapter(workspace: AgoraWorkspace, root: Path, actions: list[str]) -> None:
     target = root / ".agora" / "tools" / "github-pull-requests"
     if (target / "TOOL.md").is_file():
@@ -570,6 +591,7 @@ def ensure_start_ready(
     _ensure_skill(root, actions)
 
     _ensure_github_adapter(workspace, root, actions)
+    _ensure_repository_adapter(workspace, root, actions)
     _ensure_github_pr_adapter(workspace, root, actions)
 
     runtime_actor = _ensure_actors(workspace, runtime, actions)

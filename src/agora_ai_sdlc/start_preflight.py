@@ -592,7 +592,6 @@ def resolve_start_swarm(
     return resolved
 
 
-
 def ensure_start_ready(
     root: Path,
     runtime: RuntimeDiscovery,

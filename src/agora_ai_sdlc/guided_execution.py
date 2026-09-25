@@ -46,6 +46,12 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
         "Execute exactly one safe guided AI-SDLC preparation iteration for the current governed Work.",
         f"Project root: {root.resolve()}.",
         f"Work: {decision.swarm}/{decision.work}. Stage: {decision.state or 'unknown'}.",
+        (
+            "Canonical Agora scope for this entire iteration is "
+            f"--swarm {decision.swarm} --work {decision.work}. "
+            "Every Agora/aisdlc command that accepts Work scope MUST include both identifiers explicitly. "
+            "Never rely on the default delivery swarm or infer another Work from its id."
+        ),
         f"Read and follow the guided skill at {skill}.",
     ]
     if bundle_path:
@@ -56,6 +62,10 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
     if decision.messages:
         parts.append("Current obligations: " + " | ".join(decision.messages))
     if decision.state == "construction":
+        parts.append(
+            f"Read the Construction phase guidance at {root / '.agora' / 'skills' / 'agora-ai-sdlc-guided' / 'references' / 'construction.md'}. "
+            "Do not load or act on Inception phase guidance for this iteration."
+        )
         exact = []
         if decision.missing_artifacts:
             exact.append("missing artifacts=" + ", ".join(decision.missing_artifacts))
@@ -197,6 +207,18 @@ def execute_guided_preparation(
         work=decision.work,
         persist=True,
     )
+    if bundle.swarm != decision.swarm or bundle.work != decision.work:
+        raise ExecutorLaunchError(
+            "Guided execution scope changed before launch: "
+            f"decision={decision.swarm}/{decision.work}, bundle={bundle.swarm}/{bundle.work}. "
+            "Re-read Agora Core instead of executing stale context."
+        )
+    if bundle.stage != decision.state:
+        raise ExecutorLaunchError(
+            "Guided execution phase changed before launch: "
+            f"decision={decision.state!r}, bundle={bundle.stage!r}. "
+            "Re-read Agora Core instead of executing stale context."
+        )
     lean_path = None
     if progress_fn is not None:
         progress_fn("context")
@@ -213,7 +235,7 @@ def execute_guided_preparation(
     runner = _runner(runtime, root, prompt, model)
     workspace = workspace_factory(cwd=root)
 
-    safe_stage = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in (decision.state or "step"))
+    safe_stage = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in (bundle.stage or "step"))
     base_id = f"ai-sdlc-guided-{decision.work}-{safe_stage}"
     session_id = base_id
     existing = {getattr(item, "id", "") for item in workspace.list_sessions()}

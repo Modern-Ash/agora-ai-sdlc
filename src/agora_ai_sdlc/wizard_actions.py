@@ -8,6 +8,7 @@ from pathlib import Path
 from agora.model import AddApprovalInput, TransitionWorkInput, WorkActorInput
 from agora.workspace import AgoraWorkspace
 
+from agora_ai_sdlc.delivery_submission import pull_request_delivery_enabled, submit_pull_request
 from agora_ai_sdlc.guided import GuidedDecision
 from agora_ai_sdlc.verification import build_verification_report
 
@@ -25,13 +26,32 @@ def _actor_id(decision: GuidedDecision) -> str:
     return actor
 
 
-def next_in_session_action(decision: GuidedDecision) -> str:
+def next_in_session_action(decision: GuidedDecision, *, root: Path | None = None) -> str:
     """Return the action Enter should perform at a non-generative node."""
 
     criterion_statuses = dict(decision.criterion_statuses)
     pending_deployment = tuple(
         item for item in decision.unsatisfied_criteria if "deployed" not in criterion_statuses.get(item, ())
     )
+    if (
+        root is not None
+        and decision.state == "operations"
+        and decision.target == "completed"
+        and decision.gate == "completion"
+        and pending_deployment
+        and all("verified" in criterion_statuses.get(item, ()) for item in pending_deployment)
+        and decision.developer_actor
+        and decision.developer_actor_kind == "ai-agent"
+        and set(decision.missing_evidence).issubset({"deployment"})
+        and not (
+            decision.missing_artifacts
+            or decision.clarification_issues
+            or decision.git_issues
+        )
+        and pull_request_delivery_enabled(root)
+    ):
+        return "submit-pr"
+
     if (
         decision.state == "operations"
         and decision.target == "completed"
@@ -101,8 +121,8 @@ def execute_in_session_action(
     ready. The caller must re-inspect Core after every result.
     """
 
-    action = next_in_session_action(decision)
     root = root.resolve()
+    action = next_in_session_action(decision, root=root)
 
     if action == "verify":
         report = build_verification_report(
@@ -124,6 +144,17 @@ def execute_in_session_action(
         return WizardActionResult("verification_ok")
 
     workspace = workspace_factory(cwd=root)
+
+    if action == "submit-pr":
+        submitted = submit_pull_request(root, decision, workspace_factory=workspace_factory)
+        return WizardActionResult(
+            "pull_request_submitted",
+            (
+                ("url", submitted.pull_request_url),
+                ("branch", submitted.branch),
+                ("commit", submitted.commit_sha[:12]),
+            ),
+        )
 
     if action == "advance-criterion":
         stage = decision.next_criterion_stage

@@ -107,6 +107,8 @@ def test_single_aisdlc_flow_reaches_completed_without_side_commands_or_loops(mon
     outputs: list[str] = []
     prepare_states: list[str] = []
     actions: list[str] = []
+    decisions: list[dict] = []
+    prompts: list[str] = []
     runtime = ExecutorRecoveryChoice(
         agent="opencode",
         model="opencode/test-free",
@@ -114,6 +116,9 @@ def test_single_aisdlc_flow_reaches_completed_without_side_commands_or_loops(mon
     )
 
     def advice(root_path, decision):
+        decisions.append(decision.snapshot())
+        if len(decisions) > 20:
+            raise AssertionError(f"golden path exceeded 20 governed decisions; latest={decision.snapshot()!r}")
         technical_gap = bool(decision.missing_artifacts or decision.missing_evidence or decision.clarification_issues)
         if technical_gap:
             actions.append("prepare")
@@ -140,6 +145,9 @@ def test_single_aisdlc_flow_reaches_completed_without_side_commands_or_loops(mon
     monkeypatch.setattr("agora_ai_sdlc.guided_session.execute_guided_preparation", execute)
 
     def answer(prompt: str) -> str:
+        prompts.append(prompt)
+        if len(prompts) > 40:
+            raise AssertionError(f"golden path exceeded 40 user prompts; latest={prompt!r}")
         if "Respuesta" in prompt:
             return "No hay ambigüedad material; usar el criterio y alcance definidos en el Work."
         return ""

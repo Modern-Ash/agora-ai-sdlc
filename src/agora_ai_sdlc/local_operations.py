@@ -154,6 +154,23 @@ def prepare_local_operations(
         encoding="utf-8",
     )
 
+    existing = workspace.list_work_artifacts(decision.swarm, decision.work)
+    scan_record = next((item for item in existing if item.kind == "security-scan-report"), None)
+    if scan_record is None:
+        scan_uri = _repo_uri(root, scan_path)
+        workspace.add_artifact(
+            AddArtifactInput(
+                swarm_id=decision.swarm,
+                work_id=decision.work,
+                actor_id=actor,
+                kind="security-scan-report",
+                uri=scan_uri,
+                content_sha256=_sha256(scan_path),
+            )
+        )
+    else:
+        scan_uri = scan_record.uri
+
     workspace.add_evidence(
         AddEvidenceInput(
             swarm_id=decision.swarm,
@@ -161,7 +178,7 @@ def prepare_local_operations(
             actor_id=actor,
             type="security-scan",
             result="success",
-            artifact_refs=[f"file://{scan_path}"],
+            artifact_refs=[scan_uri],
             environment="local-artifacts",
             dedupe_key=f"security-scan:{decision.work}",
         )

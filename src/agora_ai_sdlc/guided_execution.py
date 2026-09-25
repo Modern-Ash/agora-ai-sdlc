@@ -85,6 +85,12 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
             exact.append("unsatisfied criteria=" + ", ".join(decision.unsatisfied_criteria))
         artifact_root = root / ".agora" / "ai-sdlc" / "construction" / decision.work
         task_path = artifact_root / "CONSTRUCTION-TASK.md"
+        verification_path = root / ".agora" / "ai-sdlc" / "verification" / decision.work / "VERIFICATION.json"
+        if verification_path.is_file():
+            parts.append(
+                f"A prior deterministic verification report exists at {verification_path}. "
+                "Read it before editing and repair the concrete failed, blocked, unavailable, or missing test/build condition it reports."
+            )
         parts.append(
             "Construction completion contract: " + ("; ".join(exact) if exact else "implementation pending") + ". "
             f"Read and execute the concrete task at {task_path}. "

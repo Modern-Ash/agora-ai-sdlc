@@ -144,3 +144,78 @@ def test_construction_criterion_progression_records_next_stage_with_developer(tm
     assert result.kind == "criterion_stage_advanced"
     assert result.details == (("count", 1), ("stage", "built"), ("actor", "project:ai-codex"))
     assert calls == [("project:ai-codex", "source-issue", "built")]
+
+
+def test_construction_testing_runs_host_reconciliation_instead_of_llm(monkeypatch, tmp_path):
+    decision = GuidedDecision(
+        swarm="delivery",
+        work="calculator",
+        title="Calculator",
+        method="ai-sdlc",
+        actor="project:ai-opencode",
+        role="developer",
+        state="construction",
+        target="operations",
+        gate="construction-verified",
+        blockers=("unsatisfied=[source-issue]", "missing-evidence-types=[test-suite]"),
+        messages=("Verify implementation.",),
+        missing_artifacts=(),
+        missing_evidence=("test-suite",),
+        missing_approvals=(),
+        unsatisfied_criteria=("source-issue",),
+        git_issues=(),
+        clarification_issues=(),
+        criterion_statuses=(("source-issue", ("elaborated", "designed", "built")),),
+        developer_actor="project:ai-opencode",
+        developer_actor_kind="ai-agent",
+    )
+
+    monkeypatch.setattr(
+        "agora_ai_sdlc.wizard_actions.persisted_verification_failed",
+        lambda root, work: False,
+    )
+    monkeypatch.setattr(
+        "agora_ai_sdlc.wizard_actions.reconcile_construction_execution",
+        lambda *args, **kwargs: SimpleNamespace(
+            verification_passed=True,
+            verification_report=str(tmp_path / "VERIFICATION.json"),
+        ),
+    )
+
+    assert next_in_session_action(decision, root=tmp_path) == "verify"
+    result = execute_in_session_action(tmp_path, decision)
+
+    assert result.kind == "verification_ok"
+    assert dict(result.details)["report"].endswith("VERIFICATION.json")
+
+
+def test_failed_construction_verification_is_not_repeated_locally(monkeypatch, tmp_path):
+    decision = GuidedDecision(
+        swarm="delivery",
+        work="calculator",
+        title="Calculator",
+        method="ai-sdlc",
+        actor="project:ai-opencode",
+        role="developer",
+        state="construction",
+        target="operations",
+        gate="construction-verified",
+        blockers=("unsatisfied=[source-issue]", "missing-evidence-types=[test-suite]"),
+        messages=("Repair tests.",),
+        missing_artifacts=(),
+        missing_evidence=("test-suite",),
+        missing_approvals=(),
+        unsatisfied_criteria=("source-issue",),
+        git_issues=(),
+        clarification_issues=(),
+        criterion_statuses=(("source-issue", ("elaborated", "designed", "built")),),
+        developer_actor="project:ai-opencode",
+        developer_actor_kind="ai-agent",
+    )
+
+    monkeypatch.setattr(
+        "agora_ai_sdlc.wizard_actions.persisted_verification_failed",
+        lambda root, work: True,
+    )
+
+    assert next_in_session_action(decision, root=tmp_path) == "review"

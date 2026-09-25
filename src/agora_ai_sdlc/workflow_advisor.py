@@ -16,6 +16,7 @@ from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice, recovery_cho
 from agora_ai_sdlc.guided import GuidedDecision
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
 from agora_ai_sdlc.local_delivery import local_artifacts_delivery_enabled
+from agora_ai_sdlc.verification import persisted_verification_failed
 
 
 @dataclass(frozen=True)
@@ -197,6 +198,36 @@ def advise_workflow(
         return WorkflowAdvice(
             action="accept-criteria",
             summary="Explicitly accept the completed criteria as Product Owner, then re-read Core.",
+            needs_runtime=False,
+        )
+
+    construction_testing_boundary = (
+        decision.state == "construction"
+        and bool(decision.unsatisfied_criteria)
+        and set(decision.missing_evidence).issubset({"test-suite"})
+        and "test-suite" in decision.missing_evidence
+        and not (decision.missing_artifacts or decision.clarification_issues or decision.git_issues)
+        and all(
+            "built" in criterion_statuses.get(item, ()) and "verified" not in criterion_statuses.get(item, ())
+            for item in decision.unsatisfied_criteria
+        )
+    )
+    if construction_testing_boundary:
+        if persisted_verification_failed(root, decision.work):
+            return WorkflowAdvice(
+                action="prepare",
+                summary=(
+                    "Deterministic verification already failed or could not run; "
+                    "repair the implementation/tests before verifying again."
+                ),
+                needs_runtime=True,
+            )
+        return WorkflowAdvice(
+            action="verify",
+            summary=(
+                "Run deterministic Construction verification now, persist test-suite evidence on success, "
+                "and advance the built criteria to verified."
+            ),
             needs_runtime=False,
         )
 

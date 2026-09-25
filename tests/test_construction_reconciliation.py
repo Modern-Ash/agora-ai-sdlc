@@ -181,3 +181,58 @@ def test_reconciliation_does_not_invent_progress_without_observable_files(tmp_pa
     assert result.changed_product_files == ()
     assert result.criterion_stages == ()
     assert result.verification_passed is False
+
+
+def test_reconciliation_persists_failed_verification_when_tests_are_missing(monkeypatch, tmp_path: Path):
+    capture_local_baseline(tmp_path, "percentage-discount-calculator")
+
+    construction = tmp_path / ".agora" / "ai-sdlc" / "construction" / "percentage-discount-calculator"
+    construction.mkdir(parents=True)
+    for kind, filename in CONSTRUCTION_ARTIFACTS:
+        (construction / filename).write_text(f"# {kind}\n\nConcrete content.\n", encoding="utf-8")
+
+    source = tmp_path / "src" / "discount.ts"
+    source.parent.mkdir(parents=True)
+    source.write_text("export const discount = () => 90;\n", encoding="utf-8")
+
+    class Workspace:
+        def __init__(self, cwd):
+            self.records = []
+            self.work = SimpleNamespace(criterion_statuses={"source-issue": ["elaborated", "designed"]})
+
+        def list_work_artifacts(self, swarm, work):
+            return list(self.records)
+
+        def add_artifact(self, data):
+            self.records.append(SimpleNamespace(kind=data.kind, uri=data.uri, content_sha256=data.content_sha256))
+
+        def show_work(self, swarm, work):
+            return self.work
+
+        def satisfy_criterion(self, data, criterion, *, stage=None):
+            self.work.criterion_statuses.setdefault(criterion, []).append(stage)
+
+    workspace = Workspace(tmp_path)
+    verification_path = (
+        tmp_path / ".agora" / "ai-sdlc" / "verification" / "percentage-discount-calculator" / "VERIFICATION.json"
+    )
+
+    monkeypatch.setattr(
+        "agora_ai_sdlc.construction_reconciliation.build_verification_report",
+        lambda *args, **kwargs: SimpleNamespace(
+            commands=(),
+            all_executed_commands_passed=None,
+            report_path=str(verification_path),
+        ),
+    )
+
+    result = reconcile_construction_execution(
+        tmp_path,
+        decision(),
+        workspace_factory=lambda cwd: workspace,
+    )
+
+    assert "built" in result.criterion_stages
+    assert result.verification_passed is False
+    assert result.verification_report == str(verification_path)
+    assert "verified" not in result.criterion_stages

@@ -91,7 +91,7 @@ def test_terminal_summary_makes_completed_work_explicit():
 
 
 def test_inspect_iteration_handles_work_record_without_branch(monkeypatch, tmp_path):
-    import agora_ai_sdlc.iteration_status as iteration_status
+    from agora_ai_sdlc import iteration_status
 
     record = SimpleNamespace(
         id="issue-26",

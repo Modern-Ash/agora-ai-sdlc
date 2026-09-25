@@ -137,6 +137,29 @@ def advise_workflow(
             needs_runtime=False,
         )
 
+    criterion_progression = (
+        decision.state == "construction"
+        and bool(decision.unsatisfied_criteria)
+        and decision.next_criterion_stage in {"built", "verified"}
+        and decision.developer_actor
+        and decision.developer_actor_kind == "ai-agent"
+        and not (
+            decision.missing_artifacts
+            or decision.missing_evidence
+            or decision.clarification_issues
+            or decision.git_issues
+        )
+    )
+    if criterion_progression:
+        return WorkflowAdvice(
+            action="advance-criterion",
+            summary=(
+                f"Record the evidenced {decision.next_criterion_stage} criterion stage with the assigned developer, "
+                "then re-read Core."
+            ),
+            needs_runtime=False,
+        )
+
     # Verification is deterministic and cheaper than any model call.
     if decision.missing_evidence and not (
         decision.missing_artifacts or decision.clarification_issues or decision.unsatisfied_criteria

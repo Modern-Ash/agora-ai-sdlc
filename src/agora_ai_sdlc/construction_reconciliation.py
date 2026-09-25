@@ -58,10 +58,7 @@ def _is_test_path(path: str) -> bool:
 
 
 def _has_product_implementation(paths: tuple[str, ...]) -> bool:
-    return any(
-        Path(path).suffix.casefold() in _SOURCE_SUFFIXES and not _is_test_path(path)
-        for path in paths
-    )
+    return any(Path(path).suffix.casefold() in _SOURCE_SUFFIXES and not _is_test_path(path) for path in paths)
 
 
 def _has_product_tests(paths: tuple[str, ...]) -> bool:

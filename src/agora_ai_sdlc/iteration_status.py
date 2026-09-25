@@ -284,9 +284,7 @@ def render_terminal_summary(status: IterationStatus, *, lang: str = "en") -> str
     lines.append(f"│ {t('terminal.work', lang=lang)}: {status.swarm}/{status.work}")
     lines.append(f"│ {t('terminal.state', lang=lang)}: {status.state or t('guided.unknown', lang=lang)}")
     if status.work_branch or status.current_branch:
-        lines.append(
-            f"│ {t('terminal.branch', lang=lang)}: {status.work_branch or status.current_branch}"
-        )
+        lines.append(f"│ {t('terminal.branch', lang=lang)}: {status.work_branch or status.current_branch}")
     if status.state == "completed":
         lines.append("│ ✓ " + t("terminal.completed", lang=lang))
     else:

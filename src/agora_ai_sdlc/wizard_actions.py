@@ -8,11 +8,12 @@ from pathlib import Path
 from agora.model import AddApprovalInput, TransitionWorkInput, WorkActorInput
 from agora.workspace import AgoraWorkspace
 
+from agora_ai_sdlc.construction_reconciliation import reconcile_construction_execution
 from agora_ai_sdlc.delivery_submission import pull_request_delivery_enabled, submit_pull_request
 from agora_ai_sdlc.guided import GuidedDecision
 from agora_ai_sdlc.local_delivery import local_artifacts_delivery_enabled, publish_local_artifacts
 from agora_ai_sdlc.local_operations import prepare_local_operations
-from agora_ai_sdlc.verification import build_verification_report
+from agora_ai_sdlc.verification import build_verification_report, persisted_verification_failed
 
 
 @dataclass(frozen=True)
@@ -26,6 +27,22 @@ def _actor_id(decision: GuidedDecision) -> str:
     if not actor:
         raise ValueError("The current wizard node has no responsible actor")
     return actor
+
+
+def _construction_testing_boundary(decision: GuidedDecision) -> bool:
+    statuses = dict(decision.criterion_statuses)
+    return (
+        decision.state == "construction"
+        and bool(decision.unsatisfied_criteria)
+        and set(decision.missing_evidence).issubset({"test-suite"})
+        and "test-suite" in decision.missing_evidence
+        and not (decision.missing_artifacts or decision.clarification_issues or decision.git_issues)
+        and all(
+            "built" in statuses.get(item, ())
+            and "verified" not in statuses.get(item, ())
+            for item in decision.unsatisfied_criteria
+        )
+    )
 
 
 def next_in_session_action(decision: GuidedDecision, *, root: Path | None = None) -> str:
@@ -127,6 +144,12 @@ def next_in_session_action(decision: GuidedDecision, *, root: Path | None = None
         )
     ):
         return "advance-criterion"
+    if (
+        root is not None
+        and _construction_testing_boundary(decision)
+        and not persisted_verification_failed(root, decision.work)
+    ):
+        return "verify"
     if decision.missing_evidence and not (
         decision.missing_artifacts or decision.clarification_issues or decision.unsatisfied_criteria
     ):
@@ -155,6 +178,19 @@ def execute_in_session_action(
     action = next_in_session_action(decision, root=root)
 
     if action == "verify":
+        if _construction_testing_boundary(decision):
+            reconciled = reconcile_construction_execution(
+                root,
+                decision,
+                workspace_factory=workspace_factory,
+            )
+            if not reconciled.verification_passed:
+                return WizardActionResult("verification_failed", (("count", 1),))
+            return WizardActionResult(
+                "verification_ok",
+                (("report", reconciled.verification_report or ""),),
+            )
+
         report = build_verification_report(
             root,
             swarm=decision.swarm,
@@ -163,14 +199,9 @@ def execute_in_session_action(
             timeout_seconds=300,
             persist=True,
         )
-        checks = getattr(report, "checks", ()) or ()
-        failed = [
-            item
-            for item in checks
-            if str(getattr(item, "status", getattr(item, "result", ""))).casefold() in {"failed", "failure", "error"}
-        ]
-        if failed:
-            return WizardActionResult("verification_failed", (("count", len(failed)),))
+        failed = [command for command in report.commands if command.status != "passed"]
+        if not report.commands or failed:
+            return WizardActionResult("verification_failed", (("count", max(1, len(failed))),))
         return WizardActionResult("verification_ok")
 
     workspace = workspace_factory(cwd=root)

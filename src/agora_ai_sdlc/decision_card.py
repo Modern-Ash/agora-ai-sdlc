@@ -85,6 +85,11 @@ def build_decision_card(
             "decision.do.submit_pr.create",
             "decision.do.submit_pr.evidence",
         ),
+        "prepare-local-operations": (
+            "decision.do.local_operations.artifacts",
+            "decision.do.local_operations.scan",
+            "decision.do.local_operations.reinspect",
+        ),
         "publish-local-artifacts": (
             "decision.do.local_artifacts.collect",
             "decision.do.local_artifacts.copy",
@@ -165,6 +170,7 @@ def build_decision_card(
         "verify",
         "advance-criterion",
         "submit-pr",
+        "prepare-local-operations",
         "publish-local-artifacts",
         "approve",
         "accept-criteria",

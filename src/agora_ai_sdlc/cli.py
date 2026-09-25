@@ -545,14 +545,25 @@ def main(argv: list[str] | None = None) -> int:
                     and sys.stdout.isatty()
                 )
                 if enter_wizard:
+                    from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice
                     from agora_ai_sdlc.guided_session import run_interactive
 
+                    runtime_label = result.runtime_name
+                    if result.runtime_model:
+                        runtime_label += f" · {result.runtime_model}"
+                    else:
+                        runtime_label += " · configured model"
                     print()
                     print(t("wizard.start_continuous", lang=language))
                     run_interactive(
                         Path(result.workspace_root),
                         swarm=args.swarm,
                         work=result.work_id,
+                        initial_runtime=ExecutorRecoveryChoice(
+                            agent=result.runtime_id,
+                            model=result.runtime_model,
+                            label=runtime_label,
+                        ),
                         lang=language,
                     )
         except KeyboardInterrupt:

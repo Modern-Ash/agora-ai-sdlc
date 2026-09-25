@@ -557,7 +557,7 @@ def main(argv: list[str] | None = None) -> int:
                     print(t("wizard.start_continuous", lang=language))
                     run_interactive(
                         Path(result.workspace_root),
-                        swarm=args.swarm,
+                        swarm=result.swarm_id,
                         work=result.work_id,
                         initial_runtime=ExecutorRecoveryChoice(
                             agent=result.runtime_id,

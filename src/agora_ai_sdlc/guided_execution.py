@@ -67,14 +67,34 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
             "The governed project root above is the complete working boundary for this iteration. "
             "Do not inspect, grep, read, or modify the Agora AI-SDLC installation, its Python package, "
             "another checkout, or any path outside the governed project root. "
-            "If an installed contract appears unclear, use only the project-local .agora skill/method resources."
+            + (
+                "If anything is unclear, rely on the host-supplied Construction context in this prompt; "
+                "do not discover hidden .agora files."
+                if decision.state == "construction"
+                else "If an installed contract appears unclear, use only the project-local .agora skill/method resources."
+            )
         ),
     ]
     if bundle_path:
-        parts.append(
-            f"Use the bounded execution context at {bundle_path}. "
-            "Treat its selected paths as the preferred reading set; protected/uncertain paths are retained deliberately."
-        )
+        bundle_text = ""
+        if decision.state == "construction":
+            try:
+                bundle_candidate = Path(bundle_path)
+                if bundle_candidate.is_file():
+                    bundle_text = bundle_candidate.read_text(encoding="utf-8").strip()
+            except (OSError, ValueError):
+                bundle_text = ""
+        if bundle_text:
+            parts.append(
+                "Host-supplied bounded execution context. Treat its selected paths as the preferred reading set; "
+                "protected/uncertain paths are retained deliberately:\n"
+                + bundle_text[:12000]
+            )
+        else:
+            parts.append(
+                f"Use the bounded execution context at {bundle_path}. "
+                "Treat its selected paths as the preferred reading set; protected/uncertain paths are retained deliberately."
+            )
     if decision.messages:
         parts.append("Current obligations: " + " | ".join(decision.messages))
     if decision.state == "construction":

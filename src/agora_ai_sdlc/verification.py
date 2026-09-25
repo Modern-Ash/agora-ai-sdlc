@@ -314,6 +314,29 @@ def _compact_human_diagnostic(command: VerificationCommand, max_chars: int = 120
     return "… " + value[-(max_chars - 2) :]
 
 
+def persisted_verification_failed(root: Path, work: str | None) -> bool:
+    """Return whether the latest executed deterministic verification failed or was not runnable."""
+
+    if not work:
+        return False
+    path = root.resolve() / ".agora" / "ai-sdlc" / "verification" / work / "VERIFICATION.json"
+    if not path.is_file():
+        return False
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    if not isinstance(payload, dict) or payload.get("executed") is not True:
+        return False
+    commands = payload.get("commands")
+    if not isinstance(commands, list) or not commands:
+        return True
+    return any(
+        not isinstance(command, dict) or str(command.get("status") or "").casefold() != "passed"
+        for command in commands
+    )
+
+
 def render_verification(report: VerificationReport) -> str:
     lines = [
         "Agora AI-SDLC | Deterministic Verification",

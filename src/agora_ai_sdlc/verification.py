@@ -314,6 +314,48 @@ def _compact_human_diagnostic(command: VerificationCommand, max_chars: int = 120
     return "… " + value[-(max_chars - 2) :]
 
 
+def persisted_verification_diagnostic(root: Path, work: str | None) -> str | None:
+    """Return a compact host-readable diagnosis from the latest executed verification."""
+
+    if not work:
+        return None
+    path = root.resolve() / ".agora" / "ai-sdlc" / "verification" / work / "VERIFICATION.json"
+    if not path.is_file():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict) or payload.get("executed") is not True:
+        return None
+
+    commands = payload.get("commands")
+    if not isinstance(commands, list) or not commands:
+        return "No deterministic build/test command was detected. Add executable tests and the minimal build/test configuration."
+
+    lines: list[str] = []
+    for command in commands:
+        if not isinstance(command, dict):
+            continue
+        status = str(command.get("status") or "").casefold()
+        if status == "passed":
+            continue
+        name = str(command.get("command") or "<unknown command>")
+        exit_code = command.get("exit_code")
+        stderr = str(command.get("stderr") or "").strip()
+        stdout = str(command.get("stdout") or "").strip()
+        diagnostic = " ".join((stderr or stdout).split())
+        if len(diagnostic) > 1200:
+            diagnostic = "… " + diagnostic[-1198:]
+        suffix = f" exit={exit_code}" if exit_code is not None else ""
+        detail = f" diagnostic={diagnostic}" if diagnostic else ""
+        lines.append(f"{name}: {status}{suffix}{detail}")
+
+    if not lines:
+        return None
+    return " | ".join(lines[:4])
+
+
 def persisted_verification_failed(root: Path, work: str | None) -> bool:
     """Return whether the latest executed deterministic verification failed or was not runnable."""
 

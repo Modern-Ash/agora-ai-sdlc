@@ -203,7 +203,7 @@ def test_prepare_start_reads_issue_through_governed_tool_and_creates_draft_inten
     if supports_work_branch:
         assert workspace.created_work_inputs[0].create_branch is True
         assert workspace.created_work_inputs[0].branch == "ai-sdlc/issue-11"
-    assert [item.adapter_id for item in workspace.installed_adapters] == ["github-issues", "repository", "github-pull-requests"]
+    assert [item.adapter_id for item in workspace.installed_adapters] == ["github-issues"]
     assert len(workspace.invocations) == 1
     invocation = workspace.invocations[0]
     assert invocation.tool_id == "github-issues"

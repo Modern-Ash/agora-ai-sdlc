@@ -218,3 +218,28 @@ def test_construction_prompt_requires_observable_governed_progress(monkeypatch, 
     assert "unsatisfied criteria=source-issue" in prompt
     assert "Never record human approval or perform a lifecycle transition" in prompt
     assert "Construction phase guidance" in prompt
+
+
+def test_guided_executor_refuses_scope_mismatch_before_runtime(monkeypatch, tmp_path):
+    runtime = SimpleNamespace(
+        id="claude",
+        name="Claude Code",
+        installed=True,
+        responsive=True,
+        executable="/usr/bin/claude",
+        command="claude",
+        version="1.0",
+    )
+    monkeypatch.setattr("agora_ai_sdlc.guided_execution._runtime", lambda *args, **kwargs: runtime)
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_execution.build_execution_bundle",
+        lambda *args, **kwargs: SimpleNamespace(
+            markdown_path=str(tmp_path / "EXECUTION_BUNDLE.md"),
+            swarm="issue-99-delivery",
+            work="issue-26",
+            stage="inception",
+        ),
+    )
+
+    with pytest.raises(ExecutorLaunchError, match="scope changed before launch"):
+        execute_guided_preparation(tmp_path, decision(), runtime_id="claude")

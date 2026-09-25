@@ -10,6 +10,7 @@ from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.delivery_submission import pull_request_delivery_enabled, submit_pull_request
 from agora_ai_sdlc.guided import GuidedDecision
+from agora_ai_sdlc.local_delivery import local_artifacts_delivery_enabled, publish_local_artifacts
 from agora_ai_sdlc.verification import build_verification_report
 
 
@@ -47,6 +48,21 @@ def next_in_session_action(decision: GuidedDecision, *, root: Path | None = None
         and pull_request_delivery_enabled(root)
     ):
         return "submit-pr"
+
+    if (
+        root is not None
+        and decision.state == "operations"
+        and decision.target == "completed"
+        and decision.gate == "completion"
+        and pending_deployment
+        and all("verified" in criterion_statuses.get(item, ()) for item in pending_deployment)
+        and decision.developer_actor
+        and decision.developer_actor_kind == "ai-agent"
+        and set(decision.missing_evidence).issubset({"deployment"})
+        and not (decision.missing_artifacts or decision.clarification_issues or decision.git_issues)
+        and local_artifacts_delivery_enabled(root)
+    ):
+        return "publish-local-artifacts"
 
     if (
         decision.state == "operations"
@@ -149,6 +165,17 @@ def execute_in_session_action(
                 ("url", submitted.pull_request_url),
                 ("branch", submitted.branch),
                 ("commit", submitted.commit_sha[:12]),
+            ),
+        )
+
+    if action == "publish-local-artifacts":
+        published = publish_local_artifacts(root, decision, workspace_factory=workspace_factory)
+        return WizardActionResult(
+            "local_artifacts_published",
+            (
+                ("path", published.output_path),
+                ("manifest", published.manifest_path),
+                ("count", len(published.product_files)),
             ),
         )
 

@@ -37,13 +37,7 @@ def decision() -> GuidedDecision:
 def test_reconciliation_registers_observable_outputs_and_verified_progress(monkeypatch, tmp_path: Path):
     capture_local_baseline(tmp_path, "percentage-discount-calculator")
 
-    construction = (
-        tmp_path
-        / ".agora"
-        / "ai-sdlc"
-        / "construction"
-        / "percentage-discount-calculator"
-    )
+    construction = tmp_path / ".agora" / "ai-sdlc" / "construction" / "percentage-discount-calculator"
     construction.mkdir(parents=True)
     for kind, filename in CONSTRUCTION_ARTIFACTS:
         (construction / filename).write_text(f"# {kind}\n\nConcrete content.\n", encoding="utf-8")

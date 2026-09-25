@@ -356,7 +356,7 @@ def test_adjusted_runtime_is_explicit_at_confirmation_boundary(monkeypatch):
 
 
 def test_bare_interactive_entrypoint_handles_completed_branchless_work(monkeypatch, tmp_path):
-    import agora_ai_sdlc.iteration_status as iteration_status
+    from agora_ai_sdlc import iteration_status
 
     outputs = []
     record = SimpleNamespace(

@@ -261,12 +261,7 @@ def inspect_next(
         if developer_actor and developer_actor in actors:
             developer_actor_kind = str(getattr(actors[developer_actor], "kind", "") or "") or None
 
-        technical_gaps = bool(
-            missing_artifacts
-            or missing_evidence
-            or git_issues
-            or clarification_issues
-        )
+        technical_gaps = bool(missing_artifacts or missing_evidence or git_issues or clarification_issues)
         if missing_approvals and not technical_gaps and not unsatisfied_criteria:
             approval_role = missing_approvals[0]
             approval_actor = assignments.get(approval_role)

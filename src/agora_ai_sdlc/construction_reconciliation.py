@@ -367,7 +367,7 @@ def reconcile_construction_execution(
 
     verification_passed = False
     report_path: str | None = None
-    if artifacts_complete and implementation_present and tests_present:
+    if artifacts_complete and implementation_present:
         report = build_verification_report(
             root,
             swarm=decision.swarm,
@@ -378,7 +378,8 @@ def reconcile_construction_execution(
         )
         report_path = report.report_path
         verification_passed = bool(
-            report.commands
+            tests_present
+            and report.commands
             and report.all_executed_commands_passed is True
             and all(command.status == "passed" for command in report.commands)
         )

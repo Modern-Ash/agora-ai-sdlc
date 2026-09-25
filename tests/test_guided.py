@@ -278,3 +278,71 @@ def test_guided_projection_includes_current_criterion_stages(monkeypatch, tmp_pa
     )
     assert decision.developer_actor == "project:ai-developer"
     assert decision.developer_actor_kind == "ai-agent"
+
+
+def test_bare_guided_projection_anchors_to_work_id_from_current_branch(monkeypatch, tmp_path):
+    class HistoricalWorkspace(FakeWorkspace):
+        def next_actions(self, *, swarm_id=None, human_only=False, limit=1000):
+            return [
+                SimpleNamespace(
+                    swarm_id="old-delivery",
+                    work_id="versioned-local-persistence",
+                    actor="project:developer",
+                    role="developer",
+                    state="inception",
+                    target_states=["construction"],
+                    blockers=["missing-artifacts=[plan]"],
+                ),
+                SimpleNamespace(
+                    swarm_id="issue-15-delivery",
+                    work_id="issue-15",
+                    actor="project:ai-codex",
+                    role="developer",
+                    state="construction",
+                    target_states=["operations"],
+                    blockers=["missing-artifacts=[domain-model]"],
+                ),
+            ]
+
+        def next_gate_readiness(self, swarm_id, work_id):
+            assert swarm_id == "issue-15-delivery"
+            assert work_id == "issue-15"
+            return {
+                "transitions": [
+                    {
+                        "title": "Deliver GitHub issue #15",
+                        "method": "ai-sdlc",
+                        "target_state": "operations",
+                        "gate": {
+                            "gate": "construction-verified",
+                            "unsatisfied": [],
+                            "missing_artifacts": ["domain-model"],
+                            "missing_evidence_types": [],
+                            "missing_approvals": [],
+                            "git_issues": [],
+                        },
+                        "ready_for_human_approval": False,
+                        "ready_to_complete": False,
+                    }
+                ]
+            }
+
+        def show_work(self, swarm_id, work_id):
+            return SimpleNamespace(artifact_kinds=(), criterion_statuses={})
+
+        def show_swarm(self, swarm_id):
+            return SimpleNamespace(assignments={"developer": "project:ai-codex"})
+
+        def list_actors(self):
+            return [SimpleNamespace(id="ai-codex", reference="project:ai-codex", kind="ai-agent")]
+
+    monkeypatch.setattr(guided, "AgoraWorkspace", HistoricalWorkspace)
+    monkeypatch.setattr(guided, "_current_branch", lambda root: "ai-sdlc/issue-15")
+
+    decision = guided.inspect_next(tmp_path)
+
+    assert guided.infer_work_from_current_branch(tmp_path) == "issue-15"
+    assert decision is not None
+    assert decision.swarm == "issue-15-delivery"
+    assert decision.work == "issue-15"
+    assert decision.state == "construction"

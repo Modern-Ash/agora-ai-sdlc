@@ -36,7 +36,6 @@ def decision() -> GuidedDecision:
 
 
 
-
 def test_scaffold_materializes_governance_before_executor(tmp_path: Path):
     capture_local_baseline(tmp_path, "percentage-discount-calculator")
 
@@ -50,9 +49,7 @@ def test_scaffold_materializes_governance_before_executor(tmp_path: Path):
             return list(self.records)
 
         def add_artifact(self, data):
-            self.records.append(
-                SimpleNamespace(kind=data.kind, uri=data.uri, content_sha256=data.content_sha256)
-            )
+            self.records.append(SimpleNamespace(kind=data.kind, uri=data.uri, content_sha256=data.content_sha256))
 
         def show_work(self, swarm, work):
             return self.work

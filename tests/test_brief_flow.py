@@ -79,6 +79,10 @@ Calculate the final price after applying a percentage discount.
 
     baseline = json.loads(Path(result.baseline_path).read_text(encoding="utf-8"))
     assert "INTENT_BRIEF.md" in baseline["files"]
+    assert "AGENTS.md" in baseline["files"]
+    instructions = (project / "AGENTS.md").read_text(encoding="utf-8")
+    assert "generated-agent-instructions/v1" in instructions
+    assert "Persist actual product source files and executable automated tests" in instructions
 
     workspace = AgoraWorkspace(cwd=project)
     artifact_kinds = {item.kind for item in workspace.list_work_artifacts(result.swarm_id, result.work_id)}

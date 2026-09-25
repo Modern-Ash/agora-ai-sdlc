@@ -34,6 +34,14 @@ class ConstructionReconciliationResult:
     verification_report: str | None
 
 
+@dataclass(frozen=True)
+class ConstructionScaffoldResult:
+    generated_artifacts: tuple[str, ...]
+    registered_artifacts: tuple[str, ...]
+    criterion_stages: tuple[str, ...]
+    task_path: str
+
+
 def construction_artifact_root(root: Path, work: str) -> Path:
     return root.resolve() / ".agora" / "ai-sdlc" / "construction" / work
 
@@ -44,6 +52,183 @@ def _sha256(path: Path) -> str:
 
 def _repo_uri(root: Path, path: Path) -> str:
     return f"repo://{path.resolve().relative_to(root.resolve()).as_posix()}"
+
+
+def _artifact_text(root: Path, records: list, kind: str) -> str:
+    record = next((item for item in records if item.kind == kind), None)
+    if record is None:
+        return ""
+    uri = str(record.uri)
+    if not uri.startswith("repo://"):
+        return ""
+    path = root / uri.removeprefix("repo://")
+    try:
+        return path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
+def _scaffold_document(title: str, sources: tuple[tuple[str, str], ...]) -> str:
+    lines = [
+        "<!-- agora-ai-sdlc:deterministic-construction/v1 -->",
+        "",
+        f"# {title}",
+        "",
+        "This proposal is derived only from already approved Inception artifacts.",
+        "It is non-authoritative implementation guidance; Agora Flow retains the governed source artifacts below.",
+        "",
+    ]
+    for label, content in sources:
+        lines.extend([f"## {label}", "", content or "_No approved source artifact content was available._", ""])
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def prepare_construction_scaffold(
+    root: Path,
+    decision: GuidedDecision,
+    *,
+    workspace_factory=AgoraWorkspace,
+) -> ConstructionScaffoldResult:
+    """Materialize governance artifacts from approved Inception before invoking a coding agent."""
+
+    if decision.state != "construction":
+        raise ValueError("Construction scaffold requires Work state 'construction'")
+
+    root = root.resolve()
+    workspace = workspace_factory(cwd=root)
+    actor = (decision.developer_actor or decision.actor or "").strip()
+    if not actor:
+        raise ValueError("Construction scaffold requires the assigned developer actor")
+
+    records = list(workspace.list_work_artifacts(decision.swarm, decision.work))
+    existing = {record.kind for record in records}
+    target = construction_artifact_root(root, decision.work)
+    target.mkdir(parents=True, exist_ok=True)
+
+    source = {
+        kind: _artifact_text(root, records, kind)
+        for kind in (
+            "intent",
+            "plan",
+            "requirements",
+            "user-stories",
+            "nfr",
+            "risk-register",
+            "measurement-criteria",
+            "unit-of-work",
+            "bolt-plan",
+        )
+    }
+    documents = {
+        "domain-model": _scaffold_document(
+            "Domain Model",
+            (
+                ("Intent", source["intent"]),
+                ("Requirements", source["requirements"]),
+                ("User Stories", source["user-stories"]),
+            ),
+        ),
+        "logical-design": _scaffold_document(
+            "Logical Design",
+            (
+                ("Level 1 Plan", source["plan"]),
+                ("NFR", source["nfr"]),
+                ("Unit of Work", source["unit-of-work"]),
+            ),
+        ),
+        "implementation-plan": _scaffold_document(
+            "Implementation Plan",
+            (
+                ("Level 1 Plan", source["plan"]),
+                ("Bolt Plan", source["bolt-plan"]),
+                ("Risk Register", source["risk-register"]),
+            ),
+        ),
+        "test-strategy": _scaffold_document(
+            "Test Strategy",
+            (
+                ("Measurement Criteria", source["measurement-criteria"]),
+                ("User Stories / Acceptance", source["user-stories"]),
+                ("NFR", source["nfr"]),
+            ),
+        ),
+        "deployment-unit": _scaffold_document(
+            "Deployment Unit",
+            (
+                ("Unit of Work", source["unit-of-work"]),
+                ("NFR", source["nfr"]),
+                ("Risk Register", source["risk-register"]),
+            ),
+        ),
+    }
+
+    generated: list[str] = []
+    registered: list[str] = []
+    for kind, filename in CONSTRUCTION_ARTIFACTS:
+        path = target / filename
+        if kind not in existing:
+            if not path.exists():
+                path.write_text(documents[kind], encoding="utf-8")
+                generated.append(kind)
+            workspace.add_artifact(
+                AddArtifactInput(
+                    swarm_id=decision.swarm,
+                    work_id=decision.work,
+                    actor_id=actor,
+                    kind=kind,
+                    uri=_repo_uri(root, path),
+                    content_sha256=_sha256(path),
+                )
+            )
+            registered.append(kind)
+            existing.add(kind)
+
+    task = target / "CONSTRUCTION-TASK.md"
+    task.write_text(
+        "\n".join(
+            [
+                "# Construction Task",
+                "",
+                f"- Work: {decision.swarm}/{decision.work}",
+                "",
+                "## Executor responsibility",
+                "",
+                "- Create the actual product implementation outside .agora/.",
+                "- Create executable automated tests outside .agora/.",
+                "- For a new product, create the minimal idiomatic build/test manifest or configuration required to run those tests.",
+                "- Do not merely explain or propose code in chat; persist the files in this project.",
+                "- Do not mutate Agora Core. Agora Flow registers governance artifacts, evidence and criterion stages.",
+                "",
+                "## Governed inputs",
+                "",
+                "- DOMAIN-MODEL.md",
+                "- LOGICAL-DESIGN.md",
+                "- IMPLEMENTATION-PLAN.md",
+                "- TEST-STRATEGY.md",
+                "- DEPLOYMENT-UNIT.md",
+                "",
+                "## Success boundary",
+                "",
+                "The executor must leave at least one product source file and at least one automated test file.",
+                "Agora Flow will execute deterministic verification after the executor exits.",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    stages: list[str] = []
+    if _all_construction_artifacts_present(workspace, decision) and _record_stage(
+        workspace, decision, actor, "designed"
+    ):
+        stages.append("designed")
+
+    return ConstructionScaffoldResult(
+        generated_artifacts=tuple(generated),
+        registered_artifacts=tuple(registered),
+        criterion_stages=tuple(stages),
+        task_path=str(task),
+    )
 
 
 def _is_test_path(path: str) -> bool:

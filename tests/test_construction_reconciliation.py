@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 from agora_ai_sdlc.construction_reconciliation import (
     CONSTRUCTION_ARTIFACTS,
+    prepare_construction_scaffold,
     reconcile_construction_execution,
 )
 from agora_ai_sdlc.guided import GuidedDecision
@@ -32,6 +33,46 @@ def decision() -> GuidedDecision:
         developer_actor="project:ai-opencode",
         developer_actor_kind="ai-agent",
     )
+
+
+def test_scaffold_materializes_governance_before_executor(tmp_path: Path):
+    capture_local_baseline(tmp_path, "percentage-discount-calculator")
+
+    class Workspace:
+        def __init__(self, cwd):
+            self.cwd = cwd
+            self.records = []
+            self.work = SimpleNamespace(criterion_statuses={"source-issue": ["elaborated"]})
+
+        def list_work_artifacts(self, swarm, work):
+            return list(self.records)
+
+        def add_artifact(self, data):
+            self.records.append(SimpleNamespace(kind=data.kind, uri=data.uri, content_sha256=data.content_sha256))
+
+        def show_work(self, swarm, work):
+            return self.work
+
+        def satisfy_criterion(self, data, criterion, *, stage=None):
+            self.work.criterion_statuses.setdefault(criterion, []).append(stage)
+
+    workspace = Workspace(tmp_path)
+    result = prepare_construction_scaffold(
+        tmp_path,
+        decision(),
+        workspace_factory=lambda cwd: workspace,
+    )
+
+    assert set(result.generated_artifacts) == {kind for kind, _ in CONSTRUCTION_ARTIFACTS}
+    assert set(result.registered_artifacts) == {kind for kind, _ in CONSTRUCTION_ARTIFACTS}
+    assert result.criterion_stages == ("designed",)
+    assert Path(result.task_path).is_file()
+    assert "actual product implementation" in Path(result.task_path).read_text(encoding="utf-8")
+    domain_path = (
+        tmp_path / ".agora" / "ai-sdlc" / "construction" / "percentage-discount-calculator" / "DOMAIN-MODEL.md"
+    )
+    assert "deterministic-construction/v1" in domain_path.read_text(encoding="utf-8")
+    assert workspace.work.criterion_statuses["source-issue"] == ["elaborated", "designed"]
 
 
 def test_reconciliation_registers_observable_outputs_and_verified_progress(monkeypatch, tmp_path: Path):

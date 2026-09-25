@@ -21,16 +21,19 @@ new product choice, conflicting decisions, changed scope, missing authority,
 security/data-policy issue, or exhausted execution budget. Do not ask the human
 to transport findings or repeat already valid decisions.
 
-For guided Construction sessions, the executor owns generation but not Core mutation.
-Persist Work-specific design artifacts under
-`.agora/ai-sdlc/construction/<work>/` using the canonical names
+For guided Construction sessions, Agora Flow owns governance materialization and
+Core mutation. Before the executor starts, Flow derives and registers
 `DOMAIN-MODEL.md`, `LOGICAL-DESIGN.md`, `IMPLEMENTATION-PLAN.md`,
-`TEST-STRATEGY.md` and `DEPLOYMENT-UNIT.md` when those obligations are in
-scope. Implement product code and tests in the project itself. Do not call
-`agora artifact add`, `agora evidence add`, `agora work criterion-satisfy`,
-approval or transition commands from the executor: Agora Flow host reconciles
-observable files, deterministic verification evidence and criterion stages after
-the process returns. Missing files are not inferred as progress.
+`TEST-STRATEGY.md` and `DEPLOYMENT-UNIT.md` from the already approved
+Inception contract and writes `CONSTRUCTION-TASK.md`.
+
+The executor has one responsibility: implement the actual product and executable
+automated tests outside `.agora/`, including the minimal idiomatic build/test
+configuration required for a new product. Do not return with explanation-only
+output: persist source and test files. Do not call `agora artifact add`,
+`agora evidence add`, criterion, approval or transition commands. Agora Flow
+host reconciles observable product files, deterministic verification evidence
+and criterion stages after the process returns.
 
 Anticipate the next validation/review: prepare its bounded inputs and evidence
 references while finishing the authorized work. Never enter another phase or

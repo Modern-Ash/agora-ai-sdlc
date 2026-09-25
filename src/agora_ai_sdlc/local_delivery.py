@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import yaml
-from agora.model import AddEvidenceInput, WorkActorInput
+from agora.model import AddArtifactInput, AddEvidenceInput, WorkActorInput
 from agora.workspace import AgoraWorkspace
 
 _SKIP_DIRS = {".agora", ".git", ".venv", "node_modules", "dist", "build", "target", "output", "__pycache__"}
@@ -103,6 +103,7 @@ def _governance_files(root: Path, work: str) -> tuple[str, ...]:
         root / ".agora" / "ai-sdlc" / "handoffs" / work,
         root / ".agora" / "ai-sdlc" / "verification" / work,
         root / ".agora" / "ai-sdlc" / "construction" / work,
+        root / ".agora" / "ai-sdlc" / "operations" / work,
         root / ".agora" / "ai-sdlc" / "wizard" / work,
     )
     values: list[str] = []
@@ -164,6 +165,23 @@ def publish_local_artifacts(
     if not actor or decision.developer_actor_kind != "ai-agent":
         raise ValueError("Local artifact delivery requires the assigned AI developer actor")
 
+    existing = workspace.list_work_artifacts(decision.swarm, decision.work)
+    manifest_record = next((item for item in existing if item.kind == "delivery-manifest"), None)
+    if manifest_record is None:
+        manifest_uri = f"repo://{manifest.relative_to(root).as_posix()}"
+        workspace.add_artifact(
+            AddArtifactInput(
+                swarm_id=decision.swarm,
+                work_id=decision.work,
+                actor_id=actor,
+                kind="delivery-manifest",
+                uri=manifest_uri,
+                content_sha256=_sha256(manifest),
+            )
+        )
+    else:
+        manifest_uri = manifest_record.uri
+
     workspace.add_evidence(
         AddEvidenceInput(
             swarm_id=decision.swarm,
@@ -171,7 +189,7 @@ def publish_local_artifacts(
             actor_id=actor,
             type="deployment",
             result="success",
-            artifact_refs=[f"file://{manifest}"],
+            artifact_refs=[manifest_uri],
             environment="local-artifacts",
             dedupe_key=f"local-artifacts:{decision.work}",
         )

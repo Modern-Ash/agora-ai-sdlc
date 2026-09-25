@@ -11,11 +11,11 @@ from pathlib import Path
 
 from agora_ai_sdlc.delivery_submission import pull_request_delivery_enabled
 from agora_ai_sdlc.execution_bundle import build_execution_bundle
-from agora_ai_sdlc.local_delivery import local_artifacts_delivery_enabled
 from agora_ai_sdlc.execution_decisions import advise_execution
 from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice, recovery_choices
 from agora_ai_sdlc.guided import GuidedDecision
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
+from agora_ai_sdlc.local_delivery import local_artifacts_delivery_enabled
 
 
 @dataclass(frozen=True)
@@ -112,6 +112,27 @@ def advise_workflow(
             summary=(
                 "Publish the Work-owned change set as a governed Pull Request and record the PR as deployment evidence."
             ),
+            needs_runtime=False,
+        )
+
+    local_operations_preparation = (
+        decision.state == "operations"
+        and decision.target == "completed"
+        and decision.gate == "completion"
+        and bool(pending_deployment)
+        and all("verified" in criterion_statuses.get(item, ()) for item in pending_deployment)
+        and decision.developer_actor
+        and decision.developer_actor_kind == "ai-agent"
+        and set(decision.missing_artifacts).issubset({"operational-readiness", "rollback-procedure"})
+        and set(decision.missing_evidence).issubset({"deployment", "security-scan"})
+        and (bool(decision.missing_artifacts) or "security-scan" in decision.missing_evidence)
+        and not (decision.clarification_issues or decision.git_issues)
+        and local_artifacts_delivery_enabled(root)
+    )
+    if local_operations_preparation:
+        return WorkflowAdvice(
+            action="prepare-local-operations",
+            summary="Prepare local operational-readiness, rollback and security-scan evidence deterministically.",
             needs_runtime=False,
         )
 

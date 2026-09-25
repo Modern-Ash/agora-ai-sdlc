@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-from types import SimpleNamespace
 
 import yaml
 from agora.workspace import AgoraWorkspace
@@ -121,11 +120,27 @@ def test_local_delivery_copies_only_files_changed_after_baseline(tmp_path: Path)
     source.parent.mkdir()
     source.write_text("export const add = (a: number, b: number) => a + b;\n", encoding="utf-8")
 
-    calls = {"evidence": [], "criteria": []}
+    calls = {"artifacts": [], "evidence": [], "criteria": []}
 
     class Workspace:
         def __init__(self, cwd):
             self.cwd = cwd
+
+        def list_work_artifacts(self, swarm, work):
+            return list(calls["artifacts"])
+
+        def add_artifact(self, data):
+            calls["artifacts"].append(
+                type(
+                    "Artifact",
+                    (),
+                    {
+                        "kind": data.kind,
+                        "uri": data.uri,
+                        "content_sha256": data.content_sha256,
+                    },
+                )()
+            )
 
         def add_evidence(self, data):
             calls["evidence"].append(data)
@@ -163,5 +178,7 @@ def test_local_delivery_copies_only_files_changed_after_baseline(tmp_path: Path)
     manifest = Path(result.manifest_path).read_text(encoding="utf-8")
     assert "product/src/calculator.ts" in manifest
     assert "INTENT_BRIEF.md" not in manifest
+    assert calls["artifacts"][0].kind == "delivery-manifest"
     assert calls["evidence"][0].environment == "local-artifacts"
+    assert calls["evidence"][0].artifact_refs == [calls["artifacts"][0].uri]
     assert calls["criteria"] == [("project:ai-codex", "source-issue", "deployed")]

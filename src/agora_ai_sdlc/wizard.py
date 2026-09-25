@@ -14,9 +14,9 @@ from pathlib import Path
 
 from agora_ai_sdlc.context_graph import load_artifacts
 from agora_ai_sdlc.delivery_submission import pull_request_delivery_enabled
-from agora_ai_sdlc.local_delivery import local_artifacts_delivery_enabled
 from agora_ai_sdlc.guided import GuidedDecision
 from agora_ai_sdlc.i18n import t
+from agora_ai_sdlc.local_delivery import local_artifacts_delivery_enabled
 
 PHASE_ORDER = ("inception", "construction", "operations")
 PULL_REQUEST_STEPS = ("change-set", "pull-request", "review-delivery")
@@ -413,9 +413,7 @@ def build_wizard_view(root: Path, decision: GuidedDecision) -> WizardView:
         current = _step(decision, phase)
     step_index = steps.index(current)
     phase_steps_complete = (
-        phase == "inception"
-        and decision.ready_for_human_approval
-        and not _has_open_technical_obligations(decision)
+        phase == "inception" and decision.ready_for_human_approval and not _has_open_technical_obligations(decision)
     )
 
     facts = []

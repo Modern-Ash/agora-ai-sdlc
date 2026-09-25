@@ -218,8 +218,7 @@ def materialize_deterministic_inception_outputs(
     missing = [kind for kind, *_ in DETERMINISTIC_INCEPTION_OUTPUTS if kind not in final_kinds]
     if missing:
         raise InceptionMaterializationError(
-            "deterministic Inception output materialization did not register required artifacts: "
-            + ", ".join(missing)
+            "deterministic Inception output materialization did not register required artifacts: " + ", ".join(missing)
         )
     return tuple(actions)
 

@@ -34,6 +34,14 @@ class ConstructionReconciliationResult:
     verification_report: str | None
 
 
+@dataclass(frozen=True)
+class ConstructionScaffoldResult:
+    generated_artifacts: tuple[str, ...]
+    registered_artifacts: tuple[str, ...]
+    criterion_stages: tuple[str, ...]
+    task_path: str
+
+
 def construction_artifact_root(root: Path, work: str) -> Path:
     return root.resolve() / ".agora" / "ai-sdlc" / "construction" / work
 
@@ -46,7 +54,7 @@ def _repo_uri(root: Path, path: Path) -> str:
     return f"repo://{path.resolve().relative_to(root.resolve()).as_posix()}"
 
 
-def _is_test_path(path: str) -> bool:
+NaNdef _is_test_path(path: str) -> bool:
     lowered = "/" + path.casefold().lstrip("/")
     name = Path(path).name.casefold()
     stem = Path(path).stem.casefold()

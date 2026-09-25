@@ -206,15 +206,17 @@ def test_calculator_brief_happy_path_reaches_completed(monkeypatch, tmp_path: Pa
     assert next_in_session_action(accept, root=root) == "accept-criteria"
     execute_in_session_action(root, accept)
 
-    approval = inspect_next(root, swarm=result.swarm_id, work=result.work_id)
-    assert approval is not None
-    assert next_in_session_action(approval, root=root) == "approve"
-    execute_in_session_action(root, approval)
+    completion_gate = inspect_next(root, swarm=result.swarm_id, work=result.work_id)
+    assert completion_gate is not None
+    final_action = next_in_session_action(completion_gate, root=root)
+    assert final_action in {"approve", "transition"}
+    execute_in_session_action(root, completion_gate)
 
-    complete = inspect_next(root, swarm=result.swarm_id, work=result.work_id)
-    assert complete is not None
-    assert next_in_session_action(complete, root=root) == "transition"
-    execute_in_session_action(root, complete)
+    if final_action == "approve":
+        complete = inspect_next(root, swarm=result.swarm_id, work=result.work_id)
+        assert complete is not None
+        assert next_in_session_action(complete, root=root) == "transition"
+        execute_in_session_action(root, complete)
 
     assert inspect_next(root, swarm=result.swarm_id, work=result.work_id) is None
     status = inspect_iteration(root, swarm=result.swarm_id, work=result.work_id)

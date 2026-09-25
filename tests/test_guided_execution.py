@@ -224,13 +224,20 @@ def test_construction_prompt_requires_observable_governed_progress(monkeypatch, 
     assert "Agora Flow host owns registration" in prompt
     assert "Construction phase guidance" in prompt
 
-    verification = tmp_path / ".agora" / "ai-sdlc" / "verification" / "issue-26" / "VERIFICATION.json"
-    verification.parent.mkdir(parents=True)
-    verification.write_text("{}\n", encoding="utf-8")
+    task = tmp_path / ".agora" / "ai-sdlc" / "construction" / "issue-26" / "CONSTRUCTION-TASK.md"
+    task.parent.mkdir(parents=True)
+    task.write_text("# Construction Task\n\nCreate product code and tests.\n", encoding="utf-8")
+
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_execution.persisted_verification_diagnostic",
+        lambda root, work: "npm test: failed exit=1 diagnostic=expected 90 but got 100",
+    )
 
     retry_prompt = _prompt(tmp_path, current, "repo://EXECUTION_BUNDLE.md")
-    assert str(verification) in retry_prompt
-    assert "repair the concrete failed" in retry_prompt
+    assert "Host-supplied Construction task" in retry_prompt
+    assert "Create product code and tests" in retry_prompt
+    assert "Host-supplied deterministic verification diagnosis" in retry_prompt
+    assert "npm test: failed exit=1" in retry_prompt
 
 
 def test_guided_executor_refuses_scope_mismatch_before_runtime(monkeypatch, tmp_path):

@@ -521,6 +521,7 @@ def _localized_dynamic(item: str, *, lang: str) -> str:
         "Next lifecycle target: ": "wizard.fact.target",
         "Decision gate: ": "wizard.fact.gate",
         "Responsible: ": "wizard.fact.responsible",
+        "Delivery target: ": "wizard.fact.delivery_target",
         "Missing artifact: ": "wizard.gap.artifact",
         "Unsatisfied criterion: ": "wizard.gap.criterion",
         "Missing evidence: ": "wizard.gap.evidence",

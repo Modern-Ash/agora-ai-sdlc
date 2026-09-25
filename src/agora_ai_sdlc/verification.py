@@ -332,8 +332,7 @@ def persisted_verification_failed(root: Path, work: str | None) -> bool:
     if not isinstance(commands, list) or not commands:
         return True
     return any(
-        not isinstance(command, dict) or str(command.get("status") or "").casefold() != "passed"
-        for command in commands
+        not isinstance(command, dict) or str(command.get("status") or "").casefold() != "passed" for command in commands
     )
 
 

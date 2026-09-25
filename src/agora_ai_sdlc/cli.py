@@ -499,7 +499,9 @@ def main(argv: list[str] | None = None) -> int:
                     print(json.dumps(result.snapshot(), sort_keys=True))
                     return 0
                 print(render_brief_start(result, lang=language))
-                enter_wizard = not args.prepare_only and not args.no_wizard and sys.stdin.isatty() and sys.stdout.isatty()
+                enter_wizard = (
+                    not args.prepare_only and not args.no_wizard and sys.stdin.isatty() and sys.stdout.isatty()
+                )
                 if enter_wizard:
                     runtime_label = result.runtime_name
                     if result.runtime_model:

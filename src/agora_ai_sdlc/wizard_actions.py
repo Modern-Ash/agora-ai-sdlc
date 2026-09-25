@@ -38,8 +38,7 @@ def _construction_testing_boundary(decision: GuidedDecision) -> bool:
         and "test-suite" in decision.missing_evidence
         and not (decision.missing_artifacts or decision.clarification_issues or decision.git_issues)
         and all(
-            "built" in statuses.get(item, ())
-            and "verified" not in statuses.get(item, ())
+            "built" in statuses.get(item, ()) and "verified" not in statuses.get(item, ())
             for item in decision.unsatisfied_criteria
         )
     )

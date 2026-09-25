@@ -57,7 +57,12 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
             "Every Agora/aisdlc command that accepts Work scope MUST include both identifiers explicitly. "
             "Never rely on the default delivery swarm or infer another Work from its id."
         ),
-        f"Read and follow the guided skill at {skill}.",
+        (
+            f"Read and follow the guided skill at {skill}."
+            if decision.state != "construction"
+            else "Agora Flow supplies the required Construction guidance directly in this prompt. "
+            "Do not discover or glob .agora paths to recover instructions already supplied by the host."
+        ),
         (
             "The governed project root above is the complete working boundary for this iteration. "
             "Do not inspect, grep, read, or modify the Agora AI-SDLC installation, its Python package, "
@@ -73,10 +78,17 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
     if decision.messages:
         parts.append("Current obligations: " + " | ".join(decision.messages))
     if decision.state == "construction":
-        parts.append(
-            f"Read the Construction phase guidance at {root / '.agora' / 'skills' / 'agora-ai-sdlc-guided' / 'references' / 'construction.md'}. "
-            "Do not load or act on Inception phase guidance for this iteration."
+        construction_guidance_path = (
+            root / ".agora" / "skills" / "agora-ai-sdlc-guided" / "references" / "construction.md"
         )
+        try:
+            construction_guidance = construction_guidance_path.read_text(encoding="utf-8").strip()
+        except OSError:
+            construction_guidance = ""
+        if construction_guidance:
+            parts.append(
+                "Host-supplied Construction phase guidance:\n" + construction_guidance[:8000]
+            )
         exact = []
         if decision.missing_artifacts:
             exact.append("missing artifacts=" + ", ".join(decision.missing_artifacts))
@@ -104,7 +116,8 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
             )
         parts.append(
             "Construction completion contract: " + ("; ".join(exact) if exact else "implementation pending") + ". "
-            f"The concrete task is persisted at {task_path}, and its content is supplied above when available. "
+            "The concrete Construction task content is supplied above when available. "
+            "Do not search for that task under .agora/. "
             "Agora Flow has already materialized and registered the governance/design artifacts. "
             "Your responsibility in this iteration is implementation only: create actual product source files and executable "
             "automated tests outside .agora/, plus the minimal idiomatic build/test configuration needed to run them. "

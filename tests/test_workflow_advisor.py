@@ -284,3 +284,69 @@ def test_pull_request_delivery_replaces_fake_deployment_prepare(monkeypatch):
     assert advice.action == "submit-pr"
     assert advice.needs_runtime is False
     assert advice.source == "deterministic"
+
+
+def test_built_construction_with_missing_test_evidence_verifies_without_llm(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        "agora_ai_sdlc.workflow_advisor.persisted_verification_failed",
+        lambda root, work: False,
+    )
+    monkeypatch.setattr(
+        "agora_ai_sdlc.workflow_advisor.build_execution_bundle",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("testing boundary must not call Laya")),
+    )
+
+    advice = advise_workflow(
+        tmp_path,
+        decision(
+            state="construction",
+            target="operations",
+            gate="construction-verified",
+            blockers=("unsatisfied=[source-issue]", "missing-evidence-types=[test-suite]"),
+            messages=("Verify implementation.",),
+            missing_artifacts=(),
+            missing_evidence=("test-suite",),
+            missing_approvals=(),
+            unsatisfied_criteria=("source-issue",),
+            criterion_statuses=(("source-issue", ("elaborated", "designed", "built")),),
+            developer_actor="project:ai-developer",
+            developer_actor_kind="ai-agent",
+        ),
+    )
+
+    assert advice.action == "verify"
+    assert advice.needs_runtime is False
+    assert advice.source == "deterministic"
+
+
+def test_failed_construction_verification_returns_to_agent_repair(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        "agora_ai_sdlc.workflow_advisor.persisted_verification_failed",
+        lambda root, work: True,
+    )
+    monkeypatch.setattr(
+        "agora_ai_sdlc.workflow_advisor.build_execution_bundle",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("failed verification repair is deterministic routing")),
+    )
+
+    advice = advise_workflow(
+        tmp_path,
+        decision(
+            state="construction",
+            target="operations",
+            gate="construction-verified",
+            blockers=("unsatisfied=[source-issue]", "missing-evidence-types=[test-suite]"),
+            messages=("Repair tests.",),
+            missing_artifacts=(),
+            missing_evidence=("test-suite",),
+            missing_approvals=(),
+            unsatisfied_criteria=("source-issue",),
+            criterion_statuses=(("source-issue", ("elaborated", "designed", "built")),),
+            developer_actor="project:ai-developer",
+            developer_actor_kind="ai-agent",
+        ),
+    )
+
+    assert advice.action == "prepare"
+    assert advice.needs_runtime is True
+    assert advice.source == "deterministic"

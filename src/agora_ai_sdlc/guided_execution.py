@@ -93,8 +93,7 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
             task_text = ""
         if task_text:
             parts.append(
-                "Host-supplied Construction task (authoritative for this repair iteration):\n"
-                + task_text[:8000]
+                "Host-supplied Construction task (authoritative for this repair iteration):\n" + task_text[:8000]
             )
 
         diagnostic = persisted_verification_diagnostic(root, decision.work)

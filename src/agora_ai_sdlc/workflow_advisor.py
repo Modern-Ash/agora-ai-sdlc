@@ -125,10 +125,7 @@ def advise_workflow(
         and decision.developer_actor_kind == "ai-agent"
         and set(decision.missing_artifacts).issubset({"operational-readiness", "rollback-procedure"})
         and set(decision.missing_evidence).issubset({"deployment", "security-scan"})
-        and (
-            bool(decision.missing_artifacts)
-            or "security-scan" in decision.missing_evidence
-        )
+        and (bool(decision.missing_artifacts) or "security-scan" in decision.missing_evidence)
         and not (decision.clarification_issues or decision.git_issues)
         and local_artifacts_delivery_enabled(root)
     )

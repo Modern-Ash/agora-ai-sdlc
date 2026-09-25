@@ -43,6 +43,22 @@ def _project_files(root: Path) -> dict[str, str]:
     return values
 
 
+def project_file_snapshot(root: Path) -> dict[str, str]:
+    """Return a stable digest map of non-governance project files."""
+
+    return _project_files(root.resolve())
+
+
+def diff_project_file_snapshots(
+    before: dict[str, str],
+    after: dict[str, str],
+) -> tuple[str, ...]:
+    """Return files created, modified or deleted between two project snapshots."""
+
+    paths = sorted(set(before) | set(after))
+    return tuple(path for path in paths if before.get(path) != after.get(path))
+
+
 def _baseline_path(root: Path, work: str) -> Path:
     return root / ".agora" / "ai-sdlc" / "baselines" / f"{work}.json"
 

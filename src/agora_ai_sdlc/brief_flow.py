@@ -83,9 +83,7 @@ def _ensure_brief_work(
             id=work_id,
             title=f"Deliver Intent Brief: {title}",
             actor_id=actor_id,
-            acceptance_criteria=[
-                ("source-issue", "Satisfy the acceptance criteria declared by the Intent Brief")
-            ],
+            acceptance_criteria=[("source-issue", "Satisfy the acceptance criteria declared by the Intent Brief")],
             description=f"Source brief: {source_ref}",
         )
     )

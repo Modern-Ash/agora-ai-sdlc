@@ -186,10 +186,16 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.command is None:
         if sys.stdin.isatty() and sys.stdout.isatty():
+            from agora_ai_sdlc.guided import infer_work_from_current_branch
             from agora_ai_sdlc.guided_session import run_interactive
 
+            root = Path(".")
             try:
-                run_interactive(Path("."), lang=resolve_language())
+                run_interactive(
+                    root,
+                    work=infer_work_from_current_branch(root),
+                    lang=resolve_language(),
+                )
             except (OSError, ValueError) as error:
                 print(error, file=sys.stderr)
                 return 2

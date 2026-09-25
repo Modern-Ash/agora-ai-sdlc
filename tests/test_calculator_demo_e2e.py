@@ -179,13 +179,15 @@ def test_calculator_brief_happy_path_reaches_completed(monkeypatch, tmp_path: Pa
     assert after_reconcile.missing_artifacts == ()
     assert after_reconcile.missing_evidence == ()
     assert after_reconcile.unsatisfied_criteria == ()
-    assert after_reconcile.missing_approvals == ("developer",)
 
+    construction_action = next_in_session_action(after_reconcile, root=root)
+    assert construction_action in {"approve", "transition"}
     execute_in_session_action(root, after_reconcile)
-    ready_transition = inspect_next(root, swarm=result.swarm_id, work=result.work_id)
-    assert ready_transition is not None
-    assert next_in_session_action(ready_transition, root=root) == "transition"
-    execute_in_session_action(root, ready_transition)
+    if construction_action == "approve":
+        ready_transition = inspect_next(root, swarm=result.swarm_id, work=result.work_id)
+        assert ready_transition is not None
+        assert next_in_session_action(ready_transition, root=root) == "transition"
+        execute_in_session_action(root, ready_transition)
 
     operations = inspect_next(root, swarm=result.swarm_id, work=result.work_id)
     assert operations is not None

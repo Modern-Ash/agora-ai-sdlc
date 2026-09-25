@@ -326,7 +326,9 @@ def test_failed_construction_verification_returns_to_agent_repair(monkeypatch, t
     )
     monkeypatch.setattr(
         "agora_ai_sdlc.workflow_advisor.build_execution_bundle",
-        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("failed verification repair is deterministic routing")),
+        lambda *args, **kwargs: (_ for _ in ()).throw(
+            AssertionError("failed verification repair is deterministic routing")
+        ),
     )
 
     advice = advise_workflow(

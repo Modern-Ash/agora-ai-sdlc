@@ -208,8 +208,7 @@ def advise_workflow(
         and "test-suite" in decision.missing_evidence
         and not (decision.missing_artifacts or decision.clarification_issues or decision.git_issues)
         and all(
-            "built" in criterion_statuses.get(item, ())
-            and "verified" not in criterion_statuses.get(item, ())
+            "built" in criterion_statuses.get(item, ()) and "verified" not in criterion_statuses.get(item, ())
             for item in decision.unsatisfied_criteria
         )
     )

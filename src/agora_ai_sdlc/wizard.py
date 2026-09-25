@@ -14,9 +14,9 @@ from pathlib import Path
 
 from agora_ai_sdlc.context_graph import load_artifacts
 from agora_ai_sdlc.delivery_submission import pull_request_delivery_enabled
-from agora_ai_sdlc.local_delivery import local_artifacts_delivery_enabled
 from agora_ai_sdlc.guided import GuidedDecision
 from agora_ai_sdlc.i18n import t
+from agora_ai_sdlc.local_delivery import local_artifacts_delivery_enabled
 
 PHASE_ORDER = ("inception", "construction", "operations")
 PULL_REQUEST_STEPS = ("change-set", "pull-request", "review-delivery")

@@ -234,3 +234,35 @@ def test_wizard_progress_header_distinguishes_approval_roles_and_transition(tmp_
 
     assert "CHECKPOINT · TRANSICIÓN · construction" in transition_rendered
     assert "Gate: inception-approved · LISTO" in transition_rendered
+
+
+def test_pull_request_delivery_relabels_operations_steps(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        "agora_ai_sdlc.wizard.pull_request_delivery_enabled",
+        lambda root: True,
+    )
+    view = build_wizard_view(
+        tmp_path,
+        decision(
+            state="operations",
+            target="completed",
+            gate="completion",
+            clarification_issues=(),
+            missing_artifacts=(),
+            missing_evidence=("deployment",),
+            unsatisfied_criteria=("source-issue",),
+            criterion_statuses=(("source-issue", ("elaborated", "designed", "built", "verified")),),
+        ),
+    )
+
+    assert view.delivery_target == "pull-request"
+    assert view.steps == ("change-set", "pull-request", "review-delivery")
+    assert view.current_step == "pull-request"
+
+    rendered = render_wizard(view, lang="es")
+    assert "Operations: [" in rendered
+    assert "PASO ACTUAL: 02 · Pull Request" in rendered
+    assert "✓ Change Set" in rendered
+    assert "▶ Pull Request" in rendered
+    assert "· Review" in rendered
+    assert "Delivery target: pull-request" in rendered

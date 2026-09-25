@@ -26,6 +26,7 @@ from agora_ai_sdlc.executor_launch import (
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
+from agora_ai_sdlc.verification import persisted_verification_diagnostic
 from agora_ai_sdlc.wizard import load_answers
 
 
@@ -56,26 +57,55 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
             "Every Agora/aisdlc command that accepts Work scope MUST include both identifiers explicitly. "
             "Never rely on the default delivery swarm or infer another Work from its id."
         ),
-        f"Read and follow the guided skill at {skill}.",
+        (
+            f"Read and follow the guided skill at {skill}."
+            if decision.state != "construction"
+            else "Agora Flow supplies the required Construction guidance directly in this prompt. "
+            "Do not discover or glob .agora paths to recover instructions already supplied by the host."
+        ),
         (
             "The governed project root above is the complete working boundary for this iteration. "
             "Do not inspect, grep, read, or modify the Agora AI-SDLC installation, its Python package, "
             "another checkout, or any path outside the governed project root. "
-            "If an installed contract appears unclear, use only the project-local .agora skill/method resources."
+            + (
+                "If anything is unclear, rely on the host-supplied Construction context in this prompt; "
+                "do not discover hidden .agora files."
+                if decision.state == "construction"
+                else "If an installed contract appears unclear, use only the project-local .agora skill/method resources."
+            )
         ),
     ]
     if bundle_path:
-        parts.append(
-            f"Use the bounded execution context at {bundle_path}. "
-            "Treat its selected paths as the preferred reading set; protected/uncertain paths are retained deliberately."
-        )
+        bundle_text = ""
+        if decision.state == "construction":
+            try:
+                bundle_candidate = Path(bundle_path)
+                if bundle_candidate.is_file():
+                    bundle_text = bundle_candidate.read_text(encoding="utf-8").strip()
+            except (OSError, ValueError):
+                bundle_text = ""
+        if bundle_text:
+            parts.append(
+                "Host-supplied bounded execution context. Treat its selected paths as the preferred reading set; "
+                "protected/uncertain paths are retained deliberately:\n" + bundle_text[:12000]
+            )
+        else:
+            parts.append(
+                f"Use the bounded execution context at {bundle_path}. "
+                "Treat its selected paths as the preferred reading set; protected/uncertain paths are retained deliberately."
+            )
     if decision.messages:
         parts.append("Current obligations: " + " | ".join(decision.messages))
     if decision.state == "construction":
-        parts.append(
-            f"Read the Construction phase guidance at {root / '.agora' / 'skills' / 'agora-ai-sdlc-guided' / 'references' / 'construction.md'}. "
-            "Do not load or act on Inception phase guidance for this iteration."
+        construction_guidance_path = (
+            root / ".agora" / "skills" / "agora-ai-sdlc-guided" / "references" / "construction.md"
         )
+        try:
+            construction_guidance = construction_guidance_path.read_text(encoding="utf-8").strip()
+        except OSError:
+            construction_guidance = ""
+        if construction_guidance:
+            parts.append("Host-supplied Construction phase guidance:\n" + construction_guidance[:8000])
         exact = []
         if decision.missing_artifacts:
             exact.append("missing artifacts=" + ", ".join(decision.missing_artifacts))
@@ -85,15 +115,26 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
             exact.append("unsatisfied criteria=" + ", ".join(decision.unsatisfied_criteria))
         artifact_root = root / ".agora" / "ai-sdlc" / "construction" / decision.work
         task_path = artifact_root / "CONSTRUCTION-TASK.md"
-        verification_path = root / ".agora" / "ai-sdlc" / "verification" / decision.work / "VERIFICATION.json"
-        if verification_path.is_file():
+        task_text = ""
+        try:
+            task_text = task_path.read_text(encoding="utf-8").strip()
+        except OSError:
+            task_text = ""
+        if task_text:
             parts.append(
-                f"A prior deterministic verification report exists at {verification_path}. "
-                "Read it before editing and repair the concrete failed, blocked, unavailable, or missing test/build condition it reports."
+                "Host-supplied Construction task (authoritative for this repair iteration):\n" + task_text[:8000]
+            )
+
+        diagnostic = persisted_verification_diagnostic(root, decision.work)
+        if diagnostic:
+            parts.append(
+                "Host-supplied deterministic verification diagnosis. Repair this concrete condition before finishing:\n"
+                + diagnostic
             )
         parts.append(
             "Construction completion contract: " + ("; ".join(exact) if exact else "implementation pending") + ". "
-            f"Read and execute the concrete task at {task_path}. "
+            "The concrete Construction task content is supplied above when available. "
+            "Do not search for that task under .agora/. "
             "Agora Flow has already materialized and registered the governance/design artifacts. "
             "Your responsibility in this iteration is implementation only: create actual product source files and executable "
             "automated tests outside .agora/, plus the minimal idiomatic build/test configuration needed to run them. "

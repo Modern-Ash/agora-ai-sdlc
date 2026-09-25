@@ -217,20 +217,41 @@ def test_construction_prompt_requires_observable_governed_progress(monkeypatch, 
     assert "missing evidence=test-suite" in prompt
     assert "unsatisfied criteria=source-issue" in prompt
     assert "Never record human approval or perform a lifecycle transition" in prompt
-    assert ".agora/ai-sdlc/construction/issue-26/CONSTRUCTION-TASK.md" in prompt
+    assert "Do not discover or glob .agora paths" in prompt
     assert "implementation only" in prompt
     assert "actual product source files and executable" in prompt
     assert "Do NOT run Agora/Core mutation commands" in prompt
     assert "Agora Flow host owns registration" in prompt
-    assert "Construction phase guidance" in prompt
+    assert "Agora Flow supplies the required Construction guidance directly in this prompt" in prompt
 
-    verification = tmp_path / ".agora" / "ai-sdlc" / "verification" / "issue-26" / "VERIFICATION.json"
-    verification.parent.mkdir(parents=True)
-    verification.write_text("{}\n", encoding="utf-8")
+    task = tmp_path / ".agora" / "ai-sdlc" / "construction" / "issue-26" / "CONSTRUCTION-TASK.md"
+    task.parent.mkdir(parents=True)
+    task.write_text("# Construction Task\n\nCreate product code and tests.\n", encoding="utf-8")
 
-    retry_prompt = _prompt(tmp_path, current, "repo://EXECUTION_BUNDLE.md")
-    assert str(verification) in retry_prompt
-    assert "repair the concrete failed" in retry_prompt
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_execution.persisted_verification_diagnostic",
+        lambda root, work: "npm test: failed exit=1 diagnostic=expected 90 but got 100",
+    )
+
+    guidance = tmp_path / ".agora" / "skills" / "agora-ai-sdlc-guided" / "references" / "construction.md"
+    guidance.parent.mkdir(parents=True)
+    guidance.write_text("# Construction\n\nImplement and verify bounded product changes.\n", encoding="utf-8")
+
+    bundle = tmp_path / ".agora" / "ai-sdlc" / "execution" / "issue-26" / "EXECUTION_CONTEXT.md"
+    bundle.parent.mkdir(parents=True)
+    bundle.write_text("# Bounded Context\n\nUse src/discount.ts and tests/discount.test.ts.\n", encoding="utf-8")
+
+    retry_prompt = _prompt(tmp_path, current, str(bundle))
+    assert "Host-supplied bounded execution context" in retry_prompt
+    assert "Use src/discount.ts and tests/discount.test.ts" in retry_prompt
+    assert "do not discover hidden .agora files" in retry_prompt
+    assert "Host-supplied Construction phase guidance" in retry_prompt
+    assert "Implement and verify bounded product changes" in retry_prompt
+    assert "Do not discover or glob .agora paths" in retry_prompt
+    assert "Host-supplied Construction task" in retry_prompt
+    assert "Create product code and tests" in retry_prompt
+    assert "Host-supplied deterministic verification diagnosis" in retry_prompt
+    assert "npm test: failed exit=1" in retry_prompt
 
 
 def test_guided_executor_refuses_scope_mismatch_before_runtime(monkeypatch, tmp_path):

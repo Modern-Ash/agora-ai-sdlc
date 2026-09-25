@@ -1,9 +1,14 @@
+import json
 from pathlib import Path
 from types import SimpleNamespace
 
 from agora_ai_sdlc import verification
 from agora_ai_sdlc.execution_bundle import ExecutionBundle
-from agora_ai_sdlc.verification import build_verification_report, persisted_verification_failed
+from agora_ai_sdlc.verification import (
+    build_verification_report,
+    persisted_verification_diagnostic,
+    persisted_verification_failed,
+)
 
 
 def bundle(tmp_path: Path, commands=("pnpm test",)) -> ExecutionBundle:
@@ -227,3 +232,41 @@ def test_persisted_verification_failed_is_false_after_success(tmp_path: Path):
     )
 
     assert persisted_verification_failed(tmp_path, "issue-14") is False
+
+
+def test_persisted_verification_diagnostic_reports_missing_commands(tmp_path: Path):
+    target = tmp_path / ".agora" / "ai-sdlc" / "verification" / "issue-14" / "VERIFICATION.json"
+    target.parent.mkdir(parents=True)
+    target.write_text('{"executed": true, "commands": []}\n', encoding="utf-8")
+
+    diagnostic = persisted_verification_diagnostic(tmp_path, "issue-14")
+
+    assert diagnostic is not None
+    assert "No deterministic build/test command was detected" in diagnostic
+
+
+def test_persisted_verification_diagnostic_compacts_failed_command(tmp_path: Path):
+    target = tmp_path / ".agora" / "ai-sdlc" / "verification" / "issue-14" / "VERIFICATION.json"
+    target.parent.mkdir(parents=True)
+    target.write_text(
+        json.dumps(
+            {
+                "executed": True,
+                "commands": [
+                    {
+                        "command": "npm test",
+                        "status": "failed",
+                        "exit_code": 1,
+                        "stderr": "AssertionError: expected 90 but got 100",
+                        "stdout": "",
+                    }
+                ],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    diagnostic = persisted_verification_diagnostic(tmp_path, "issue-14")
+
+    assert diagnostic == "npm test: failed exit=1 diagnostic=AssertionError: expected 90 but got 100"

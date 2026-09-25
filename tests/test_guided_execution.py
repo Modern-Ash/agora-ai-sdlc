@@ -217,6 +217,10 @@ def test_construction_prompt_requires_observable_governed_progress(monkeypatch, 
     assert "missing evidence=test-suite" in prompt
     assert "unsatisfied criteria=source-issue" in prompt
     assert "Never record human approval or perform a lifecycle transition" in prompt
+    assert ".agora/ai-sdlc/construction/issue-26/DOMAIN-MODEL.md" in prompt
+    assert ".agora/ai-sdlc/construction/issue-26/DEPLOYMENT-UNIT.md" in prompt
+    assert "Do NOT run Agora/Core mutation commands" in prompt
+    assert "Agora Flow host owns registration" in prompt
     assert "Construction phase guidance" in prompt
 
 

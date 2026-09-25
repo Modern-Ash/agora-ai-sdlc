@@ -424,7 +424,7 @@ def prepare_start(
     prepared = preflight(
         root,
         runtime,
-        swarm_id=resolved_swarm,
+        swarm_id=swarm,
         issue=issue,
         workspace_factory=workspace_factory,
     )

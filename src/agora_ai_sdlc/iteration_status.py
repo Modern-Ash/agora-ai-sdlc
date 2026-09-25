@@ -166,7 +166,10 @@ def inspect_iteration(
         except (OSError, ValueError):
             candidates = []
         if candidates:
-            record = next((item for item in candidates if item.branch == current_branch), candidates[0])
+            record = next(
+                (item for item in candidates if getattr(item, "branch", None) == current_branch),
+                candidates[0],
+            )
             resolved_work = record.id
     else:
         try:
@@ -174,8 +177,11 @@ def inspect_iteration(
         except (OSError, ValueError):
             candidates = []
         if candidates:
-            record = next((item for item in candidates if item.branch == current_branch), candidates[0])
-            resolved_swarm = record.swarm_id
+            record = next(
+                (item for item in candidates if getattr(item, "branch", None) == current_branch),
+                candidates[0],
+            )
+            resolved_swarm = getattr(record, "swarm_id", None)
             resolved_work = record.id
 
     if decision is None and resolved_swarm and resolved_work:

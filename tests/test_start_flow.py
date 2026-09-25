@@ -760,3 +760,31 @@ def test_linked_git_worktree_binds_governed_work_branch(tmp_path):
     assert created.branch == "ai-sdlc/issue-14"
     assert created.create_branch is True
     assert result.branch == "ai-sdlc/issue-14"
+
+
+def test_prepare_start_uses_preflight_resolved_swarm_everywhere(tmp_path):
+    workspace = FakeWorkspace(tmp_path)
+
+    def preflight(candidate, runtime, **options):
+        assert options["swarm_id"] == "delivery"
+        assert options["issue"] == 15
+        return StartPreparationResult(
+            root=candidate.resolve(),
+            actions=("swarm.resolved:delivery->issue-15-delivery",),
+            swarm_id="issue-15-delivery",
+        )
+
+    result = _prepare_start(
+        tmp_path,
+        issue=15,
+        project="Modern-Ash/agorix",
+        agent="codex",
+        preflight=preflight,
+        workspace_factory=lambda cwd: workspace,
+        runtime_discovery=lambda root: (runtime("codex"),),
+    )
+
+    assert result.swarm_id == "issue-15-delivery"
+    assert workspace.created_work_inputs[0].swarm_id == "issue-15-delivery"
+    assert workspace.invocations[0].swarm_id == "issue-15-delivery"
+    assert "swarm.resolved:delivery->issue-15-delivery" in result.preflight_actions

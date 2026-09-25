@@ -117,6 +117,113 @@ def _unit_of_work_document(issue: IssueFacts, *, work_id: str, pathway: str) -> 
     )
 
 
+def _section(text: str, heading: str) -> str:
+    lines = text.replace("\r\n", "\n").splitlines()
+    start = None
+    target = heading.strip().casefold()
+    for index, line in enumerate(lines):
+        if line.startswith("## ") and line[3:].strip().casefold() == target:
+            start = index + 1
+            break
+    if start is None:
+        return ""
+    body: list[str] = []
+    for line in lines[start:]:
+        if line.startswith("## "):
+            break
+        body.append(line)
+    return "\n".join(body).strip()
+
+
+DETERMINISTIC_INCEPTION_OUTPUTS = (
+    ("plan", "PLAN.md", "Level 1 Plan", "Deterministic Level 1 Plan"),
+    ("user-stories", "USER-STORIES.md", "User Stories", "Deterministic User Stories"),
+    ("nfr", "NFR.md", "Non-functional requirements", "Deterministic Non-functional Requirements"),
+    ("risk-register", "RISK-REGISTER.md", "Risk Register", "Deterministic Risk Register"),
+    (
+        "measurement-criteria",
+        "MEASUREMENT-CRITERIA.md",
+        "Measurement Criteria",
+        "Deterministic Measurement Criteria",
+    ),
+    ("bolt-plan", "BOLT-PLAN.md", "Suggested Bolts", "Deterministic Bolt Plan"),
+)
+
+
+def materialize_deterministic_inception_outputs(
+    root: Path,
+    *,
+    workspace: AgoraWorkspace,
+    swarm_id: str,
+    work_id: str,
+    actor_id: str,
+    intent_path: str,
+    deterministic_output: str,
+) -> tuple[str, ...]:
+    """Split an unambiguous deterministic Inception proposal into Core artifacts.
+
+    This is intentionally separate from the baseline materializer so issue-based
+    flows can continue to request generative enrichment. Brief Start calls this
+    only when the source has no material semantic gaps.
+    """
+
+    root = root.resolve()
+    intent = Path(intent_path)
+    if not intent.is_absolute():
+        intent = root / intent
+    intent = intent.resolve()
+    intent_dir = intent.parent
+
+    actions: list[str] = []
+    existing = workspace.list_work_artifacts(swarm_id, work_id)
+    existing_by_kind = {record.kind: record for record in existing}
+
+    for kind, filename, heading, title in DETERMINISTIC_INCEPTION_OUTPUTS:
+        if kind in existing_by_kind:
+            actions.append(f"artifact.existing:{kind}")
+            continue
+        section = _section(deterministic_output, heading)
+        if not section:
+            raise InceptionMaterializationError(
+                f"deterministic Inception output is missing required section {heading!r}"
+            )
+        path = intent_dir / filename
+        content = "\n".join(
+            [
+                f"# {title}",
+                "",
+                section,
+                "",
+                "## Provenance",
+                "",
+                "- Derived deterministically from the explicit Intent Brief during Agora Flow Inception.",
+                "- Non-authoritative until the required human approvals are recorded.",
+            ]
+        )
+        if _write_generated(path, content):
+            actions.append(f"artifact.generated:{kind}")
+        _ensure_artifact(
+            workspace,
+            root=root,
+            swarm_id=swarm_id,
+            work_id=work_id,
+            actor_id=actor_id,
+            kind=kind,
+            path=path,
+            actions=actions,
+        )
+
+    final_records = workspace.list_work_artifacts(swarm_id, work_id)
+    final_kinds = {record.kind for record in final_records}
+    missing = [kind for kind, *_ in DETERMINISTIC_INCEPTION_OUTPUTS if kind not in final_kinds]
+    if missing:
+        raise InceptionMaterializationError(
+            "deterministic Inception output materialization did not register required artifacts: "
+            + ", ".join(missing)
+        )
+    return tuple(actions)
+
+
 def _content_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 

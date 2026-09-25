@@ -56,10 +56,7 @@ def test_work_change_set_excludes_unrelated_agora_history(monkeypatch, tmp_path:
         if key[:2] == ("ls-files", "--others"):
             return SimpleNamespace(
                 returncode=0,
-                stdout=(
-                    ".agora/ai-sdlc/handoffs/issue-14/REVIEW.md\n"
-                    ".agora/sessions/unrelated/RESULT.md\n"
-                ),
+                stdout=(".agora/ai-sdlc/handoffs/issue-14/REVIEW.md\n.agora/sessions/unrelated/RESULT.md\n"),
                 stderr="",
             )
         raise AssertionError(key)

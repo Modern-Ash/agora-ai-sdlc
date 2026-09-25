@@ -158,6 +158,10 @@ def test_final_criterion_acceptance_is_human_and_never_uses_laya(monkeypatch):
 
 def test_verified_final_criterion_uses_assigned_ai_developer_without_laya(monkeypatch):
     monkeypatch.setattr(
+        "agora_ai_sdlc.workflow_advisor.pull_request_delivery_enabled",
+        lambda root: False,
+    )
+    monkeypatch.setattr(
         "agora_ai_sdlc.workflow_advisor.build_execution_bundle",
         lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("deployed stage must not call Laya")),
     )

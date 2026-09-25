@@ -143,6 +143,7 @@ def test_single_aisdlc_flow_reaches_completed_without_side_commands_or_loops(mon
 
     monkeypatch.setattr("agora_ai_sdlc.guided_session.advise_workflow", advice)
     monkeypatch.setattr("agora_ai_sdlc.guided_session.execute_guided_preparation", execute)
+    monkeypatch.setattr("agora_ai_sdlc.guided_session._select_runtime", lambda *args, **kwargs: runtime)
 
     def answer(prompt: str) -> str:
         prompts.append(prompt)

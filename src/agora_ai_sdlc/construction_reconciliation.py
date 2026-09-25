@@ -118,6 +118,33 @@ def _all_construction_artifacts_present(workspace, decision: GuidedDecision) -> 
     return all(kind in kinds for kind, _ in CONSTRUCTION_ARTIFACTS)
 
 
+def _register_support_artifact(
+    root: Path,
+    decision: GuidedDecision,
+    workspace,
+    actor: str,
+    *,
+    kind: str,
+    path: Path,
+) -> str:
+    existing = workspace.list_work_artifacts(decision.swarm, decision.work)
+    record = next((item for item in existing if item.kind == kind), None)
+    if record is not None:
+        return record.uri
+    uri = _repo_uri(root, path)
+    workspace.add_artifact(
+        AddArtifactInput(
+            swarm_id=decision.swarm,
+            work_id=decision.work,
+            actor_id=actor,
+            kind=kind,
+            uri=uri,
+            content_sha256=_sha256(path),
+        )
+    )
+    return uri
+
+
 def reconcile_construction_execution(
     root: Path,
     decision: GuidedDecision,
@@ -171,6 +198,14 @@ def reconcile_construction_execution(
             and all(command.status == "passed" for command in report.commands)
         )
         if verification_passed and report.report_path:
+            report_uri = _register_support_artifact(
+                root,
+                decision,
+                workspace,
+                actor,
+                kind="test-report",
+                path=Path(report.report_path),
+            )
             workspace.add_evidence(
                 AddEvidenceInput(
                     swarm_id=decision.swarm,
@@ -178,7 +213,7 @@ def reconcile_construction_execution(
                     actor_id=actor,
                     type="test-suite",
                     result="success",
-                    artifact_refs=[f"file://{report.report_path}"],
+                    artifact_refs=[report_uri],
                     environment="local-construction",
                     dedupe_key=f"test-suite:{decision.work}",
                 )

@@ -653,7 +653,7 @@ def test_prepare_start_reuses_existing_durable_issue_read_and_intent(tmp_path):
 
     assert result.intent_id == "issue-11"
     assert len(workspace.created_work_inputs) == 0
-    assert [item.adapter_id for item in workspace.installed_adapters] == ["repository", "github-pull-requests"]
+    assert workspace.installed_adapters == []
     assert workspace.invocations == []
 
 

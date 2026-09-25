@@ -540,6 +540,15 @@ def _render_progress_header(view: WizardView, *, lang: str) -> list[str]:
     gauge = "█" * filled + "░" * (width - filled)
     phase_name = t(f"wizard.phase.{view.phase}", lang=lang)
 
+    steps = PHASE_STEPS[view.phase]
+    step_number = len(view.completed_steps) + 1
+    total_steps = len(steps)
+    step_percent = round(step_number * 100 / total_steps)
+    step_width = 28
+    step_filled = min(step_width, round(step_width * step_number / total_steps))
+    step_gauge = "█" * step_filled + "░" * (step_width - step_filled)
+    step_name = t(f"wizard.step.{view.current_step}", lang=lang)
+
     kind_key = f"wizard.progress.kind.{view.checkpoint_kind or 'review'}"
     kind = t(kind_key, lang=lang)
     if kind == kind_key:
@@ -555,6 +564,8 @@ def _render_progress_header(view: WizardView, *, lang: str) -> list[str]:
             f"│ {t('wizard.progress.global', lang=lang)}: [{gauge}] "
             f"{t('wizard.progress.phase', lang=lang, current=phase_number, total=total_phases, phase=phase_name)}"
         ),
+        f"│ {phase_name}: [{step_gauge}] {step_number}/{total_steps} · {step_percent}%",
+        f"│ {t('wizard.current_step', lang=lang).upper()}: {step_number:02d} · {step_name}",
         f"│ {t('wizard.progress.checkpoint', lang=lang)} · {checkpoint}",
         f"│ {t('wizard.progress.gate', lang=lang)}: {gate} · {gate_status}",
     ]

@@ -353,3 +353,42 @@ def test_adjusted_runtime_is_explicit_at_confirmation_boundary(monkeypatch):
     assert result.reason == "clear"
     assert calls == {"inspect": 2, "advice": 1, "execute": 1}
     assert any("[Enter] Confirm and run with Claude Code · configured model" in line for line in outputs)
+
+
+def test_bare_interactive_entrypoint_handles_completed_branchless_work(monkeypatch, tmp_path):
+    from agora_ai_sdlc import iteration_status
+
+    outputs = []
+    record = SimpleNamespace(
+        id="issue-26",
+        swarm_id="issue-26-demo",
+        title="Deliver GitHub issue #26",
+        state="completed",
+        artifact_kinds=(),
+        evidence_results=(),
+        base_branch=None,
+    )
+
+    class Workspace:
+        def __init__(self, cwd):
+            self.cwd = cwd
+
+        def list_work(self, swarm_id=None):
+            return [record]
+
+        def show_work(self, swarm_id, work_id):
+            return record
+
+        def list_activity(self, **kwargs):
+            return []
+
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.inspect_next", lambda *args, **kwargs: None)
+    monkeypatch.setattr(iteration_status, "AgoraWorkspace", Workspace)
+    monkeypatch.setattr(iteration_status, "_current_branch", lambda root: "demo/agora-flow-clean")
+    monkeypatch.setattr(iteration_status, "inspect_next", lambda *args, **kwargs: None)
+
+    result = run_interactive(tmp_path, output_fn=outputs.append, lang="es")
+
+    assert result.reason == "completed"
+    assert any("Estado del ciclo en Core: completed" in line for line in outputs)
+    assert any("Work completado; no quedan acciones gobernadas pendientes." in line for line in outputs)

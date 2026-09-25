@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 from agora_ai_sdlc.iteration_status import IterationStatus, render_status, render_terminal_summary
 
 
@@ -86,3 +88,42 @@ def test_terminal_summary_makes_completed_work_explicit():
     assert "Estado del ciclo en Core: completed" in rendered
     assert "Work completado; no quedan acciones gobernadas pendientes." in rendered
     assert "Última actividad gobernada: work.transition: completed" in rendered
+
+
+def test_inspect_iteration_handles_work_record_without_branch(monkeypatch, tmp_path):
+    from agora_ai_sdlc import iteration_status
+
+    record = SimpleNamespace(
+        id="issue-26",
+        swarm_id="issue-26-demo",
+        title="Deliver GitHub issue #26",
+        state="completed",
+        artifact_kinds=(),
+        evidence_results=(),
+        base_branch=None,
+    )
+
+    class Workspace:
+        def __init__(self, cwd):
+            self.cwd = cwd
+
+        def list_work(self, swarm_id=None):
+            return [record]
+
+        def show_work(self, swarm_id, work_id):
+            return record
+
+        def list_activity(self, **kwargs):
+            return []
+
+    monkeypatch.setattr(iteration_status, "AgoraWorkspace", Workspace)
+    monkeypatch.setattr(iteration_status, "_current_branch", lambda root: "demo/agora-flow-clean")
+    monkeypatch.setattr(iteration_status, "inspect_next", lambda *args, **kwargs: None)
+
+    status = iteration_status.inspect_iteration(tmp_path)
+
+    assert status.swarm == "issue-26-demo"
+    assert status.work == "issue-26"
+    assert status.state == "completed"
+    assert status.work_branch is None
+    assert status.current_branch == "demo/agora-flow-clean"

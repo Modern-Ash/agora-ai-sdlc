@@ -479,3 +479,24 @@ def test_start_recoverable_failure_prompts_and_retries_selected_model(monkeypatc
 def test_start_rejects_model_with_non_opencode_agent(capsys):
     assert main(["start", "--issue", "14", "--agent", "claude", "--model", "claude-sonnet"]) == 2
     assert "--model can only be used with --agent opencode" in capsys.readouterr().err
+
+
+def test_continue_no_action_shows_terminal_work_state_instead_of_generic_clear(monkeypatch, capsys):
+    from types import SimpleNamespace
+
+    monkeypatch.setattr("agora_ai_sdlc.guided.inspect_next", lambda *args, **kwargs: None)
+    terminal = SimpleNamespace(
+        state="completed",
+        snapshot=lambda: {"swarm": "delivery", "work": "issue-26", "state": "completed"},
+    )
+    monkeypatch.setattr("agora_ai_sdlc.iteration_status.inspect_iteration", lambda *args, **kwargs: terminal)
+    monkeypatch.setattr(
+        "agora_ai_sdlc.iteration_status.render_terminal_summary",
+        lambda status, lang="en": "TERMINAL completed delivery/issue-26",
+    )
+
+    assert main(["continue", "--non-interactive", "--swarm", "delivery", "--work", "issue-26"]) == 0
+    output = capsys.readouterr().out
+
+    assert "TERMINAL completed delivery/issue-26" in output
+    assert "No governed action currently needs attention" not in output

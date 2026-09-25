@@ -641,21 +641,37 @@ def main(argv: list[str] | None = None) -> int:
             print(error, file=sys.stderr)
             return 2
         advice = None
+        terminal_status = None
         if decision is not None:
             from agora_ai_sdlc.workflow_advisor import advise_workflow
 
             advice = advise_workflow(root, decision)
+        else:
+            from agora_ai_sdlc.iteration_status import inspect_iteration
+
+            terminal_status = inspect_iteration(root, swarm=args.swarm, work=args.work)
         if args.json:
-            payload = decision.snapshot() if decision is not None else {"status": "clear"}
+            if decision is not None:
+                payload = decision.snapshot()
+            else:
+                payload = {
+                    "status": "completed" if terminal_status and terminal_status.state == "completed" else "clear",
+                    "iteration": terminal_status.snapshot() if terminal_status is not None else None,
+                }
             if advice is not None:
                 payload["workflow_advice"] = advice.snapshot()
             print(json.dumps(payload, sort_keys=True))
         else:
-            rendered = (
-                render(decision, expert=args.expert, show_commands=args.commands)
-                if language == "en"
-                else render(decision, expert=args.expert, show_commands=args.commands, lang=language)
-            )
+            if decision is None:
+                from agora_ai_sdlc.iteration_status import render_terminal_summary
+
+                rendered = render_terminal_summary(terminal_status, lang=language)
+            else:
+                rendered = (
+                    render(decision, expert=args.expert, show_commands=args.commands)
+                    if language == "en"
+                    else render(decision, expert=args.expert, show_commands=args.commands, lang=language)
+                )
             if advice is not None:
                 rendered += "\n\nRecommended now: " + advice.summary
                 if advice.recommended_runtime is not None:

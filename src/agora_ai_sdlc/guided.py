@@ -42,6 +42,9 @@ class GuidedDecision:
     criterion_statuses: tuple[tuple[str, tuple[str, ...]], ...] = ()
     developer_actor: str | None = None
     developer_actor_kind: str | None = None
+    responsible_actor_kind: str | None = None
+    required_criterion_stage: str | None = None
+    next_criterion_stage: str | None = None
 
     @property
     def blocked(self) -> bool:
@@ -161,6 +164,34 @@ def _current_branch(root: Path) -> str | None:
     return value or None
 
 
+def _next_criterion_stage(
+    workspace: AgoraWorkspace,
+    swarm: str,
+    unsatisfied: tuple[str, ...],
+    statuses: tuple[tuple[str, tuple[str, ...]], ...],
+    required_stage: str | None,
+) -> tuple[str | None, str | None]:
+    """Resolve the next missing criterion stage and the role authorized to record it."""
+
+    if not unsatisfied or not required_stage:
+        return None, None
+    try:
+        contract = workspace.method_contract(swarm)
+        required_index = contract.criterion_stages.index(required_stage)
+    except (AttributeError, ValueError):
+        return None, None
+
+    current = dict(statuses)
+    for criterion in unsatisfied:
+        recorded = set(current.get(criterion, ()))
+        for stage in contract.criterion_stages[: required_index + 1]:
+            if stage in recorded:
+                continue
+            roles = tuple(contract.criterion_stage_roles.get(stage, ()) or ())
+            return stage, (roles[0] if roles else None)
+    return None, None
+
+
 def inspect_next(
     root: Path,
     *,
@@ -213,19 +244,48 @@ def inspect_next(
 
     developer_actor = None
     developer_actor_kind = None
+    responsible_actor = task.actor
+    responsible_role = task.role
+    responsible_actor_kind = getattr(task, "actor_kind", None)
+    required_criterion_stage = str(gate.get("required_criterion_stage") or "") or None
+    next_criterion_stage = None
     try:
         swarm_record = workspace.show_swarm(str(task.swarm_id or ""))
-        developer_actor = (getattr(swarm_record, "assignments", {}) or {}).get("developer")
-        if developer_actor:
-            actor_record = next(
-                (actor for actor in workspace.list_actors() if getattr(actor, "reference", None) == developer_actor),
-                None,
+        assignments = getattr(swarm_record, "assignments", {}) or {}
+        actors = {
+            getattr(actor, "reference", None): actor
+            for actor in workspace.list_actors()
+            if getattr(actor, "reference", None)
+        }
+        developer_actor = assignments.get("developer")
+        if developer_actor and developer_actor in actors:
+            developer_actor_kind = str(getattr(actors[developer_actor], "kind", "") or "") or None
+
+        technical_gaps = bool(missing_artifacts or missing_evidence or git_issues or clarification_issues)
+        if missing_approvals and not technical_gaps and not unsatisfied_criteria:
+            approval_role = missing_approvals[0]
+            approval_actor = assignments.get(approval_role)
+            if approval_actor:
+                responsible_role = approval_role
+                responsible_actor = approval_actor
+                record = actors.get(approval_actor)
+                responsible_actor_kind = str(getattr(record, "kind", "") or "") or None
+        elif unsatisfied_criteria and not technical_gaps:
+            next_criterion_stage, stage_role = _next_criterion_stage(
+                workspace,
+                str(task.swarm_id or ""),
+                unsatisfied_criteria,
+                criterion_statuses,
+                required_criterion_stage,
             )
-            if actor_record is not None:
-                developer_actor_kind = str(getattr(actor_record, "kind", "") or "") or None
+            stage_actor = assignments.get(stage_role) if stage_role else None
+            if stage_role and stage_actor:
+                responsible_role = stage_role
+                responsible_actor = stage_actor
+                record = actors.get(stage_actor)
+                responsible_actor_kind = str(getattr(record, "kind", "") or "") or None
     except (AttributeError, OSError, ValueError, FileNotFoundError):
-        developer_actor = None
-        developer_actor_kind = None
+        pass
 
     messages = _humanize(
         blockers,
@@ -242,8 +302,8 @@ def inspect_next(
         work=str(task.work_id or ""),
         title=details.get("title"),
         method=details.get("method"),
-        actor=task.actor,
-        role=task.role,
+        actor=responsible_actor,
+        role=responsible_role,
         state=task.state,
         target=target,
         gate=gate.get("gate"),
@@ -261,6 +321,9 @@ def inspect_next(
         criterion_statuses=criterion_statuses,
         developer_actor=developer_actor,
         developer_actor_kind=developer_actor_kind,
+        responsible_actor_kind=responsible_actor_kind,
+        required_criterion_stage=required_criterion_stage,
+        next_criterion_stage=next_criterion_stage,
     )
 
 

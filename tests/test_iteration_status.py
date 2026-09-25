@@ -1,4 +1,4 @@
-from agora_ai_sdlc.iteration_status import IterationStatus, render_status
+from agora_ai_sdlc.iteration_status import IterationStatus, render_status, render_terminal_summary
 
 
 def sample_status() -> IterationStatus:
@@ -62,3 +62,27 @@ def test_unknown_usage_is_rendered_as_unknown_not_zero():
     assert "Lifecycle: [██░░░░░░░░] 1/4  inception" in rendered
     assert "Usage: unknown" in rendered
     assert "Usage: 0" not in rendered
+
+
+def test_terminal_summary_makes_completed_work_explicit():
+    status = sample_status()
+    completed = IterationStatus(
+        **{
+            **status.snapshot(),
+            "state": "completed",
+            "target": None,
+            "gate": None,
+            "missing_evidence": (),
+            "missing_approvals": (),
+            "last_activity": "work.transition: completed",
+            "ready_for_human_approval": False,
+            "ready_to_transition": False,
+        }
+    )
+
+    rendered = render_terminal_summary(completed, lang="es")
+
+    assert "Agora Flow · estado final" in rendered
+    assert "Estado del ciclo en Core: completed" in rendered
+    assert "Work completado; no quedan acciones gobernadas pendientes." in rendered
+    assert "Última actividad gobernada: work.transition: completed" in rendered

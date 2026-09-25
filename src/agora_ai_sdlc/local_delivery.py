@@ -74,6 +74,15 @@ def _read_baseline(root: Path, work: str) -> dict[str, str]:
     return {str(key): str(value) for key, value in files.items()}
 
 
+def changed_product_files(root: Path, work: str) -> tuple[str, ...]:
+    """Return project files created or changed since the Work baseline."""
+
+    root = root.resolve()
+    baseline = _read_baseline(root, work)
+    current = _project_files(root)
+    return tuple(path for path, digest in current.items() if baseline.get(path) != digest)
+
+
 def local_artifacts_delivery_enabled(root: Path) -> bool:
     config = root / "ai-sdlc" / "project.yaml"
     if not config.is_file():
@@ -93,6 +102,7 @@ def _governance_files(root: Path, work: str) -> tuple[str, ...]:
         root / ".agora" / "intents" / work,
         root / ".agora" / "ai-sdlc" / "handoffs" / work,
         root / ".agora" / "ai-sdlc" / "verification" / work,
+        root / ".agora" / "ai-sdlc" / "construction" / work,
         root / ".agora" / "ai-sdlc" / "wizard" / work,
     )
     values: list[str] = []
@@ -112,12 +122,7 @@ def publish_local_artifacts(
     workspace_factory=AgoraWorkspace,
 ) -> LocalArtifactDelivery:
     root = root.resolve()
-    baseline = _read_baseline(root, decision.work)
-    current = _project_files(root)
-    changed = tuple(
-        path for path, digest in current.items()
-        if baseline.get(path) != digest
-    )
+    changed = changed_product_files(root, decision.work)
 
     output_root = root / "output" / decision.work
     product_root = output_root / "product"

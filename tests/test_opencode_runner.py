@@ -341,3 +341,9 @@ def test_run_opencode_fails_fast_on_terminal_provider_error(monkeypatch, tmp_pat
 
     assert exit_code == 70
     assert process.killed is True
+
+
+def test_terminal_provider_error_ignores_source_identifier_named_forbidden_skips():
+    assert not opencode_runner.terminal_provider_error(
+        '129- expected = {"schema", "id", "mandatory_steps", "forbidden_skips"}'
+    )

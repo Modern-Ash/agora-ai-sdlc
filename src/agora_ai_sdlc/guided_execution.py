@@ -53,6 +53,12 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
             "Never rely on the default delivery swarm or infer another Work from its id."
         ),
         f"Read and follow the guided skill at {skill}.",
+        (
+            "The governed project root above is the complete working boundary for this iteration. "
+            "Do not inspect, grep, read, or modify the Agora AI-SDLC installation, its Python package, "
+            "another checkout, or any path outside the governed project root. "
+            "If an installed contract appears unclear, use only the project-local .agora skill/method resources."
+        ),
     ]
     if bundle_path:
         parts.append(

@@ -38,6 +38,7 @@ from agora_ai_sdlc.start_preflight import (
     StartPreparationResult,
     ensure_start_ready,
     isolate_dirty_work,
+    resolve_start_swarm,
 )
 
 
@@ -66,6 +67,7 @@ class StartExecutorError(StartFlowError):
 class StartFlowResult:
     project: str
     issue: int
+    swarm_id: str
     issue_url: str
     issue_title: str
     intent_id: str
@@ -429,12 +431,21 @@ def prepare_start(
     root = prepared.root
     notify("start.project-ready")
     workspace = workspace_factory(cwd=root)
+    preflight_actions = list(prepared.actions)
+    resolved_swarm = resolve_start_swarm(
+        workspace,
+        root,
+        f"ai-{runtime.id}",
+        swarm,
+        issue,
+        preflight_actions,
+    )
 
     issue_url = f"https://github.com/{project}/issues/{issue}"
     work_record = _ensure_issue_work(
         workspace,
         root,
-        swarm=swarm,
+        swarm=resolved_swarm,
         actor=actor,
         issue=issue,
         issue_url=issue_url,
@@ -472,7 +483,7 @@ def prepare_start(
                     tool_id="github-issues",
                     operation_id="view",
                     actor_id=actor,
-                    swarm_id=swarm,
+                    swarm_id=resolved_swarm,
                     inputs={"issue": issue_url},
                     launch=True,
                 )
@@ -538,7 +549,7 @@ def prepare_start(
         issue_title=title,
         runtime_id=runtime.id,
         runtime_name=runtime.name,
-        swarm_id=swarm,
+        swarm_id=resolved_swarm,
         work_id=work_record.id,
         branch=resolved_branch,
         base_branch=getattr(work_record, "base_branch", None),
@@ -553,7 +564,7 @@ def prepare_start(
         materialized = inception_materializer(
             root,
             workspace=workspace,
-            swarm_id=swarm,
+            swarm_id=resolved_swarm,
             work_id=work_record.id,
             intent_path=intent.path,
             issue=deterministic.issue,
@@ -611,6 +622,7 @@ def prepare_start(
     return StartFlowResult(
         project=project,
         issue=number,
+        swarm_id=resolved_swarm,
         issue_url=issue_url,
         issue_title=title,
         intent_id=intent.id,
@@ -630,7 +642,7 @@ def prepare_start(
         workspace_isolated=isolation_action is not None,
         preflight_actions=tuple(
             ([isolation_action] if isolation_action is not None else [])
-            + list(prepared.actions)
+            + preflight_actions
             + list(materialization_actions)
             + list(clarification_actions)
         ),

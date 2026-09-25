@@ -224,7 +224,6 @@ _MESSAGES: dict[str, dict[str, str]] = {
         "wizard.step.pull-request": "Pull Request",
         "wizard.step.review-delivery": "Review",
         "wizard.step.generated-output": "Resultado generado",
-        "wizard.step.generated-output": "Generated Output",
         "wizard.brownfield": "Brownfield semantic elevation",
         "wizard.semantic_elevation": "Agora will build/review static and dynamic system models before changing code.",
         "wizard.method_outputs": "AI-SDLC method outputs",

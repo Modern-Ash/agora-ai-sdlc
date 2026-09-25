@@ -243,3 +243,28 @@ def test_guided_executor_refuses_scope_mismatch_before_runtime(monkeypatch, tmp_
 
     with pytest.raises(ExecutorLaunchError, match="scope changed before launch"):
         execute_guided_preparation(tmp_path, decision(), runtime_id="claude")
+
+
+def test_guided_executor_refuses_phase_mismatch_before_runtime(monkeypatch, tmp_path):
+    runtime = SimpleNamespace(
+        id="claude",
+        name="Claude Code",
+        installed=True,
+        responsive=True,
+        executable="/usr/bin/claude",
+        command="claude",
+        version="1.0",
+    )
+    monkeypatch.setattr("agora_ai_sdlc.guided_execution._runtime", lambda *args, **kwargs: runtime)
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_execution.build_execution_bundle",
+        lambda *args, **kwargs: SimpleNamespace(
+            markdown_path=str(tmp_path / "EXECUTION_BUNDLE.md"),
+            swarm="delivery",
+            work="issue-26",
+            stage="construction",
+        ),
+    )
+
+    with pytest.raises(ExecutorLaunchError, match="phase changed before launch"):
+        execute_guided_preparation(tmp_path, decision(), runtime_id="claude")

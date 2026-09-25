@@ -424,7 +424,7 @@ def prepare_start(
     prepared = preflight(
         root,
         runtime,
-        swarm_id=swarm,
+        swarm_id=resolved_swarm,
         issue=issue,
         workspace_factory=workspace_factory,
     )
@@ -567,7 +567,7 @@ def prepare_start(
         if not deterministic.semantic_gaps:
             clarification = deterministic_clarifier(
                 workspace=workspace,
-                swarm_id=swarm,
+                swarm_id=resolved_swarm,
                 work_id=work_record.id,
                 actor_id=str(getattr(materialized, "actor_id", "") or ""),
             )
@@ -590,7 +590,7 @@ def prepare_start(
                 root,
                 runtime=runtime,
                 handoff_path=Path(handoff.path),
-                swarm_id=swarm,
+                swarm_id=resolved_swarm,
                 work_id=work_record.id,
                 responsible_actor=actor,
                 model=model,

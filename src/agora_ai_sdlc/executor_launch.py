@@ -330,13 +330,19 @@ def launch_inception_executor(
     responsible_actor: str = "product-owner",
     model: str | None = None,
     workspace_factory=AgoraWorkspace,
+    runtime_plan: RuntimeExecutionPlan | None = None,
 ) -> InceptionExecutionResult:
     """Launch one governed Inception session and reuse completed work idempotently."""
 
     root = root.resolve()
-    runner = build_executor_runner(runtime, root, handoff_path, model=model)
+    runner = runtime_plan.runner if runtime_plan is not None else build_executor_runner(runtime, root, handoff_path, model=model)
     workspace = workspace_factory(cwd=root)
-    executor_id = f"ai-{runtime.id}"
+    session_actor = (
+        runtime_plan.actor_reference.removeprefix("project:")
+        if runtime_plan is not None
+        else responsible_actor.removeprefix("project:")
+    )
+    executor_id = session_actor if runtime_plan is not None else f"ai-{runtime.id}"
     base_id = f"ai-sdlc-inception-{work_id}"
     sessions = _matching_sessions(workspace, root, base_id)
     latest = sessions[-1] if sessions else None
@@ -357,6 +363,8 @@ def launch_inception_executor(
         try:
             with guard_governed_state(root):
                 completed = workspace.launch_session(LaunchSessionInput(session_id=latest.id))
+        except GovernanceRegression as error:
+            raise ExecutorLaunchError(str(error)) from error
         except (OSError, RuntimeError, ValueError) as error:
             raise ExecutorLaunchError(
                 f"Inception executor failed while launching prepared session {latest.id}: {error}"
@@ -391,12 +399,15 @@ def launch_inception_executor(
         kwargs["executor_id"] = executor_id
     if "retry_of" in fields and retry_of is not None:
         kwargs["retry_of"] = retry_of
-    if "runtime_version" in fields and runtime.version:
-        kwargs["runtime_version"] = runtime.version
+    runtime_version = runtime_plan.runtime_version if runtime_plan is not None else runtime.version
+    if "runtime_version" in fields and runtime_version:
+        kwargs["runtime_version"] = runtime_version
 
     try:
         with guard_governed_state(root):
             completed = workspace.start_session(StartSessionInput(**kwargs))
+    except GovernanceRegression as error:
+        raise ExecutorLaunchError(str(error)) from error
     except (OSError, RuntimeError, ValueError) as error:
         latest_after = _matching_sessions(workspace, root, base_id)
         durable = latest_after[-1] if latest_after else None

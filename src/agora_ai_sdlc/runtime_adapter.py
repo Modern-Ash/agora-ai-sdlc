@@ -20,7 +20,8 @@ from agora_ai_sdlc.agent_capabilities import (
     CapabilityError,
     manifest_for,
 )
-from agora_ai_sdlc.execution_envelope import ExecutionEnvelope, verify_integrity
+from agora_ai_sdlc.execution_envelope import CoreSnapshot, ExecutionEnvelope, validate_current, verify_integrity
+from agora_ai_sdlc.execution_requirements import ExecutionRequirements
 from agora_ai_sdlc.runtime_domain import AgentRuntimeRef
 
 SURFACES = ("instructions", "system_prompt", "skills", "mcp", "model_selection", "subagents", "reviewer")
@@ -143,8 +144,18 @@ class RuntimeAdapter(ABC):
         return ExecutionOutcome(exit_code=exit_code, output=sanitize(output))
 
     # -- template methods -------------------------------------------------------------------
-    def prepare_execution(self, payload: Mapping[str, Any]) -> PreparedExecution:
+    def prepare_execution(
+        self,
+        payload: Mapping[str, Any],
+        *,
+        current: tuple[CoreSnapshot, ExecutionRequirements] | None = None,
+    ) -> PreparedExecution:
+        """Verify, optionally revalidate against current Core state, then render the invocation."""
         envelope = verify_integrity(payload)
+        if current is not None:
+            check = validate_current(envelope, *current)
+            if not check.valid:
+                raise AdapterError("adapter.stale_envelope", ",".join(check.reasons))
         if not envelope.executable or envelope.binding is None:
             raise AdapterError("adapter.not_executable", "envelope is a stop/human-authority envelope")
         try:

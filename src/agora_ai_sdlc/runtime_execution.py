@@ -85,8 +85,7 @@ def _model_override(runtime_id: str, value: str, current: RuntimeBinding | None)
         )
     if not provider or not model:
         raise RuntimeExecutionError("runtime.model.invalid", f"invalid model override {value!r}")
-    model_id = provider if provider.casefold() == "ollama" else provider
-    return ModelRuntimeRef(model_id, provider, model)
+    return ModelRuntimeRef(provider, provider, model)
 
 
 def binding_for(root: Path, runtime_id: str, model: str | None = None) -> RuntimeBinding:

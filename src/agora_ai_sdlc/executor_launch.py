@@ -13,6 +13,7 @@ from agora.model import LaunchSessionInput, StartSessionInput
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.execution_bundle import build_execution_bundle
+from agora_ai_sdlc.governance_guard import GovernanceRegression, guard_governed_state
 from agora_ai_sdlc.guided import inspect_next
 from agora_ai_sdlc.inception_validation import validate_inception_output
 from agora_ai_sdlc.llm_failures import recoverable_llm_failure
@@ -369,7 +370,10 @@ def launch_inception_executor(
         )
     if latest is not None and latest.status == "prepared":
         try:
-            completed = workspace.launch_session(LaunchSessionInput(session_id=latest.id))
+            with guard_governed_state(root):
+                completed = workspace.launch_session(LaunchSessionInput(session_id=latest.id))
+        except GovernanceRegression as error:
+            raise ExecutorLaunchError(str(error)) from error
         except (OSError, RuntimeError, ValueError) as error:
             raise ExecutorLaunchError(
                 f"Inception executor failed while launching prepared session {latest.id}: {error}"
@@ -408,7 +412,10 @@ def launch_inception_executor(
         kwargs["runtime_version"] = runtime.version
 
     try:
-        completed = workspace.start_session(StartSessionInput(**kwargs))
+        with guard_governed_state(root):
+            completed = workspace.start_session(StartSessionInput(**kwargs))
+    except GovernanceRegression as error:
+        raise ExecutorLaunchError(str(error)) from error
     except (OSError, RuntimeError, ValueError) as error:
         latest_after = _matching_sessions(workspace, root, base_id)
         durable = latest_after[-1] if latest_after else None

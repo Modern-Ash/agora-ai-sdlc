@@ -40,3 +40,9 @@ Agora Core (`agora-framework`, compatible range) and development-only test/lint 
 
 - Final compatible Agora Core range (depends on a released Core boundary).
 
+
+## Agent capability manifests
+
+`agora-ai-sdlc/agent-capability-manifest/v1` declares, per agent runtime, which integration mechanisms it supports (`aisdlc runtimes --capabilities`). It is static: no lifecycle state, Laya decisions, approvals, availability or observations. Discovery observes installation, policy decides use, Laya advises, Core is authority. Every capability id is explicit; unknown agents or ids fail closed.
+
+Adding an adapter: register a manifest in `agent_capabilities.py` via `build_manifest` with every id claimed explicitly (claim only what the adapter implements), then add it to the parity test.

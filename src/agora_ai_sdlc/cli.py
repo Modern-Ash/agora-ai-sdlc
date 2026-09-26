@@ -73,6 +73,11 @@ def main(argv: list[str] | None = None) -> int:
     runtimes = sub.add_parser("runtimes", help="Detect local AI CLI runtimes without reading credentials")
     runtimes.add_argument("--root", default=".", help="Project root used to correlate configured runtimes")
     runtimes.add_argument("--json", action="store_true", help="Print deterministic machine-readable output")
+    runtimes.add_argument(
+        "--capabilities",
+        action="store_true",
+        help="Print canonical agent capability manifests as JSON (static facts, no probing)",
+    )
     runtimes.add_argument("--timeout", type=float, default=2.0, help="Probe timeout in seconds")
     runtimes.add_argument("--lang", choices=SUPPORTED_LANGUAGES, help="Presentation language")
     doctor = sub.add_parser("doctor", help="Diagnose the local AI-SDLC environment")
@@ -428,6 +433,16 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"- {name}: {answer.value} confidence={answer.confidence:.3f} {suffix}")
         return 0
 
+    if args.command == "runtimes" and args.capabilities:
+        from agora_ai_sdlc.agent_capabilities import registered_manifests
+
+        print(
+            json.dumps(
+                [{**item.to_dict(), "digest": item.digest} for item in registered_manifests()],
+                sort_keys=True,
+            )
+        )
+        return 0
     if args.command == "runtimes":
         from agora_ai_sdlc.runtime_discovery import discover_runtimes, render_runtimes
 

@@ -47,6 +47,12 @@ class CoreSnapshot:
 def snapshot_from_workspace(workspace: Any, status: Any) -> CoreSnapshot:
     """Build a snapshot from Core (`AgoraWorkspace`) and the AI-SDLC iteration status."""
     swarm = workspace.show_swarm(status.swarm)
+    ready_for_human = getattr(status, "ready_for_human_approval", None)
+    human_boundary = (
+        bool(status.missing_approvals)
+        if ready_for_human is None
+        else bool(ready_for_human and status.missing_approvals)
+    )
     return CoreSnapshot(
         swarm=status.swarm,
         work=status.work,
@@ -56,7 +62,7 @@ def snapshot_from_workspace(workspace: Any, status: Any) -> CoreSnapshot:
         role=status.role,
         assignments=dict(swarm.assignments),
         actors=frozenset(actor.reference for actor in workspace.list_actors()),
-        human_boundary=bool(status.ready_for_human_approval and status.missing_approvals),
+        human_boundary=human_boundary,
     )
 
 

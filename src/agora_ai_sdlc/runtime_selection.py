@@ -3,6 +3,8 @@
 from dataclasses import dataclass, field
 from typing import Protocol
 
+from agora_ai_sdlc.runtime_domain import RuntimeBinding, normalize_runtime
+
 SCHEMA = "agora-ai-sdlc/runtime-selection/v1"
 FALLBACK_SIGNALS = ("quota", "runtime-unavailable", "budget-exhausted", "budget-unavailable")
 FAILURE_SIGNALS = (*FALLBACK_SIGNALS, "ordinary-failure")
@@ -19,15 +21,23 @@ class CoreUsageSummary(Protocol):
 
 @dataclass(frozen=True)
 class RuntimeRef:
+    """Legacy flat runtime (v1); `binding` is its deterministic v2 normalization."""
+
     id: str
     integration: str
     provider: str
     model: str
 
+    @property
+    def binding(self) -> RuntimeBinding:
+        return normalize_runtime(
+            {"id": self.id, "integration": self.integration, "provider": self.provider, "model": self.model}
+        )
+
 
 @dataclass(frozen=True)
 class Candidate:
-    runtime: RuntimeRef
+    runtime: RuntimeRef | RuntimeBinding
     projected_usage: dict[str, int | None]
     data_policy: dict
     review_policy: dict
@@ -73,19 +83,17 @@ def _validate(route: Route, budgets: tuple[Budget, ...], signal: str | None) -> 
         raise ValueError("activity class is required")
     if not route.candidates:
         raise ValueError("route requires at least one runtime candidate")
-    ids = [candidate.runtime.id for candidate in route.candidates]
+    ids = [_runtime_id(candidate.runtime) for candidate in route.candidates]
     if any(not runtime_id.strip() for runtime_id in ids) or len(ids) != len(set(ids)):
         raise ValueError("runtime candidate ids must be non-empty and unique")
-    if any(
-        not value.strip()
-        for candidate in route.candidates
-        for value in (
-            candidate.runtime.integration,
-            candidate.runtime.provider,
-            candidate.runtime.model,
-        )
-    ):
-        raise ValueError("runtime integration, provider and model are required")
+    for candidate in route.candidates:
+        if isinstance(candidate.runtime, RuntimeBinding):
+            continue
+        if any(
+            not value.strip()
+            for value in (candidate.runtime.integration, candidate.runtime.provider, candidate.runtime.model)
+        ):
+            raise ValueError("runtime integration, provider and model are required")
     if signal is not None and signal not in FAILURE_SIGNALS:
         raise ValueError(f"unsupported Core failure signal: {signal}")
     if any(item not in FALLBACK_SIGNALS for item in route.allowed_fallback_signals):
@@ -151,13 +159,13 @@ def _budget_blockers(candidate: Candidate, budgets: tuple[Budget, ...]) -> list[
     return blockers
 
 
-def _runtime_dict(runtime: RuntimeRef) -> dict[str, str]:
-    return {
-        "id": runtime.id,
-        "integration": runtime.integration,
-        "provider": runtime.provider,
-        "model": runtime.model,
-    }
+def _runtime_id(runtime: RuntimeRef | RuntimeBinding) -> str:
+    return runtime.agent.id if isinstance(runtime, RuntimeBinding) else runtime.id
+
+
+def _runtime_dict(runtime: RuntimeRef | RuntimeBinding) -> dict:
+    binding = runtime if isinstance(runtime, RuntimeBinding) else runtime.binding
+    return {**binding.to_legacy(), "binding": binding.to_dict()}
 
 
 def _consumed(budgets: tuple[Budget, ...]) -> dict[str, dict[str, int | None]]:
@@ -206,8 +214,10 @@ def select_runtime(
     if signal is not None:
         if signal not in route.allowed_fallback_signals:
             return _blocked_signal(route, budgets, signal)
-        current = current_runtime or route.candidates[0].runtime.id
-        matches = [index for index, candidate in enumerate(route.candidates) if candidate.runtime.id == current]
+        current = current_runtime or _runtime_id(route.candidates[0].runtime)
+        matches = [
+            index for index, candidate in enumerate(route.candidates) if _runtime_id(candidate.runtime) == current
+        ]
         if not matches:
             raise ValueError(f"current runtime {current!r} is not in the configured route")
         start = matches[0] + 1
@@ -222,7 +232,7 @@ def select_runtime(
         blockers = [*policy_blockers, *budget_blockers]
         considered.append(
             {
-                "runtime": candidate.runtime.id,
+                "runtime": _runtime_id(candidate.runtime),
                 "blockers": tuple(blocker["code"] for blocker in blockers),
             }
         )

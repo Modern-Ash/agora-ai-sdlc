@@ -139,8 +139,10 @@ def test_claude_envelope_is_rejected_by_codex_adapter():
 
 
 def test_registry_provides_codex_without_provider_branching():
-    registry = default_registry(codex_options={"executable": "/bin/codex", "probe": lambda c: (0, "0.156.1")})
-    assert registry.ids() == ("claude", "codex")
+    registry = default_registry(
+        Path("."), codex_options={"executable": "/bin/codex", "probe": lambda c: (0, "0.156.1")}
+    )
+    assert registry.ids() == ("claude", "codex", "opencode")
     assert isinstance(registry.get(AgentRuntimeRef("codex", "codex")), CodexAdapter)
 
 

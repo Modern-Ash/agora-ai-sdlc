@@ -56,6 +56,36 @@ def _validation_detail(validation) -> str:
     return "Agora validation failed — " + "; ".join(items) + suffix
 
 
+def _formatter_check(root: Path) -> DoctorCheck | None:
+    """Formatters must not rewrite `.agora/`: Core digests depend on the exact bytes."""
+    package = root / "package.json"
+    ignore = root / ".prettierignore"
+    uses_prettier = ignore.is_file() or any(
+        (root / name).is_file()
+        for name in (".prettierrc", ".prettierrc.json", ".prettierrc.yaml", ".prettierrc.yml", "prettier.config.js")
+    )
+    if not uses_prettier and package.is_file():
+        try:
+            uses_prettier = "prettier" in package.read_text(encoding="utf-8")
+        except OSError:
+            return None
+    if not uses_prettier:
+        return None
+    try:
+        lines = (
+            {line.strip() for line in ignore.read_text(encoding="utf-8").splitlines()} if ignore.is_file() else set()
+        )
+    except OSError:
+        return None
+    if lines & {".agora", ".agora/", ".agora/**", "/.agora", "/.agora/"}:
+        return DoctorCheck("formatter", True, ".agora/ excluded from Prettier")
+    return DoctorCheck(
+        "formatter",
+        False,
+        "Prettier may rewrite .agora/ and break Core digests — add `.agora/` to .prettierignore",
+    )
+
+
 def run_doctor(root: Path) -> tuple[tuple[DoctorCheck, ...], tuple[RuntimeDiscovery, ...]]:
     checks: list[DoctorCheck] = []
 
@@ -106,6 +136,10 @@ def run_doctor(root: Path) -> tuple[tuple[DoctorCheck, ...], tuple[RuntimeDiscov
             str(skill.relative_to(root)) if skill.is_file() else "not installed",
         )
     )
+
+    formatter = _formatter_check(root)
+    if formatter is not None:
+        checks.append(formatter)
 
     runtimes = discover_runtimes(root)
     return tuple(checks), runtimes

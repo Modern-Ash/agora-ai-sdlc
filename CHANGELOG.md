@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.2.0 - 2026-09-26
+
+- Publish a single-tool installation surface that exposes `agora`, `aisdlc` and `agora-ai-sdlc` from the Agora AI-SDLC distribution while resolving Agora Core as a normal dependency.
+- Wire the provider-neutral runtime layer into the real Inception, Guided and Construction execution paths through `ExecutionRequirements -> RuntimeBinding -> ExecutionEnvelope -> RuntimeAdapter`.
 - Fail closed when an executor run leaves Agora governed state invalid (new `governance_guard`), and warn in `aisdlc doctor` when Prettier may rewrite `.agora/`.
 - Add the provider-neutral runtime layer (epic #252): `runtime-binding/v2` agent/model taxonomy, canonical agent capability manifests, `ExecutionRequirements`, deterministic capability admission, `ExecutionEnvelope`, the `RuntimeAdapter` SPI with Claude Code, Codex and OpenCode(+Ollama) adapters, immutable `ExecutionCandidate` review subjects, a shared conformance suite, `aisdlc runtimes --capabilities|--migrate-preview|--diagnose` and the "Adding a new agent runtime" guide. Compatibility: v1 flat runtime entries stay readable and JSON consumers keep their fields (`kind`, `models` and `binding` are additive); `default_registry` takes a project root; the opt-in fallback signal `capability-mismatch` is new.
 - Stabilize the continuous Flow branch against current main and preserve Expert CLI Construction execution alongside Automagic Flow.

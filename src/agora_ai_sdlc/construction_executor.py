@@ -151,6 +151,7 @@ def launch_construction_executor(
                 bundle=bundle,
                 runtime_id=runtime.id,
                 model=model,
+                runtime=runtime,
                 workspace=workspace,
                 actor=actor_reference,
                 context={

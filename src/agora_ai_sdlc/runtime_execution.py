@@ -114,6 +114,21 @@ def binding_for(root: Path, runtime_id: str, model: str | None = None) -> Runtim
     )
 
 
+def configured_agent_for_role(root: Path, role: str = "developer") -> str | None:
+    path = root / "ai-sdlc" / "project.yaml"
+    if not path.is_file():
+        return None
+    try:
+        payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        return None
+    mapping = payload.get("role_execution") if isinstance(payload, dict) else None
+    if not isinstance(mapping, dict):
+        return None
+    value = mapping.get(role)
+    return value if isinstance(value, str) and value and value != "human" else None
+
+
 def runtime_for(root: Path, runtime_id: str) -> RuntimeDiscovery:
     for item in discover_runtimes(root):
         if item.id == runtime_id and item.installed and item.responsive:

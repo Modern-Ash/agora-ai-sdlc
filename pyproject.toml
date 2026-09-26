@@ -16,6 +16,7 @@ laya = ["laya>=0.3.11,<0.4"]
 full = ["laya>=0.3.11,<0.4"]
 
 [project.scripts]
+agora = "agora.cli:main"
 agora-ai-sdlc = "agora_ai_sdlc.cli:main"
 aisdlc = "agora_ai_sdlc.cli:main"
 

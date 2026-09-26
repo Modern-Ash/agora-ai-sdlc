@@ -143,6 +143,16 @@ def check_package() -> None:
         )
         if not json.loads(self_test).get("ok"):
             raise PhaseError("wheel-installed conformance self-test failed", "inspect the self-test failures")
+        core_cli = (
+            venv
+            / ("Scripts" if sys.platform == "win32" else "bin")
+            / ("agora.exe" if sys.platform == "win32" else "agora")
+        )
+        run(
+            [str(core_cli), "--version"],
+            "the AI-SDLC wheel must expose the bundled Agora Core CLI",
+            cwd=Path(tmp),
+        )
 
 
 PHASES: list[tuple[str, Callable[[], object]]] = [

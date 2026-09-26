@@ -236,6 +236,16 @@ def _admission_blockers(
     return blockers, missing
 
 
+def admit_binding(
+    binding: RuntimeBinding,
+    requirements: ExecutionRequirements,
+    availability: Mapping[str, Any] | None = None,
+) -> tuple[dict, ...]:
+    """Public admission check for one binding; an empty result means admissible."""
+    blockers, _ = _admission_blockers(Candidate(binding, {}, {}, {}), requirements, availability)
+    return tuple(blockers)
+
+
 def _admission_signal(blockers: list[dict]) -> str:
     codes = {blocker["code"] for blocker in blockers}
     return "runtime-unavailable" if codes & set(AVAILABILITY_BLOCKERS) else "capability-mismatch"

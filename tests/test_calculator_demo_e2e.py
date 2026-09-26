@@ -1,4 +1,9 @@
+import re
+import shutil
+import subprocess
 from pathlib import Path
+
+import pytest
 
 from agora_ai_sdlc.brief_flow import prepare_brief_start
 from agora_ai_sdlc.construction_reconciliation import (
@@ -10,6 +15,24 @@ from agora_ai_sdlc.guided import inspect_next
 from agora_ai_sdlc.iteration_status import inspect_iteration
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 from agora_ai_sdlc.wizard_actions import execute_in_session_action, next_in_session_action
+
+
+def _node_strips_types() -> bool:
+    """The demo product runs TypeScript with `node --experimental-strip-types` (Node >= 22.6)."""
+    node = shutil.which("node")
+    if node is None:
+        return False
+    try:
+        version = subprocess.run([node, "--version"], capture_output=True, text=True, timeout=10, check=False).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    match = re.match(r"v(\d+)\.(\d+)", version.strip())
+    return bool(match) and (int(match.group(1)), int(match.group(2))) >= (22, 6)
+
+
+requires_node_type_stripping = pytest.mark.skipif(
+    not _node_strips_types(), reason="needs Node >= 22.6 for --experimental-strip-types"
+)
 
 
 def _runtime() -> RuntimeDiscovery:
@@ -116,6 +139,7 @@ def _confirm_until_state(root: Path, swarm: str, work: str, target_state: str) -
     raise AssertionError(f"did not reach {target_state}")
 
 
+@requires_node_type_stripping
 def test_calculator_brief_happy_path_reaches_completed(monkeypatch, tmp_path: Path):
     monkeypatch.setenv("AGORA_HOME", str(tmp_path / "home"))
     root = tmp_path / "calculator-demo"

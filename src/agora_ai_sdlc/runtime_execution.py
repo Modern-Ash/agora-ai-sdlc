@@ -149,6 +149,14 @@ def _actor_reference(workspace: Any, requested: str | None) -> tuple[str, str]:
     raise RuntimeExecutionError("runtime.actor.unknown", f"responsible actor {requested!r} does not exist in Core")
 
 
+def supports_governed_runtime_plan(workspace: Any) -> bool:
+    """Whether this Core/workspace exposes the read APIs required by ExecutionEnvelope."""
+    return all(
+        callable(getattr(workspace, name, None))
+        for name in ("show_swarm", "list_actors", "work_inspection_read_set_sha256")
+    )
+
+
 def snapshot_for_decision(workspace: Any, decision: Any, actor_reference: str) -> CoreSnapshot:
     swarm = workspace.show_swarm(decision.swarm)
     actors = frozenset(

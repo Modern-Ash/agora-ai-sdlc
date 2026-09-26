@@ -34,6 +34,8 @@ class RuntimeDiscovery:
     configured: bool
     service: str | None = None
     error: str | None = None
+    # Model ids a model runtime reports locally (Ollama `list`); never pulled or downloaded.
+    models: tuple[str, ...] = ()
 
     @property
     def kind(self) -> RuntimeKind:
@@ -76,6 +78,23 @@ def _run(
     if result.returncode != 0:
         return False, version, f"exit-{result.returncode}"
     return True, version, None
+
+
+def _list_models(
+    executable: str,
+    *,
+    timeout_seconds: float,
+    runner: Callable[..., subprocess.CompletedProcess[str]],
+) -> tuple[str, ...]:
+    """Local model catalog through a normal `ollama list`; no credentials, no pulls."""
+    try:
+        result = runner([executable, "list"], capture_output=True, text=True, timeout=timeout_seconds, check=False)
+    except (subprocess.TimeoutExpired, OSError):
+        return ()
+    if result.returncode != 0:
+        return ()
+    names = [line.split()[0] for line in (result.stdout or "").splitlines()[1:] if line.strip()]
+    return tuple(sorted(dict.fromkeys(names)))
 
 
 def _configured_runtime_ids(root: Path) -> set[str]:
@@ -153,6 +172,7 @@ def discover_runtimes(
             runner=runner,
         )
         service = None
+        models: tuple[str, ...] = ()
         if runtime_id == "ollama" and responsive:
             daemon_ok, _, daemon_error = _run(
                 [executable, "ps"],
@@ -160,6 +180,8 @@ def discover_runtimes(
                 runner=runner,
             )
             service = "responsive" if daemon_ok else f"unavailable:{daemon_error or 'unknown'}"
+            if daemon_ok:
+                models = _list_models(executable, timeout_seconds=timeout_seconds, runner=runner)
 
         discoveries.append(
             RuntimeDiscovery(
@@ -173,6 +195,7 @@ def discover_runtimes(
                 configured=runtime_id in configured,
                 service=service,
                 error=error,
+                models=models,
             )
         )
 

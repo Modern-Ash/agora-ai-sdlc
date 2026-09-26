@@ -175,7 +175,11 @@ def _budget_blockers(candidate: Candidate, budgets: tuple[Budget, ...]) -> list[
 
 
 def _runtime_id(runtime: RuntimeRef | RuntimeBinding | ModelRuntimeRef) -> str:
-    return runtime.agent.id if isinstance(runtime, RuntimeBinding) else runtime.id
+    """Candidate identity: a binding is agent + model, so one agent may appear with several models."""
+    if isinstance(runtime, RuntimeBinding):
+        model = runtime.model
+        return runtime.agent.id if model is None else f"{runtime.agent.id}+{model.provider}/{model.model}"
+    return runtime.id
 
 
 def _runtime_dict(runtime: RuntimeRef | RuntimeBinding) -> dict:
@@ -198,6 +202,14 @@ def _binding_of(runtime: RuntimeRef | RuntimeBinding | ModelRuntimeRef) -> Runti
         return None
 
 
+def _model_present(requested: str, installed: tuple[str, ...]) -> bool:
+    if requested.casefold() in ("", "default", "configured-default"):
+        return True  # native model resolution
+    names = {name.casefold() for name in installed}
+    wanted = requested.casefold()
+    return wanted in names or (":" not in wanted and f"{wanted}:latest" in names)
+
+
 def _admission_blockers(
     candidate: Candidate,
     requirements: ExecutionRequirements,
@@ -217,6 +229,14 @@ def _admission_blockers(
         model = binding.model and availability.get(binding.model.id)
         if model and not (model.installed and model.responsive and model.service in (None, "responsive")):
             blockers.append(_blocker("runtime.model_unavailable", "model runtime is not installed and responsive"))
+        elif model and model.models and not _model_present(binding.model.model, model.models):
+            blockers.append(
+                _blocker(
+                    "runtime.model_unavailable",
+                    "requested model is not present locally; it will not be pulled implicitly",
+                    reason="model-not-present",
+                )
+            )
     missing: list[str] = []
     try:
         manifest = manifest_for(binding.agent)

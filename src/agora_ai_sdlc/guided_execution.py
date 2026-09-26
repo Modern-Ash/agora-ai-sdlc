@@ -342,6 +342,7 @@ def execute_guided_preparation(
                 bundle=bundle,
                 runtime_id=runtime.id,
                 model=model,
+                runtime=runtime,
                 workspace=workspace,
                 actor=decision.actor,
                 context={

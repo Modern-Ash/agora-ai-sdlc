@@ -33,6 +33,7 @@ from agora_ai_sdlc.flavor_manifest import (
 from agora_ai_sdlc.guided import skill_path
 from agora_ai_sdlc.profile_activation import adoption_profiles
 from agora_ai_sdlc.runtime_discovery import discover_runtimes, render_runtimes
+from agora_ai_sdlc.runtime_domain import normalize_runtime
 from agora_ai_sdlc.skill_resources import install_resources
 
 SCHEMA = "agora-ai-sdlc/install-config/v1"
@@ -316,7 +317,7 @@ def preview(config: dict, target: Path) -> dict:
         "framework": normalized["framework"],
         "pathway": normalized["pathway"],
         "integrations": normalized["integrations"],
-        "runtimes": normalized["runtimes"],
+        "runtimes": [normalize_runtime(item).to_dict() for item in normalized["runtimes"]],
         "role_execution": normalized["role_execution"],
         "method": normalized["method"],
         "writes": [

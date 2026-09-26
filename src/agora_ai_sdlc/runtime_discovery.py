@@ -135,7 +135,9 @@ def _configured_runtime_ids(root: Path) -> set[str]:
                 binding = None
             if binding is not None:
                 configured.add(binding.agent.id.casefold())
-                if binding.model is not None and binding.model.id.casefold() in {item[0] for item in RUNTIME_CANDIDATES}:
+                if binding.model is not None and binding.model.id.casefold() in {
+                    item[0] for item in RUNTIME_CANDIDATES
+                }:
                     configured.add(binding.model.id.casefold())
                 continue
             runtime_id = str(runtime.get("id") or "").casefold()

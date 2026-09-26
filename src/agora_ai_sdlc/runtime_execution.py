@@ -132,9 +132,7 @@ def runtime_for(root: Path, runtime_id: str) -> RuntimeDiscovery:
     for item in discover_runtimes(root):
         if item.id == runtime_id and item.installed and item.responsive:
             return item
-    raise RuntimeExecutionError(
-        "runtime.unavailable", f"agent runtime {runtime_id!r} is not installed and responsive"
-    )
+    raise RuntimeExecutionError("runtime.unavailable", f"agent runtime {runtime_id!r} is not installed and responsive")
 
 
 def _actor_reference(workspace: Any, requested: str | None) -> tuple[str, str]:

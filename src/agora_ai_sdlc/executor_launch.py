@@ -335,7 +335,11 @@ def launch_inception_executor(
     """Launch one governed Inception session and reuse completed work idempotently."""
 
     root = root.resolve()
-    runner = runtime_plan.runner if runtime_plan is not None else build_executor_runner(runtime, root, handoff_path, model=model)
+    runner = (
+        runtime_plan.runner
+        if runtime_plan is not None
+        else build_executor_runner(runtime, root, handoff_path, model=model)
+    )
     workspace = workspace_factory(cwd=root)
     session_actor = (
         runtime_plan.actor_reference.removeprefix("project:")

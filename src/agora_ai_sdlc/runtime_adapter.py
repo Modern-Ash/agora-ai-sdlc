@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import subprocess
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -47,6 +48,35 @@ class AdapterError(ValueError):
     def __init__(self, code: str, message: str) -> None:
         super().__init__(f"{code}: {sanitize(message)}")
         self.code = code
+
+
+_VERSION = re.compile(r"(\d+)\.(\d+)\.(\d+)")
+Probe = Callable[[list[str]], tuple[int, str]]
+
+
+def subprocess_probe(command: list[str]) -> tuple[int, str]:
+    """Credential-free, bounded version probe."""
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, timeout=5, check=False)
+    except (OSError, subprocess.TimeoutExpired) as error:
+        return 1, error.__class__.__name__
+    return result.returncode, (result.stdout or result.stderr or "").strip()
+
+
+def probe_health(executable: str | None, probe: Probe, minimum: tuple[int, int, int]) -> Health:
+    """Installed / responsive / supported-version diagnosis shared by adapters."""
+    if not executable:
+        return Health(False, False, "executable-not-found")
+    code, output = probe([executable, "--version"])
+    if code != 0:
+        return Health(True, False, f"version-probe-failed:exit-{code}")
+    match = _VERSION.search(output)
+    if not match:
+        return Health(True, False, "version-unparseable")
+    version = tuple(int(part) for part in match.groups())
+    if version < minimum:
+        return Health(True, False, f"unsupported-version:{'.'.join(map(str, version))}")
+    return Health(True, True, output.splitlines()[0])
 
 
 def sanitize(text: str) -> str:
@@ -352,7 +382,9 @@ __all__ = [
     "RuntimeAdapter",
     "SyncAction",
     "plan_sync",
+    "probe_health",
     "sanitize",
+    "subprocess_probe",
     "supported_surfaces",
     "sync_projection",
 ]

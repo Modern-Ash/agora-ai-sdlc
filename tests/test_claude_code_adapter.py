@@ -155,7 +155,7 @@ def test_selection_admits_claude_and_registry_returns_adapter():
     allow = {"allowed": True, "blockers": []}
     result = select_runtime(Route("build", (Candidate(claude, {}, allow, allow),)), requirements=REQ, availability=None)
     assert result["allowed"]
-    registry = default_registry(executable="/bin/claude", probe=lambda command: (0, "2.1.281"))
+    registry = default_registry(claude_options={"executable": "/bin/claude", "probe": lambda command: (0, "2.1.281")})
     chosen = registry.get(
         AgentRuntimeRef(**{k: result["selected"]["binding"]["agent"][k] for k in ("id", "integration")})
     )

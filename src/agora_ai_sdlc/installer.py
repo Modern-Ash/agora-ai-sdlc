@@ -468,11 +468,7 @@ def apply(config: dict, target: Path, home: Path) -> dict:
     )
     assignments = {
         "product-owner": "product-owner",
-        "developer": (
-            "delivery-member"
-            if normalized["role_execution"]["developer"] == "human"
-            else "ai-developer"
-        ),
+        "developer": ("delivery-member" if normalized["role_execution"]["developer"] == "human" else "ai-developer"),
     }
     for role, actor in assignments.items():
         workspace.assign_actor(

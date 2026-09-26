@@ -525,17 +525,27 @@ def test_prepare_start_forwards_explicit_opencode_model(tmp_path):
     assert observed["model"] == "ollama/claude"
 
 
-def test_prepare_start_rejects_explicit_model_for_non_opencode_runtime(tmp_path):
-    with pytest.raises(StartFlowError, match="supported only with --agent opencode"):
-        _prepare_start(
-            tmp_path,
-            issue=11,
-            project="Modern-Ash/agorix",
-            agent="codex",
-            model="gpt-5.5",
-            workspace_factory=FakeWorkspace,
-            runtime_discovery=lambda root: (runtime("codex"),),
-        )
+def test_prepare_start_forwards_explicit_model_for_codex(tmp_path):
+    workspace = FakeWorkspace(tmp_path)
+    observed = {}
+
+    def executor(root, **kwargs):
+        observed.update(kwargs)
+        return _execution(root, **kwargs)
+
+    result = _prepare_start(
+        tmp_path,
+        issue=11,
+        project="Modern-Ash/agorix",
+        agent="codex",
+        model="gpt-5.5",
+        workspace_factory=lambda cwd: workspace,
+        runtime_discovery=lambda root: (runtime("codex"),),
+        executor_launcher=executor,
+    )
+
+    assert result.runtime_id == "codex"
+    assert observed["model"] == "gpt-5.5"
 
 
 def test_prepare_start_rejects_provider_only_runtime_as_executor(tmp_path):

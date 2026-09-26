@@ -418,8 +418,8 @@ def prepare_start(
     notify("start.workspace-ready")
     project = project or infer_project(root)
     runtime = _select_runtime(root, agent, discovery=runtime_discovery)
-    if model and runtime.id != "opencode":
-        raise StartFlowError("Explicit --model selection is currently supported only with --agent opencode")
+    if model and runtime.id == "ollama":
+        raise StartFlowError("Ollama is a model runtime; select an agent host and pass --model provider/model")
     notify("start.runtime-ready")
     prepared = preflight(
         root,

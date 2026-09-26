@@ -1,0 +1,102 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/agora_ai_sdlc/__init__.py"
+
+concurrency:
+  group: release-${{ github.sha }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Verify, tag and publish GitHub release
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install Python
+        run: uv python install 3.13
+
+      - name: Install project dependencies
+        run: uv sync --python 3.13
+
+      - name: Verify release candidate
+        run: uv run --python 3.13 python scripts/verify_all.py
+
+      - name: Resolve and validate version
+        id: version
+        shell: bash
+        run: |
+          VERSION="$(uv run --python 3.13 python -c 'from agora_ai_sdlc import __version__; print(__version__)')"
+          if [[ "$VERSION" == *dev* || "$VERSION" == *+* ]]; then
+            echo "Refusing to release non-final version: $VERSION" >&2
+            exit 1
+          fi
+          MANIFEST_VERSION="$(uv run --python 3.13 python -c "from agora_ai_sdlc.flavor_manifest import load_packaged_manifest; print(load_packaged_manifest().version)")"
+          if [[ "$MANIFEST_VERSION" != "$VERSION" ]]; then
+            echo "Package version $VERSION != flavor manifest $MANIFEST_VERSION" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Build distributions and checksums
+        shell: bash
+        run: |
+          rm -rf dist
+          uv build --out-dir dist
+          cd dist
+          sha256sum agora_ai_sdlc-*.whl agora_ai_sdlc-*.tar.gz > SHA256SUMS
+
+      - name: Smoke-test built wheel
+        shell: bash
+        run: |
+          uv venv /tmp/agora-ai-sdlc-release
+          PYTHON=/tmp/agora-ai-sdlc-release/bin/python
+          uv pip install --python "$PYTHON" dist/agora_ai_sdlc-*.whl
+          /tmp/agora-ai-sdlc-release/bin/agora --version
+          /tmp/agora-ai-sdlc-release/bin/aisdlc --version
+          /tmp/agora-ai-sdlc-release/bin/aisdlc self-test --json
+
+      - name: Create release tag
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+        shell: bash
+        run: |
+          if git rev-parse --verify "refs/tags/$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists; refusing to overwrite it." >&2
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Agora AI-SDLC ${TAG#v}"
+          git push origin "$TAG"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        shell: bash
+        run: |
+          gh release create "$TAG" \
+            dist/agora_ai_sdlc-*.whl \
+            dist/agora_ai_sdlc-*.tar.gz \
+            dist/SHA256SUMS \
+            --verify-tag \
+            --generate-notes \
+            --title "Agora AI-SDLC $TAG"

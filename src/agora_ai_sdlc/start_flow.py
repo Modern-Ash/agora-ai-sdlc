@@ -28,7 +28,8 @@ from agora_ai_sdlc.executor_launch import (
     ExecutorLaunchError,
     InceptionExecutionResult,
     executor_capable,
-    launch_inception_executor,\n    launch_inception_executor_v2,
+    launch_inception_executor,
+    launch_inception_executor_v2,
 )
 from agora_ai_sdlc.i18n import t
 from agora_ai_sdlc.inception_handoff import write_inception_handoff

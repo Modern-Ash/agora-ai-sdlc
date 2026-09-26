@@ -9,7 +9,8 @@ from pathlib import Path
 from agora.model import AddArtifactInput, AddEvidenceInput, WorkActorInput
 from agora.workspace import AgoraWorkspace
 
-from agora_ai_sdlc.execution_candidate import candidate_from_git\nfrom agora_ai_sdlc.guided import GuidedDecision
+from agora_ai_sdlc.execution_candidate import candidate_from_git
+from agora_ai_sdlc.guided import GuidedDecision
 from agora_ai_sdlc.local_delivery import changed_product_files
 from agora_ai_sdlc.verification import build_verification_report
 

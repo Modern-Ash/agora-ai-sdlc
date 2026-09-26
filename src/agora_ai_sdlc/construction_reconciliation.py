@@ -408,7 +408,9 @@ def reconcile_construction_execution(
             candidate_subject = candidate.subject_hash
             candidate_path = root / ".agora" / "ai-sdlc" / "verification" / decision.work / "CANDIDATE.json"
             candidate_path.parent.mkdir(parents=True, exist_ok=True)
-            candidate_path.write_text(json.dumps(candidate.descriptor(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            candidate_path.write_text(
+                json.dumps(candidate.descriptor(), indent=2, sort_keys=True) + "\n", encoding="utf-8"
+            )
             workspace.add_evidence(
                 AddEvidenceInput(
                     swarm_id=decision.swarm,

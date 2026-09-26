@@ -12,7 +12,7 @@ import yaml
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.i18n import t
-from agora_ai_sdlc.runtime_domain import RuntimeKind, runtime_kind
+from agora_ai_sdlc.runtime_domain import RuntimeKind, normalize_runtime, runtime_kind
 
 RUNTIME_CANDIDATES = (
     ("codex", "Codex", "codex"),
@@ -127,13 +127,15 @@ def _configured_runtime_ids(root: Path) -> set[str]:
         except (OSError, yaml.YAMLError):
             payload = {}
         for runtime in payload.get("runtimes") or []:
-            if isinstance(runtime, dict):
-                runtime_id = str(runtime.get("id") or "").casefold()
-                provider = str(runtime.get("provider") or "").casefold()
-                integration = str(runtime.get("integration") or "").casefold()
-                for candidate_id, _, _ in RUNTIME_CANDIDATES:
-                    if candidate_id in {runtime_id, provider, integration}:
-                        configured.add(candidate_id)
+            if not isinstance(runtime, dict):
+                continue
+            try:
+                binding = normalize_runtime(runtime)
+            except ValueError:
+                continue
+            configured.add(binding.agent.id.casefold())
+            if binding.model is not None and binding.model.id.casefold() in MODEL_RUNTIMES:
+                configured.add(binding.model.id.casefold())
     return configured
 
 

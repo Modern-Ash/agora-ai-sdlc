@@ -116,6 +116,7 @@ def launch_construction_executor(
     model: str | None = None,
     workspace_factory=AgoraWorkspace,
     decision=None,
+    use_runtime_layer: bool | None = None,
 ) -> ConstructionExecutionResult:
     """Launch one governed Construction session.
 
@@ -183,13 +184,16 @@ def launch_construction_executor(
         kwargs["executor_id"] = (plan.actor_reference.removeprefix("project:") if plan is not None else actor_reference.removeprefix("project:"))
     if "retry_of" in fields and retry_of is not None:
         kwargs["retry_of"] = retry_of
-    if "runtime_version" in fields and runtime.version:
-        kwargs["runtime_version"] = runtime.version
+    selected_version = plan.runtime_version if plan is not None else runtime.version
+    if "runtime_version" in fields and selected_version:
+        kwargs["runtime_version"] = selected_version
 
     before_snapshot = project_file_snapshot(root) if decision is not None else {}
     try:
         with guard_governed_state(root):
             completed = workspace.start_session(StartSessionInput(**kwargs))
+    except GovernanceRegression as error:
+        raise ExecutorLaunchError(str(error)) from error
     except (OSError, RuntimeError, ValueError) as error:
         after = _matching_sessions(workspace, root, base_id)
         durable = after[-1] if after else None

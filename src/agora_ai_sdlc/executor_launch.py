@@ -12,10 +12,13 @@ from agora.markdown import read_markdown
 from agora.model import LaunchSessionInput, StartSessionInput
 from agora.workspace import AgoraWorkspace
 
+from agora_ai_sdlc.execution_bundle import build_execution_bundle
 from agora_ai_sdlc.governance_guard import GovernanceRegression, guard_governed_state
+from agora_ai_sdlc.guided import inspect_next
 from agora_ai_sdlc.inception_validation import validate_inception_output
 from agora_ai_sdlc.llm_failures import recoverable_llm_failure
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
+from agora_ai_sdlc.runtime_execution import RuntimeExecutionError, build_governed_runtime_plan
 
 SCHEMA = "agora-ai-sdlc/executor-adapters/v1"
 MAX_PRESENTATION_CHARS = 6000
@@ -326,9 +329,29 @@ def launch_inception_executor(
     """Launch one governed Inception session and reuse completed work idempotently."""
 
     root = root.resolve()
-    runner = build_executor_runner(runtime, root, handoff_path, model=model)
     workspace = workspace_factory(cwd=root)
-    executor_id = f"ai-{runtime.id}"
+    decision = inspect_next(root, swarm=swarm_id, work=work_id)
+    if decision is None:
+        raise ExecutorLaunchError(f"Cannot resolve governed Inception decision for {swarm_id}/{work_id}")
+    bundle = build_execution_bundle(root, swarm=swarm_id, work=work_id, persist=True)
+    try:
+        plan = build_governed_runtime_plan(
+            root,
+            decision=decision,
+            bundle=bundle,
+            runtime_id=runtime.id,
+            model=model,
+            workspace=workspace,
+            actor=decision.actor or responsible_actor,
+            context={
+                "purpose": "inception",
+                "guidance": _inception_prompt(root, handoff_path),
+                "handoff": str(handoff_path.resolve().relative_to(root)),
+            },
+        )
+    except RuntimeExecutionError as error:
+        raise ExecutorLaunchError(str(error), recoverable=True) from error
+    runner = plan.runner
     base_id = f"ai-sdlc-inception-{work_id}"
     sessions = _matching_sessions(workspace, root, base_id)
     latest = sessions[-1] if sessions else None
@@ -372,7 +395,7 @@ def launch_inception_executor(
 
     fields = getattr(StartSessionInput, "__dataclass_fields__", {})
     kwargs = {
-        "actor_id": responsible_actor,
+        "actor_id": plan.actor_id,
         "swarm_id": swarm_id,
         "id": session_id,
         "work_id": work_id,
@@ -382,7 +405,7 @@ def launch_inception_executor(
     if "timeout_seconds" in fields:
         kwargs["timeout_seconds"] = timeout_seconds
     if "executor_id" in fields:
-        kwargs["executor_id"] = executor_id
+        kwargs["executor_id"] = plan.actor_id
     if "retry_of" in fields and retry_of is not None:
         kwargs["retry_of"] = retry_of
     if "runtime_version" in fields and runtime.version:

@@ -403,7 +403,9 @@ def execute_guided_preparation(
         session_id = f"{base_id}-{suffix}"
         suffix += 1
 
-    actor_id = (plan.actor_reference if plan is not None else (decision.actor or decision.role or "developer")).removeprefix("project:")
+    actor_id = (
+        plan.actor_reference if plan is not None else (decision.actor or decision.role or "developer")
+    ).removeprefix("project:")
     fields = getattr(StartSessionInput, "__dataclass_fields__", {})
     kwargs = {
         "actor_id": actor_id,

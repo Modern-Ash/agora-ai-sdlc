@@ -12,7 +12,7 @@ import yaml
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.i18n import t
-from agora_ai_sdlc.runtime_domain import RuntimeKind, normalize_runtime, runtime_kind
+from agora_ai_sdlc.runtime_domain import MODEL_RUNTIMES, RuntimeKind, normalize_runtime, runtime_kind
 
 RUNTIME_CANDIDATES = (
     ("codex", "Codex", "codex"),

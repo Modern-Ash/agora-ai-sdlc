@@ -720,3 +720,26 @@ def test_failed_executor_surfaces_provider_stderr(tmp_path):
 
     assert captured.value.recoverable is True
     assert "Provider error: }" not in str(captured.value)
+
+
+def test_executor_run_that_breaks_governed_state_fails_closed(tmp_path, monkeypatch):
+    from contextlib import contextmanager
+
+    from agora_ai_sdlc.governance_guard import GovernanceRegression
+
+    @contextmanager
+    def broken_run(root):
+        yield
+        raise GovernanceRegression([("intent.invalid", ".agora/intents/issue-1/INTENT.md", "no front matter")])
+
+    monkeypatch.setattr("agora_ai_sdlc.executor_launch.guard_governed_state", broken_run)
+    with pytest.raises(ExecutorLaunchError) as error:
+        launch_inception_executor(
+            tmp_path,
+            runtime=runtime("opencode"),
+            handoff_path=handoff(tmp_path),
+            swarm_id="delivery",
+            work_id="issue-14",
+            workspace_factory=lambda cwd: Workspace(tmp_path),
+        )
+    assert "intent.invalid" in str(error.value) and error.value.recoverable is False

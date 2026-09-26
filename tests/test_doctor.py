@@ -33,3 +33,16 @@ def test_doctor_reports_actionable_project_error_instead_of_exception_class(tmp_
     project = next(item for item in checks if item.id == "project")
     assert project.ok is False
     assert project.detail == "method pack front matter is malformed"
+
+
+def test_formatter_check_flags_prettier_without_agora_ignore(tmp_path):
+    from agora_ai_sdlc.doctor import _formatter_check
+
+    assert _formatter_check(tmp_path) is None
+    (tmp_path / "package.json").write_text('{"devDependencies": {"prettier": "^3"}}')
+    check = _formatter_check(tmp_path)
+    assert check is not None and not check.ok and ".prettierignore" in check.detail
+    (tmp_path / ".prettierignore").write_text("dist\n.agora/\n")
+    assert _formatter_check(tmp_path).ok
+    (tmp_path / ".prettierignore").write_text("dist\n")
+    assert not _formatter_check(tmp_path).ok

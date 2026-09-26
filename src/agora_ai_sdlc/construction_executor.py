@@ -181,7 +181,11 @@ def launch_construction_executor(
     if "timeout_seconds" in fields:
         kwargs["timeout_seconds"] = CONSTRUCTION_TIMEOUT_SECONDS
     if "executor_id" in fields:
-        kwargs["executor_id"] = (plan.actor_reference.removeprefix("project:") if plan is not None else actor_reference.removeprefix("project:"))
+        kwargs["executor_id"] = (
+            plan.actor_reference.removeprefix("project:")
+            if plan is not None
+            else actor_reference.removeprefix("project:")
+        )
     if "retry_of" in fields and retry_of is not None:
         kwargs["retry_of"] = retry_of
     selected_version = plan.runtime_version if plan is not None else runtime.version

@@ -84,6 +84,11 @@ def _runtime(root: Path, runtime_id: str) -> RuntimeDiscovery:
     raise ExecutorLaunchError(f"Selected runtime {runtime_id!r} is no longer responsive")
 
 
+def _runner(runtime: RuntimeDiscovery, root: Path, prompt: str, model: str | None) -> str:
+    """Legacy/minimal-Core compatibility seam. Full Core uses ExecutionEnvelope adapters."""
+    return build_runtime_runner(runtime, root, prompt, model=model)
+
+
 def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> str:
     skill = root / ".agora" / "skills" / "agora-ai-sdlc-guided" / "SKILL.md"
     parts = [
@@ -355,7 +360,7 @@ def execute_guided_preparation(
             raise ExecutorLaunchError(str(error)) from error
         runner = plan.runner
     else:
-        runner = build_runtime_runner(runtime, root, prompt, model=model)
+        runner = _runner(runtime, root, prompt, model)
 
     safe_stage = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in (bundle.stage or "step"))
     base_id = f"ai-sdlc-guided-{decision.work}-{safe_stage}"

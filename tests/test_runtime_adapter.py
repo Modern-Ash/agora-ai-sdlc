@@ -160,7 +160,7 @@ def test_unsafe_paths_secrets_and_bad_json_fail_closed(tmp_path):
 
 def test_describe_is_readonly_and_redacts_secrets(tmp_path):
     described = FakeAdapter().describe(tmp_path, surfaces=("subagents", "reviewer"), envelope=envelope())
-    assert described["unsupported_surfaces"] == ["reviewer"]
+    assert described["unsupported_surfaces"] == ["subagents", "reviewer"]
     assert described["model_binding"]["model"]["model"] == "m1"
     assert "abc123secretvalue" not in json.dumps(described) and list(tmp_path.iterdir()) == []
     assert sanitize("Bearer abcdefghijklmnop") == "[redacted]"

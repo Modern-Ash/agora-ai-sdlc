@@ -158,7 +158,6 @@ def project_requirements(
     )
 
 
-
 def requirements_from_dict(payload: Mapping[str, Any]) -> ExecutionRequirements:
     """Parse and validate a persisted ExecutionRequirements/v1 payload."""
 
@@ -210,6 +209,7 @@ def requirements_from_dict(payload: Mapping[str, Any]) -> ExecutionRequirements:
     if actual != expected:
         raise DecisionPlaneError("requirements.noncanonical", "requirements payload is not canonical")
     return result
+
 
 def requirements_for(
     bundle: ExecutionBundle,

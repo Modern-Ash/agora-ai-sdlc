@@ -18,7 +18,7 @@ flowchart TB
 - **Core** owns the lifecycle engine, gate enforcement, durable state and Tool Pack operations.
 - **Flavor** (this repo) composes Core capabilities into AI-SDLC: manifest, Method Pack, policies, profiles, templates, samples. It never duplicates lifecycle logic.
 - **Studio** renders Core projections; it holds no lifecycle policy.
-- **Runtimes** (Codex, Claude Code, OpenCode, Ollama, ...) are replaceable actors; no runtime is required.
+- **Runtimes** (Codex, Claude Code, OpenCode, Ollama, ...) are replaceable actors; no runtime is required. They split into *agent runtimes* (repository-aware hosts: Claude Code, Codex, OpenCode) and *model runtimes* (Ollama), combined by `agora-ai-sdlc/runtime-binding/v2`; a model runtime alone never satisfies an agent-execution requirement. Legacy flat entries normalize deterministically; ambiguous ones fail with a typed diagnostic.
 - Markdown and Git remain the project source of truth.
 
 ## Concepts

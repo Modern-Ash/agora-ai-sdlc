@@ -12,6 +12,7 @@ import yaml
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.i18n import t
+from agora_ai_sdlc.runtime_domain import RuntimeKind, runtime_kind
 
 RUNTIME_CANDIDATES = (
     ("codex", "Codex", "codex"),
@@ -34,8 +35,21 @@ class RuntimeDiscovery:
     service: str | None = None
     error: str | None = None
 
+    @property
+    def kind(self) -> RuntimeKind:
+        return runtime_kind(self.id)
+
     def snapshot(self) -> dict:
-        return asdict(self)
+        return {**asdict(self), "kind": self.kind.value}
+
+
+def agent_runtimes(discoveries: tuple[RuntimeDiscovery, ...]) -> tuple[RuntimeDiscovery, ...]:
+    return tuple(item for item in discoveries if item.kind is RuntimeKind.AGENT)
+
+
+def model_runtimes(discoveries: tuple[RuntimeDiscovery, ...]) -> tuple[RuntimeDiscovery, ...]:
+    """Model runtimes never satisfy an agent-execution requirement on their own."""
+    return tuple(item for item in discoveries if item.kind is RuntimeKind.MODEL)
 
 
 def _run(
@@ -179,6 +193,8 @@ def render_runtimes(discoveries: tuple[RuntimeDiscovery, ...], *, lang: str = "e
             state = t("runtime.installed_failed", lang=lang)
         if item.configured:
             state += " · " + t("runtime.configured", lang=lang)
+        if item.kind is RuntimeKind.MODEL:
+            state += " · " + t("runtime.kind_model", lang=lang)
         if item.service is not None:
             state += f" · {t('runtime.service', lang=lang)} {item.service}"
         lines.append(f"{marker} {item.name:<12} {state}")

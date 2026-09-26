@@ -181,3 +181,21 @@ def requirements_for(
         independent_review_required=independent_review_required,
         advisory_error=error,
     )
+
+
+def requirements_for_activity(activity: str, *, tier: str = "local") -> ExecutionRequirements:
+    """Deterministic requirements for an activity class without a bundle (diagnostics, migration previews)."""
+    if activity not in _ACTIVITY_CAPABILITIES:
+        raise DecisionPlaneError("requirements.activity", f"unknown activity class {activity!r}")
+    human = activity == "human.authority" or tier == "human"
+    capabilities = () if human else _ACTIVITY_CAPABILITIES[activity]
+    return ExecutionRequirements(
+        activity_class=activity,
+        reasoning_tier=_max(TIERS, _TIER_FLOOR[activity], tier),
+        risk="low",
+        security_review="normal",
+        validation_focus=("functional",),
+        required_capabilities=tuple(name for name in CAPABILITY_IDS if name in capabilities),
+        human_authority_required=human,
+        advisory={"provider": None, "model": None, "accepted": [], "escalated": [], "confidence": {}},
+    )

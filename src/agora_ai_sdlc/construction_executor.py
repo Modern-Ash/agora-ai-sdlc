@@ -18,9 +18,15 @@ from agora_ai_sdlc.executor_launch import (
     _session_output,
     build_runtime_runner,
 )
-from agora_ai_sdlc.governance_guard import GovernanceRegression, guard_governed_state\nfrom agora_ai_sdlc.guided_execution import _construction_relevant_changes
+from agora_ai_sdlc.governance_guard import GovernanceRegression, guard_governed_state
+from agora_ai_sdlc.guided_execution import _construction_relevant_changes
 from agora_ai_sdlc.local_delivery import diff_project_file_snapshots, project_file_snapshot
-from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes\nfrom agora_ai_sdlc.runtime_execution import (\n    configured_runtime_for_role,\n    prepare_runtime_execution,\n    resolve_runtime_binding,\n)
+from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
+from agora_ai_sdlc.runtime_execution import (
+    configured_runtime_for_role,
+    prepare_runtime_execution,
+    resolve_runtime_binding,
+)
 
 CONSTRUCTION_TIMEOUT_SECONDS = 900
 
@@ -182,7 +188,8 @@ def launch_construction_executor(
 
     before_snapshot = project_file_snapshot(root) if decision is not None else {}
     try:
-        with guard_governed_state(root):\n            completed = workspace.start_session(StartSessionInput(**kwargs))
+        with guard_governed_state(root):
+            completed = workspace.start_session(StartSessionInput(**kwargs))
     except (OSError, RuntimeError, ValueError) as error:
         after = _matching_sessions(workspace, root, base_id)
         durable = after[-1] if after else None

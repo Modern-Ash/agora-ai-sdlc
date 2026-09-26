@@ -46,3 +46,7 @@ Agora Core (`agora-framework`, compatible range) and development-only test/lint 
 `agora-ai-sdlc/agent-capability-manifest/v1` declares, per agent runtime, which integration mechanisms it supports (`aisdlc runtimes --capabilities`). It is static: no lifecycle state, Laya decisions, approvals, availability or observations. Discovery observes installation, policy decides use, Laya advises, Core is authority. Every capability id is explicit; unknown agents or ids fail closed.
 
 Adding an adapter: register a manifest in `agent_capabilities.py` via `build_manifest` with every id claimed explicitly (claim only what the adapter implements), then add it to the parity test.
+
+## Execution requirements
+
+`agora-ai-sdlc/execution-requirements/v1` (`execution_requirements.py`) turns a deterministic execution bundle plus *accepted* advisory (Laya) answers into provider-neutral requirements: activity class, reasoning tier (`local|standard|frontier|human`), risk, security review, validation focus and required capability ids. The action-to-capability mapping is owned by AI-SDLC. Advisory answers can only raise tier, risk or security focus; low-confidence, invalid or failed answers are kept as escalations and never remove a deterministic requirement. `human` yields a non-executable human-authority requirement. Advisory model/checkpoint is provenance only; no runtime or provider is named.

@@ -16,12 +16,16 @@ from agora_ai_sdlc.construction_reconciliation import (
 )
 from agora_ai_sdlc.execution_bundle import build_execution_bundle
 from agora_ai_sdlc.execution_context import persist_execution_context, select_execution_context
-from agora_ai_sdlc.executor_launch import ExecutorLaunchError, _session_failure_diagnostic
+from agora_ai_sdlc.executor_launch import ExecutorLaunchError, _session_failure_diagnostic, build_runtime_runner
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
 from agora_ai_sdlc.local_delivery import diff_project_file_snapshots, project_file_snapshot
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
-from agora_ai_sdlc.runtime_execution import RuntimeExecutionError, build_governed_runtime_plan
+from agora_ai_sdlc.runtime_execution import (
+    RuntimeExecutionError,
+    build_governed_runtime_plan,
+    supports_governed_runtime_plan,
+)
 from agora_ai_sdlc.verification import persisted_verification_diagnostic
 from agora_ai_sdlc.wizard import load_answers
 
@@ -329,24 +333,28 @@ def execute_guided_preparation(
     )
     before_snapshot = project_file_snapshot(root) if decision.state == "construction" else {}
     workspace = workspace_factory(cwd=root)
-    try:
-        plan = build_governed_runtime_plan(
-            root,
-            decision=decision,
-            bundle=bundle,
-            runtime_id=runtime.id,
-            model=model,
-            workspace=workspace,
-            actor=decision.actor,
-            context={
-                "purpose": "guided-preparation",
-                "guidance": prompt,
-                "bounded_context": str(lean_path) if lean_path is not None else bundle.markdown_path,
-            },
-        )
-    except RuntimeExecutionError as error:
-        raise ExecutorLaunchError(str(error)) from error
-    runner = plan.runner
+    plan = None
+    if supports_governed_runtime_plan(workspace):
+        try:
+            plan = build_governed_runtime_plan(
+                root,
+                decision=decision,
+                bundle=bundle,
+                runtime_id=runtime.id,
+                model=model,
+                workspace=workspace,
+                actor=decision.actor,
+                context={
+                    "purpose": "guided-preparation",
+                    "guidance": prompt,
+                    "bounded_context": str(lean_path) if lean_path is not None else bundle.markdown_path,
+                },
+            )
+        except RuntimeExecutionError as error:
+            raise ExecutorLaunchError(str(error)) from error
+        runner = plan.runner
+    else:
+        runner = build_runtime_runner(runtime, root, prompt, model=model)
 
     safe_stage = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in (bundle.stage or "step"))
     base_id = f"ai-sdlc-guided-{decision.work}-{safe_stage}"
@@ -357,7 +365,7 @@ def execute_guided_preparation(
         session_id = f"{base_id}-{suffix}"
         suffix += 1
 
-    actor_id = plan.actor_id
+    actor_id = plan.actor_id if plan is not None else (decision.actor or decision.role or "developer").removeprefix("project:")
     fields = getattr(StartSessionInput, "__dataclass_fields__", {})
     kwargs = {
         "actor_id": actor_id,
@@ -373,7 +381,9 @@ def execute_guided_preparation(
     # Setting executor_id to a synthetic ai-<runtime> identity caused Core to
     # reject valid runtime switches when that actor was not registered.
     if "executor_id" in fields:
-        kwargs["executor_id"] = plan.actor_id
+        assigned = plan.actor_id if plan is not None else (decision.actor or "").removeprefix("project:")
+        if assigned:
+            kwargs["executor_id"] = assigned
     if "runtime_version" in fields and runtime.version:
         kwargs["runtime_version"] = runtime.version
     if "timeout_seconds" in fields:

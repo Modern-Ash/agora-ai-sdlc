@@ -16,6 +16,7 @@ from agora_ai_sdlc.executor_launch import (
     _matching_sessions,
     _session_failure_diagnostic,
     _session_output,
+    build_runtime_runner,
 )
 from agora_ai_sdlc.governance_guard import GovernanceRegression, guard_governed_state
 from agora_ai_sdlc.guided import inspect_next
@@ -26,6 +27,7 @@ from agora_ai_sdlc.runtime_execution import (
     RuntimeExecutionError,
     build_governed_runtime_plan,
     configured_agent_for_role,
+    supports_governed_runtime_plan,
 )
 
 CONSTRUCTION_TIMEOUT_SECONDS = 900
@@ -135,29 +137,33 @@ def launch_construction_executor(
 
     runtime = runtime or runtime_for_actor(root, actor_reference, requested=runtime_id)
     workspace = workspace_factory(cwd=root)
-    if decision is None:
-        decision = inspect_next(root, swarm=swarm_id, work=work_id)
-    if decision is None:
-        raise ExecutorLaunchError(f"Cannot resolve governed Construction decision for {swarm_id}/{work_id}.")
     prompt = _construction_prompt(root, Path(bundle.json_path), swarm_id, work_id)
-    try:
-        plan = build_governed_runtime_plan(
-            root,
-            decision=decision,
-            bundle=bundle,
-            runtime_id=runtime.id,
-            model=model,
-            workspace=workspace,
-            actor=actor_reference,
-            context={
-                "purpose": "construction",
-                "guidance": prompt,
-                "execution_bundle": bundle.json_path,
-            },
-        )
-    except RuntimeExecutionError as error:
-        raise ExecutorLaunchError(str(error), recoverable=True) from error
-    runner = plan.runner
+    plan = None
+    if supports_governed_runtime_plan(workspace):
+        if decision is None:
+            decision = inspect_next(root, swarm=swarm_id, work=work_id)
+        if decision is None:
+            raise ExecutorLaunchError(f"Cannot resolve governed Construction decision for {swarm_id}/{work_id}.")
+        try:
+            plan = build_governed_runtime_plan(
+                root,
+                decision=decision,
+                bundle=bundle,
+                runtime_id=runtime.id,
+                model=model,
+                workspace=workspace,
+                actor=actor_reference,
+                context={
+                    "purpose": "construction",
+                    "guidance": prompt,
+                    "execution_bundle": bundle.json_path,
+                },
+            )
+        except RuntimeExecutionError as error:
+            raise ExecutorLaunchError(str(error), recoverable=True) from error
+        runner = plan.runner
+    else:
+        runner = build_runtime_runner(runtime, root, prompt, model=model)
 
     base_id = f"ai-sdlc-construction-{work_id}"
     sessions = _matching_sessions(workspace, root, base_id)
@@ -177,7 +183,7 @@ def launch_construction_executor(
 
     fields = getattr(StartSessionInput, "__dataclass_fields__", {})
     kwargs = {
-        "actor_id": plan.actor_id,
+        "actor_id": plan.actor_id if plan is not None else actor_reference,
         "swarm_id": swarm_id,
         "id": session_id,
         "work_id": work_id,
@@ -189,7 +195,7 @@ def launch_construction_executor(
     if "executor_id" in fields:
         # Runtime choice is not an authority handoff; a synthetic ai-<runtime>
         # id is rejected by Core when that actor is not registered.
-        kwargs["executor_id"] = plan.actor_id
+        kwargs["executor_id"] = plan.actor_id if plan is not None else actor_reference.removeprefix("project:")
     if "retry_of" in fields and retry_of is not None:
         kwargs["retry_of"] = retry_of
     if "runtime_version" in fields and runtime.version:

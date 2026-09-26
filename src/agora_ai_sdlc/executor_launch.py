@@ -12,9 +12,13 @@ from agora.markdown import read_markdown
 from agora.model import LaunchSessionInput, StartSessionInput
 from agora.workspace import AgoraWorkspace
 
-from agora_ai_sdlc.agent_capabilities import CapabilityError, manifest_for\nfrom agora_ai_sdlc.execution_bundle import build_execution_bundle\nfrom agora_ai_sdlc.governance_guard import GovernanceRegression, guard_governed_state\nfrom agora_ai_sdlc.inception_validation import validate_inception_output
+from agora_ai_sdlc.agent_capabilities import CapabilityError, manifest_for
+from agora_ai_sdlc.execution_bundle import build_execution_bundle
+from agora_ai_sdlc.governance_guard import GovernanceRegression, guard_governed_state
+from agora_ai_sdlc.inception_validation import validate_inception_output
 from agora_ai_sdlc.llm_failures import recoverable_llm_failure
-from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery\nfrom agora_ai_sdlc.runtime_execution import RuntimeExecutionPlan, prepare_runtime_execution
+from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
+from agora_ai_sdlc.runtime_execution import RuntimeExecutionPlan, prepare_runtime_execution
 
 SCHEMA = "agora-ai-sdlc/executor-adapters/v1"
 MAX_PRESENTATION_CHARS = 6000
@@ -351,7 +355,8 @@ def launch_inception_executor(
         )
     if latest is not None and latest.status == "prepared":
         try:
-            with guard_governed_state(root):\n                completed = workspace.launch_session(LaunchSessionInput(session_id=latest.id))
+            with guard_governed_state(root):
+                completed = workspace.launch_session(LaunchSessionInput(session_id=latest.id))
         except (OSError, RuntimeError, ValueError) as error:
             raise ExecutorLaunchError(
                 f"Inception executor failed while launching prepared session {latest.id}: {error}"
@@ -390,7 +395,8 @@ def launch_inception_executor(
         kwargs["runtime_version"] = runtime.version
 
     try:
-        with guard_governed_state(root):\n            completed = workspace.start_session(StartSessionInput(**kwargs))
+        with guard_governed_state(root):
+            completed = workspace.start_session(StartSessionInput(**kwargs))
     except (OSError, RuntimeError, ValueError) as error:
         latest_after = _matching_sessions(workspace, root, base_id)
         durable = latest_after[-1] if latest_after else None

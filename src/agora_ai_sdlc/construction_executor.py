@@ -17,8 +17,8 @@ from agora_ai_sdlc.executor_launch import (
     _session_failure_diagnostic,
     _session_output,
 )
-from agora_ai_sdlc.guided import inspect_next
 from agora_ai_sdlc.governance_guard import GovernanceRegression, guard_governed_state
+from agora_ai_sdlc.guided import inspect_next
 from agora_ai_sdlc.guided_execution import _construction_relevant_changes
 from agora_ai_sdlc.local_delivery import diff_project_file_snapshots, project_file_snapshot
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes

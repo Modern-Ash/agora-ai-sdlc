@@ -10,7 +10,7 @@ from pathlib import Path
 from agora.model import AddArtifactInput, AddEvidenceInput, WorkActorInput
 from agora.workspace import AgoraWorkspace
 
-from agora_ai_sdlc.execution_candidate import candidate_from_git
+from agora_ai_sdlc.execution_candidate import candidate_from_artifacts
 from agora_ai_sdlc.guided import GuidedDecision
 from agora_ai_sdlc.local_delivery import changed_product_files
 from agora_ai_sdlc.verification import build_verification_report
@@ -396,20 +396,33 @@ def reconcile_construction_execution(
                 kind="test-report",
                 path=Path(report.report_path),
             )
-            revision = workspace.work_inspection_read_set_sha256(decision.swarm, decision.work)
-            candidate = candidate_from_git(
+            revision_reader = getattr(workspace, "work_inspection_read_set_sha256", None)
+            revision = (
+                revision_reader(decision.swarm, decision.work)
+                if callable(revision_reader)
+                else f"unavailable:{decision.work}"
+            )
+            candidate = candidate_from_artifacts(
                 root,
+                changed,
                 repository=str(root),
                 swarm=decision.swarm,
                 work=decision.work,
                 revision=revision,
-                target=report.head or "HEAD",
             )
             candidate_subject = candidate.subject_hash
             candidate_path = root / ".agora" / "ai-sdlc" / "verification" / decision.work / "CANDIDATE.json"
             candidate_path.parent.mkdir(parents=True, exist_ok=True)
             candidate_path.write_text(
                 json.dumps(candidate.descriptor(), indent=2, sort_keys=True) + "\n", encoding="utf-8"
+            )
+            candidate_uri = _register_support_artifact(
+                root,
+                decision,
+                workspace,
+                actor,
+                kind="verification-candidate",
+                path=candidate_path,
             )
             workspace.add_evidence(
                 AddEvidenceInput(
@@ -418,8 +431,8 @@ def reconcile_construction_execution(
                     actor_id=actor,
                     type="test-suite",
                     result="success",
-                    artifact_refs=[report_uri],
-                    tested_commit=candidate.target_commit,
+                    artifact_refs=[report_uri, candidate_uri],
+                    tested_commit=getattr(report, "head", None),
                     environment="local-construction",
                     dedupe_key=f"test-suite:{candidate.subject_hash}",
                 )

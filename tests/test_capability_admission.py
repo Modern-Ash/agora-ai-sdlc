@@ -69,9 +69,7 @@ def test_legacy_ollama_as_agent_is_agent_required():
 
 
 def test_fallback_to_later_candidate_only_when_policy_permits():
-    needy = ExecutionRequirements(
-        **{**REQ.__dict__, "required_capabilities": ("workspace.read", "structured_output")}
-    )
+    needy = ExecutionRequirements(**{**REQ.__dict__, "required_capabilities": ("workspace.read", "structured_output")})
     avail = found(opencode=True, ollama=True, claude=True, anthropic=True)
     allowed = select_runtime(route(OPENCODE, CLAUDE), requirements=needy, availability=avail)
     assert allowed["selected"]["id"] == "claude" and allowed["fallback"] == {

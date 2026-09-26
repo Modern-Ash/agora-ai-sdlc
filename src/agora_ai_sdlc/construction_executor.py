@@ -16,11 +16,16 @@ from agora_ai_sdlc.executor_launch import (
     _matching_sessions,
     _session_failure_diagnostic,
     _session_output,
-    build_runtime_runner,
 )
+from agora_ai_sdlc.guided import inspect_next
 from agora_ai_sdlc.guided_execution import _construction_relevant_changes
 from agora_ai_sdlc.local_delivery import diff_project_file_snapshots, project_file_snapshot
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
+from agora_ai_sdlc.runtime_execution import (
+    RuntimeExecutionError,
+    build_governed_runtime_plan,
+    configured_agent_for_role,
+)
 
 CONSTRUCTION_TIMEOUT_SECONDS = 900
 
@@ -47,12 +52,11 @@ def runtime_for_actor(
 ) -> RuntimeDiscovery:
     """Resolve a responsive repository executor from the assigned actor or override."""
 
-    runtime_id = requested
-    if runtime_id is None and actor_reference.startswith("project:ai-"):
-        runtime_id = actor_reference.removeprefix("project:ai-")
+    runtime_id = requested or configured_agent_for_role(root, "developer")
     if runtime_id is None:
         raise ExecutorLaunchError(
-            "Construction cannot infer the selected AI runtime from the assigned developer actor."
+            "Construction has no configured agent runtime for the developer role; "
+            "pass --agent or configure role_execution.developer. Actor identity is not used as a runtime id."
         )
 
     for runtime in discover_runtimes(root):
@@ -129,9 +133,30 @@ def launch_construction_executor(
         raise ExecutorLaunchError("Construction execution bundle was not persisted.")
 
     runtime = runtime or runtime_for_actor(root, actor_reference, requested=runtime_id)
-    prompt = _construction_prompt(root, Path(bundle.json_path), swarm_id, work_id)
-    runner = build_runtime_runner(runtime, root, prompt, model=model)
     workspace = workspace_factory(cwd=root)
+    if decision is None:
+        decision = inspect_next(root, swarm=swarm_id, work=work_id)
+    if decision is None:
+        raise ExecutorLaunchError(f"Cannot resolve governed Construction decision for {swarm_id}/{work_id}.")
+    prompt = _construction_prompt(root, Path(bundle.json_path), swarm_id, work_id)
+    try:
+        plan = build_governed_runtime_plan(
+            root,
+            decision=decision,
+            bundle=bundle,
+            runtime_id=runtime.id,
+            model=model,
+            workspace=workspace,
+            actor=actor_reference,
+            context={
+                "purpose": "construction",
+                "guidance": prompt,
+                "execution_bundle": bundle.json_path,
+            },
+        )
+    except RuntimeExecutionError as error:
+        raise ExecutorLaunchError(str(error), recoverable=True) from error
+    runner = plan.runner
 
     base_id = f"ai-sdlc-construction-{work_id}"
     sessions = _matching_sessions(workspace, root, base_id)
@@ -151,7 +176,7 @@ def launch_construction_executor(
 
     fields = getattr(StartSessionInput, "__dataclass_fields__", {})
     kwargs = {
-        "actor_id": actor_reference,
+        "actor_id": plan.actor_id,
         "swarm_id": swarm_id,
         "id": session_id,
         "work_id": work_id,
@@ -163,7 +188,7 @@ def launch_construction_executor(
     if "executor_id" in fields:
         # Runtime choice is not an authority handoff; a synthetic ai-<runtime>
         # id is rejected by Core when that actor is not registered.
-        kwargs["executor_id"] = actor_reference.removeprefix("project:")
+        kwargs["executor_id"] = plan.actor_id
     if "retry_of" in fields and retry_of is not None:
         kwargs["retry_of"] = retry_of
     if "runtime_version" in fields and runtime.version:

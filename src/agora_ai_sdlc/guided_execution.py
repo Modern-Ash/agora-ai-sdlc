@@ -23,10 +23,12 @@ from agora_ai_sdlc.executor_launch import (
     _session_failure_diagnostic,
     load_executor_adapters,
 )
-from agora_ai_sdlc.governance_guard import GovernanceRegression, guard_governed_state\nfrom agora_ai_sdlc.guided import GuidedDecision, inspect_next
+from agora_ai_sdlc.governance_guard import GovernanceRegression, guard_governed_state
+from agora_ai_sdlc.guided import GuidedDecision, inspect_next
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
 from agora_ai_sdlc.local_delivery import diff_project_file_snapshots, project_file_snapshot
-from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes\nfrom agora_ai_sdlc.runtime_execution import RuntimeExecutionPlan, prepare_runtime_execution
+from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
+from agora_ai_sdlc.runtime_execution import RuntimeExecutionPlan, prepare_runtime_execution
 from agora_ai_sdlc.verification import persisted_verification_diagnostic
 from agora_ai_sdlc.wizard import load_answers
 

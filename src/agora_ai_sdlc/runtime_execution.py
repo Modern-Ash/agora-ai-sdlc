@@ -185,6 +185,8 @@ def build_governed_runtime_plan(
     bundle: ExecutionBundle,
     runtime_id: str,
     model: str | None,
+    runtime: RuntimeDiscovery | None = None,
+    availability: dict[str, RuntimeDiscovery] | None = None,
     workspace: Any | None = None,
     actor: str | None = None,
     context: dict[str, Any] | None = None,
@@ -193,20 +195,23 @@ def build_governed_runtime_plan(
     """Build and preflight an exact adapter-backed execution plan."""
     root = root.resolve()
     workspace = workspace or AgoraWorkspace(cwd=root)
-    runtime = runtime_for(root, runtime_id)
+    runtime = runtime or runtime_for(root, runtime_id)
     binding = binding_for(root, runtime_id, model)
     requirements = requirements_for(bundle, provider=LayaDecisionProvider())
     requested_actor = actor or getattr(decision, "actor", None) or getattr(decision, "role", None)
     actor_reference, actor_id = _actor_reference(workspace, requested_actor)
     snapshot = snapshot_for_decision(workspace, decision, actor_reference)
 
+    observed = availability or _availability(root)
+    if runtime.id not in observed:
+        observed = {**observed, runtime.id: runtime}
     envelope = build_envelope(
         snapshot,
         requirements,
         binding,
         bundle,
         actor_id=actor_reference,
-        availability=_availability(root),
+        availability=observed,
         candidate=candidate,
         context=context,
     )

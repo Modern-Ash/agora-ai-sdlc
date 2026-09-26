@@ -18,6 +18,7 @@ from agora_ai_sdlc.executor_launch import (
     _session_output,
 )
 from agora_ai_sdlc.guided import inspect_next
+from agora_ai_sdlc.governance_guard import GovernanceRegression, guard_governed_state
 from agora_ai_sdlc.guided_execution import _construction_relevant_changes
 from agora_ai_sdlc.local_delivery import diff_project_file_snapshots, project_file_snapshot
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
@@ -196,7 +197,10 @@ def launch_construction_executor(
 
     before_snapshot = project_file_snapshot(root) if decision is not None else {}
     try:
-        completed = workspace.start_session(StartSessionInput(**kwargs))
+        with guard_governed_state(root):
+            completed = workspace.start_session(StartSessionInput(**kwargs))
+    except GovernanceRegression as error:
+        raise ExecutorLaunchError(str(error)) from error
     except (OSError, RuntimeError, ValueError) as error:
         after = _matching_sessions(workspace, root, base_id)
         durable = after[-1] if after else None

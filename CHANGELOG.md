@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add the provider-neutral runtime layer (epic #252): `runtime-binding/v2` agent/model taxonomy, canonical agent capability manifests, `ExecutionRequirements`, deterministic capability admission, `ExecutionEnvelope`, the `RuntimeAdapter` SPI with Claude Code, Codex and OpenCode(+Ollama) adapters, immutable `ExecutionCandidate` review subjects, a shared conformance suite, `aisdlc runtimes --capabilities|--migrate-preview|--diagnose` and the "Adding a new agent runtime" guide. Compatibility: v1 flat runtime entries stay readable and JSON consumers keep their fields (`kind`, `models` and `binding` are additive); `default_registry` takes a project root; the opt-in fallback signal `capability-mismatch` is new.
 - Stabilize the continuous Flow branch against current main and preserve Expert CLI Construction execution alongside Automagic Flow.
 - Evolve Agora Flow into a continuous AI-DLC wizard with phase/substep progress, Level 1 Plan preview, transparent Decision Cards, transversal human validation checkpoints and first-class AI-DLC artifacts.
 - Add the continuous Agora Flow AI-DLC wizard with inline clarification, AI-DLC phase/substep guidance, transparent method outputs, Enter-to-confirm governed execution, and seamless Start -> wizard flow.

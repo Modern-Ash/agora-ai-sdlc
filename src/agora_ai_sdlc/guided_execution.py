@@ -23,10 +23,10 @@ from agora_ai_sdlc.executor_launch import (
     _session_failure_diagnostic,
     load_executor_adapters,
 )
-from agora_ai_sdlc.guided import GuidedDecision, inspect_next
+from agora_ai_sdlc.governance_guard import GovernanceRegression, guard_governed_state\nfrom agora_ai_sdlc.guided import GuidedDecision, inspect_next
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
 from agora_ai_sdlc.local_delivery import diff_project_file_snapshots, project_file_snapshot
-from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
+from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes\nfrom agora_ai_sdlc.runtime_execution import RuntimeExecutionPlan, prepare_runtime_execution
 from agora_ai_sdlc.verification import persisted_verification_diagnostic
 from agora_ai_sdlc.wizard import load_answers
 
@@ -219,7 +219,29 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
     return " ".join(parts)
 
 
-def _runner(runtime: RuntimeDiscovery, root: Path, prompt: str, model: str | None) -> str:
+def _runner(
+    runtime: RuntimeDiscovery,
+    root: Path,
+    prompt: str,
+    model: str | None,
+    *,
+    bundle=None,
+    actor_id: str | None = None,
+    workspace_factory=AgoraWorkspace,
+) -> RuntimeExecutionPlan | str:
+    """Build the canonical runtime plan; legacy string mode is kept for direct compatibility callers."""
+
+    if bundle is not None and actor_id:
+        return prepare_runtime_execution(
+            root,
+            bundle,
+            actor_id=actor_id,
+            runtime_id=runtime.id,
+            model=model,
+            guidance=prompt,
+            workspace_factory=workspace_factory,
+        )
+
     adapter = load_executor_adapters().get(runtime.id)
     if adapter is None or adapter.kind != "agent":
         raise ExecutorLaunchError(f"Runtime {runtime.id!r} is not a repository executor")
@@ -353,7 +375,17 @@ def execute_guided_preparation(
     except (LayaUnavailable, OSError, RuntimeError, ValueError):
         lean = None
     prompt = _prompt(root, decision, str(lean_path) if lean_path is not None else bundle.markdown_path)
-    runner = _runner(runtime, root, prompt, model)
+    prepared = _runner(
+        runtime,
+        root,
+        prompt,
+        model,
+        bundle=bundle,
+        actor_id=decision.actor or decision.role or "developer",
+        workspace_factory=workspace_factory,
+    )
+    plan = prepared if isinstance(prepared, RuntimeExecutionPlan) else None
+    runner = plan.runner if plan is not None else prepared
     repair_diagnostic = (
         persisted_verification_diagnostic(root, decision.work) if decision.state == "construction" else None
     )
@@ -369,7 +401,7 @@ def execute_guided_preparation(
         session_id = f"{base_id}-{suffix}"
         suffix += 1
 
-    actor_id = (decision.actor or decision.role or "developer").removeprefix("project:")
+    actor_id = (plan.actor_reference if plan is not None else (decision.actor or decision.role or "developer")).removeprefix("project:")
     fields = getattr(StartSessionInput, "__dataclass_fields__", {})
     kwargs = {
         "actor_id": actor_id,
@@ -385,22 +417,24 @@ def execute_guided_preparation(
     # Setting executor_id to a synthetic ai-<runtime> identity caused Core to
     # reject valid runtime switches when that actor was not registered.
     if "executor_id" in fields:
-        assigned = (decision.actor or "").removeprefix("project:")
-        if assigned:
-            kwargs["executor_id"] = assigned
-    if "runtime_version" in fields and runtime.version:
-        kwargs["runtime_version"] = runtime.version
+        kwargs["executor_id"] = actor_id
+    selected_version = plan.runtime_version if plan is not None else runtime.version
+    if "runtime_version" in fields and selected_version:
+        kwargs["runtime_version"] = selected_version
     if "timeout_seconds" in fields:
         kwargs["timeout_seconds"] = 600
 
     if progress_fn is not None:
         progress_fn("executor")
     try:
-        result = _start_session_with_heartbeat(
-            workspace,
-            StartSessionInput(**kwargs),
-            progress_fn=progress_fn,
-        )
+        with guard_governed_state(root):
+            result = _start_session_with_heartbeat(
+                workspace,
+                StartSessionInput(**kwargs),
+                progress_fn=progress_fn,
+            )
+    except GovernanceRegression as error:
+        raise ExecutorLaunchError(str(error)) from error
     except (OSError, RuntimeError, ValueError) as error:
         session_path = root / ".agora" / "sessions" / session_id
         diagnostic = ""

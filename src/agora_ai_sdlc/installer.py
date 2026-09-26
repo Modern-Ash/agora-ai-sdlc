@@ -32,12 +32,12 @@ from agora_ai_sdlc.flavor_manifest import (
 )
 from agora_ai_sdlc.guided import skill_path
 from agora_ai_sdlc.profile_activation import adoption_profiles
-from agora_ai_sdlc.runtime_discovery import discover_runtimes, render_runtimes
+from agora_ai_sdlc.runtime_discovery import discover_runtimes, render_runtimes\nfrom agora_ai_sdlc.runtime_domain import AgentRuntimeRef, ModelRuntimeRef, RuntimeBinding, normalize_runtime
 from agora_ai_sdlc.skill_resources import install_resources
 
 SCHEMA = "agora-ai-sdlc/install-config/v1"
-PROJECT_SCHEMA = "agora-ai-sdlc/project-config/v1"
-INTEGRATIONS = ("generic", "codex", "claude")
+PROJECT_SCHEMA = "agora-ai-sdlc/project-config/v2"
+INTEGRATIONS = ("generic", "codex", "claude", "opencode")
 PROFILE_IDS = ("starter", "enterprise", "modernization", "regulated")
 METHOD_ID = "ai-sdlc"
 METHOD_VERSION = "0.2.0"
@@ -316,7 +316,7 @@ def preview(config: dict, target: Path) -> dict:
         "framework": normalized["framework"],
         "pathway": normalized["pathway"],
         "integrations": normalized["integrations"],
-        "runtimes": normalized["runtimes"],
+        "runtimes": [_project_runtime_entry(runtime) for runtime in normalized["runtimes"]],
         "role_execution": normalized["role_execution"],
         "method": normalized["method"],
         "writes": [
@@ -326,6 +326,25 @@ def preview(config: dict, target: Path) -> dict:
             ".agora/skills/agora-ai-sdlc-guided/SKILL.md",
         ],
     }
+
+
+def _project_runtime_entry(runtime: dict) -> dict:
+    """Persist the v2 binding while retaining the legacy id as a compatibility alias."""
+
+    binding = normalize_runtime(runtime)
+    integration = binding.agent.integration.casefold()
+    canonical_id = {
+        "claude": "claude",
+        "claude-code": "claude",
+        "codex": "codex",
+        "opencode": "opencode",
+    }.get(integration, binding.agent.id)
+    canonical_integration = "claude-code" if canonical_id == "claude" else binding.agent.integration
+    model = binding.model
+    if model is not None and model.id != "ollama":
+        model = ModelRuntimeRef(canonical_id, model.provider, model.model)
+    canonical = RuntimeBinding(AgentRuntimeRef(canonical_id, canonical_integration), model)
+    return {"id": runtime["id"], **canonical.to_dict()}
 
 
 def _write_project_metadata(target: Path, normalized: dict) -> None:
@@ -422,19 +441,19 @@ def apply(config: dict, target: Path, home: Path) -> dict:
             "project",
         ),
     ]
-    actors.extend(
-        AddActorInput(
-            f"ai-{runtime['id']}",
-            runtime["id"],
-            "ai-agent",
-            ["specification", "implementation", "operations"],
-            "project",
-            integration=runtime["integration"],
-            provider=runtime["provider"],
-            model=runtime["model"],
+    if normalized["role_execution"]["developer"] != "human":
+        actors.append(
+            AddActorInput(
+                "ai-developer",
+                "AI Developer",
+                "ai-agent",
+                ["implementation", "operations"],
+                "project",
+                integration="generic",
+                provider="configured-by-runner",
+                model="configured-by-runner",
+            )
         )
-        for runtime in normalized["runtimes"]
-    )
     for actor in actors:
         workspace.add_actor(actor)
 
@@ -451,7 +470,7 @@ def apply(config: dict, target: Path, home: Path) -> dict:
         "developer": (
             "delivery-member"
             if normalized["role_execution"]["developer"] == "human"
-            else f"ai-{normalized['role_execution']['developer']}"
+            else "ai-developer"
         ),
     }
     for role, actor in assignments.items():

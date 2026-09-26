@@ -120,7 +120,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     start.add_argument(
         "--model",
-        help="Explicit provider/model id for OpenCode, for example ollama/claude or openai/gpt-5.5",
+        help="Explicit model binding; OpenCode accepts provider/model, for example ollama/qwen2.5-coder",
     )
     start.add_argument("--swarm", default="delivery", help="Agora delivery swarm used for the governed issue read")
     start.add_argument("--actor", default="product-owner", help="Agora actor used for the governed issue read")

@@ -12,10 +12,9 @@ from agora.markdown import read_markdown
 from agora.model import LaunchSessionInput, StartSessionInput
 from agora.workspace import AgoraWorkspace
 
-from agora_ai_sdlc.governance_guard import GovernanceRegression, guard_governed_state
-from agora_ai_sdlc.inception_validation import validate_inception_output
+from agora_ai_sdlc.agent_capabilities import CapabilityError, manifest_for\nfrom agora_ai_sdlc.execution_bundle import build_execution_bundle\nfrom agora_ai_sdlc.governance_guard import GovernanceRegression, guard_governed_state\nfrom agora_ai_sdlc.inception_validation import validate_inception_output
 from agora_ai_sdlc.llm_failures import recoverable_llm_failure
-from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
+from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery\nfrom agora_ai_sdlc.runtime_execution import RuntimeExecutionPlan, prepare_runtime_execution
 
 SCHEMA = "agora-ai-sdlc/executor-adapters/v1"
 MAX_PRESENTATION_CHARS = 6000
@@ -87,8 +86,13 @@ def load_executor_adapters() -> dict[str, ExecutorAdapter]:
 
 
 def executor_capable(runtime_id: str) -> bool:
-    adapter = load_executor_adapters().get(runtime_id)
-    return adapter is not None and adapter.kind == "agent"
+    """Whether the canonical runtime layer has an agent adapter contract for this id."""
+
+    try:
+        manifest_for(runtime_id)
+    except CapabilityError:
+        return False
+    return True
 
 
 def _adapter(runtime_id: str) -> ExecutorAdapter:
@@ -347,10 +351,7 @@ def launch_inception_executor(
         )
     if latest is not None and latest.status == "prepared":
         try:
-            with guard_governed_state(root):
-                completed = workspace.launch_session(LaunchSessionInput(session_id=latest.id))
-        except GovernanceRegression as error:
-            raise ExecutorLaunchError(str(error)) from error
+            with guard_governed_state(root):\n                completed = workspace.launch_session(LaunchSessionInput(session_id=latest.id))
         except (OSError, RuntimeError, ValueError) as error:
             raise ExecutorLaunchError(
                 f"Inception executor failed while launching prepared session {latest.id}: {error}"
@@ -372,7 +373,7 @@ def launch_inception_executor(
 
     fields = getattr(StartSessionInput, "__dataclass_fields__", {})
     kwargs = {
-        "actor_id": responsible_actor,
+        "actor_id": session_actor,
         "swarm_id": swarm_id,
         "id": session_id,
         "work_id": work_id,
@@ -389,10 +390,7 @@ def launch_inception_executor(
         kwargs["runtime_version"] = runtime.version
 
     try:
-        with guard_governed_state(root):
-            completed = workspace.start_session(StartSessionInput(**kwargs))
-    except GovernanceRegression as error:
-        raise ExecutorLaunchError(str(error)) from error
+        with guard_governed_state(root):\n            completed = workspace.start_session(StartSessionInput(**kwargs))
     except (OSError, RuntimeError, ValueError) as error:
         latest_after = _matching_sessions(workspace, root, base_id)
         durable = latest_after[-1] if latest_after else None
@@ -429,3 +427,52 @@ def launch_inception_executor(
             f"Inception executor {runtime.name} ended with unexpected session status {completed.status!r}"
         )
     return _result(completed, reused=False, handoff_path=handoff_path)
+
+
+def launch_inception_executor_v2(
+    root: Path,
+    *,
+    runtime: RuntimeDiscovery,
+    handoff_path: Path,
+    swarm_id: str,
+    work_id: str,
+    responsible_actor: str = "product-owner",
+    model: str | None = None,
+    workspace_factory=AgoraWorkspace,
+) -> InceptionExecutionResult:
+    """Product path: Core authority -> Laya requirements -> admission -> envelope -> RuntimeAdapter."""
+
+    root = root.resolve()
+    if workspace_factory is not AgoraWorkspace:
+        return launch_inception_executor(
+            root,
+            runtime=runtime,
+            handoff_path=handoff_path,
+            swarm_id=swarm_id,
+            work_id=work_id,
+            responsible_actor=responsible_actor,
+            model=model,
+            workspace_factory=workspace_factory,
+        )
+
+    bundle = build_execution_bundle(root, swarm=swarm_id, work=work_id, persist=True)
+    plan = prepare_runtime_execution(
+        root,
+        bundle,
+        actor_id=responsible_actor,
+        runtime_id=runtime.id,
+        model=model,
+        guidance=_inception_prompt(root, handoff_path),
+        workspace_factory=workspace_factory,
+    )
+    return launch_inception_executor(
+        root,
+        runtime=runtime,
+        handoff_path=handoff_path,
+        swarm_id=swarm_id,
+        work_id=work_id,
+        responsible_actor=responsible_actor,
+        model=model,
+        workspace_factory=workspace_factory,
+        runtime_plan=plan,
+    )

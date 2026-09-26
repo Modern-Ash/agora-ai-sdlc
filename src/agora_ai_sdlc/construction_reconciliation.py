@@ -9,7 +9,7 @@ from pathlib import Path
 from agora.model import AddArtifactInput, AddEvidenceInput, WorkActorInput
 from agora.workspace import AgoraWorkspace
 
-from agora_ai_sdlc.guided import GuidedDecision
+from agora_ai_sdlc.execution_candidate import candidate_from_git\nfrom agora_ai_sdlc.guided import GuidedDecision
 from agora_ai_sdlc.local_delivery import changed_product_files
 from agora_ai_sdlc.verification import build_verification_report
 
@@ -32,6 +32,7 @@ class ConstructionReconciliationResult:
     criterion_stages: tuple[str, ...]
     verification_passed: bool
     verification_report: str | None
+    candidate_subject: str | None = None
 
 
 @dataclass(frozen=True)
@@ -383,6 +384,7 @@ def reconcile_construction_execution(
             and report.all_executed_commands_passed is True
             and all(command.status == "passed" for command in report.commands)
         )
+        candidate_subject: str | None = None
         if verification_passed and report.report_path:
             report_uri = _register_support_artifact(
                 root,
@@ -392,6 +394,19 @@ def reconcile_construction_execution(
                 kind="test-report",
                 path=Path(report.report_path),
             )
+            revision = workspace.work_inspection_read_set_sha256(decision.swarm, decision.work)
+            candidate = candidate_from_git(
+                root,
+                repository=str(root),
+                swarm=decision.swarm,
+                work=decision.work,
+                revision=revision,
+                target=report.head or "HEAD",
+            )
+            candidate_subject = candidate.subject_hash
+            candidate_path = root / ".agora" / "ai-sdlc" / "verification" / decision.work / "CANDIDATE.json"
+            candidate_path.parent.mkdir(parents=True, exist_ok=True)
+            candidate_path.write_text(json.dumps(candidate.descriptor(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
             workspace.add_evidence(
                 AddEvidenceInput(
                     swarm_id=decision.swarm,
@@ -400,12 +415,15 @@ def reconcile_construction_execution(
                     type="test-suite",
                     result="success",
                     artifact_refs=[report_uri],
+                    tested_commit=candidate.target_commit,
                     environment="local-construction",
-                    dedupe_key=f"test-suite:{decision.work}",
+                    dedupe_key=f"test-suite:{candidate.subject_hash}",
                 )
             )
             if _record_stage(workspace, decision, actor, "verified"):
                 stages.append("verified")
+    else:
+        candidate_subject = None
 
     return ConstructionReconciliationResult(
         registered_artifacts=registered,
@@ -413,4 +431,5 @@ def reconcile_construction_execution(
         criterion_stages=tuple(stages),
         verification_passed=verification_passed,
         verification_report=report_path,
+        candidate_subject=candidate_subject,
     )

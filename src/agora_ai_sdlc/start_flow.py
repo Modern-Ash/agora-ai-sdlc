@@ -28,7 +28,7 @@ from agora_ai_sdlc.executor_launch import (
     ExecutorLaunchError,
     InceptionExecutionResult,
     executor_capable,
-    launch_inception_executor,
+    launch_inception_executor,\n    launch_inception_executor_v2,
 )
 from agora_ai_sdlc.i18n import t
 from agora_ai_sdlc.inception_handoff import write_inception_handoff
@@ -398,7 +398,7 @@ def prepare_start(
     runtime_discovery: Callable[[Path], tuple[RuntimeDiscovery, ...]] = discover_runtimes,
     preflight: Callable[..., StartPreparationResult] = ensure_start_ready,
     isolation: Callable[[Path, int], tuple[Path, str | None]] = isolate_dirty_work,
-    executor_launcher: Callable[..., InceptionExecutionResult] = launch_inception_executor,
+    executor_launcher: Callable[..., InceptionExecutionResult] = launch_inception_executor_v2,
     inception_materializer: Callable[..., object] = materialize_deterministic_inception,
     deterministic_clarifier: Callable[..., object] = record_zero_question_clarification,
     launch_executor: bool = True,

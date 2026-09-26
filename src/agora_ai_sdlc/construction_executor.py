@@ -18,10 +18,9 @@ from agora_ai_sdlc.executor_launch import (
     _session_output,
     build_runtime_runner,
 )
-from agora_ai_sdlc.governance_guard import GovernanceRegression, guard_governed_state
-from agora_ai_sdlc.guided_execution import _construction_relevant_changes
+from agora_ai_sdlc.governance_guard import GovernanceRegression, guard_governed_state\nfrom agora_ai_sdlc.guided_execution import _construction_relevant_changes
 from agora_ai_sdlc.local_delivery import diff_project_file_snapshots, project_file_snapshot
-from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
+from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes\nfrom agora_ai_sdlc.runtime_execution import (\n    configured_runtime_for_role,\n    prepare_runtime_execution,\n    resolve_runtime_binding,\n)
 
 CONSTRUCTION_TIMEOUT_SECONDS = 900
 
@@ -48,13 +47,11 @@ def runtime_for_actor(
 ) -> RuntimeDiscovery:
     """Resolve a responsive repository executor from the assigned actor or override."""
 
-    runtime_id = requested
-    if runtime_id is None and actor_reference.startswith("project:ai-"):
-        runtime_id = actor_reference.removeprefix("project:ai-")
-    if runtime_id is None:
-        raise ExecutorLaunchError(
-            "Construction cannot infer the selected AI runtime from the assigned developer actor."
-        )
+    try:
+        configured = configured_runtime_for_role(root, "developer", requested=requested)
+        runtime_id = resolve_runtime_binding(root, configured).agent.id
+    except ValueError as error:
+        raise ExecutorLaunchError(str(error)) from error
 
     for runtime in discover_runtimes(root):
         if runtime.id == runtime_id and runtime.installed and runtime.responsive:
@@ -131,7 +128,22 @@ def launch_construction_executor(
 
     runtime = runtime or runtime_for_actor(root, actor_reference, requested=runtime_id)
     prompt = _construction_prompt(root, Path(bundle.json_path), swarm_id, work_id)
-    runner = build_runtime_runner(runtime, root, prompt, model=model)
+    if use_runtime_layer is None:
+        use_runtime_layer = workspace_factory is AgoraWorkspace
+    plan = (
+        prepare_runtime_execution(
+            root,
+            bundle,
+            actor_id=actor_reference,
+            runtime_id=runtime.id,
+            model=model,
+            guidance=prompt,
+            workspace_factory=workspace_factory,
+        )
+        if use_runtime_layer
+        else None
+    )
+    runner = plan.runner if plan is not None else build_runtime_runner(runtime, root, prompt, model=model)
     workspace = workspace_factory(cwd=root)
 
     base_id = f"ai-sdlc-construction-{work_id}"
@@ -152,7 +164,7 @@ def launch_construction_executor(
 
     fields = getattr(StartSessionInput, "__dataclass_fields__", {})
     kwargs = {
-        "actor_id": actor_reference,
+        "actor_id": plan.actor_reference.removeprefix("project:") if plan is not None else actor_reference,
         "swarm_id": swarm_id,
         "id": session_id,
         "work_id": work_id,
@@ -162,9 +174,7 @@ def launch_construction_executor(
     if "timeout_seconds" in fields:
         kwargs["timeout_seconds"] = CONSTRUCTION_TIMEOUT_SECONDS
     if "executor_id" in fields:
-        # Runtime choice is not an authority handoff; a synthetic ai-<runtime>
-        # id is rejected by Core when that actor is not registered.
-        kwargs["executor_id"] = actor_reference.removeprefix("project:")
+        kwargs["executor_id"] = (plan.actor_reference.removeprefix("project:") if plan is not None else actor_reference.removeprefix("project:"))
     if "retry_of" in fields and retry_of is not None:
         kwargs["retry_of"] = retry_of
     if "runtime_version" in fields and runtime.version:
@@ -172,10 +182,7 @@ def launch_construction_executor(
 
     before_snapshot = project_file_snapshot(root) if decision is not None else {}
     try:
-        with guard_governed_state(root):
-            completed = workspace.start_session(StartSessionInput(**kwargs))
-    except GovernanceRegression as error:
-        raise ExecutorLaunchError(str(error)) from error
+        with guard_governed_state(root):\n            completed = workspace.start_session(StartSessionInput(**kwargs))
     except (OSError, RuntimeError, ValueError) as error:
         after = _matching_sessions(workspace, root, base_id)
         durable = after[-1] if after else None

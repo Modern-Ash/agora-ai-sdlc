@@ -56,7 +56,7 @@ def snapshot_from_workspace(workspace: Any, status: Any) -> CoreSnapshot:
         role=status.role,
         assignments=dict(swarm.assignments),
         actors=frozenset(actor.reference for actor in workspace.list_actors()),
-        human_boundary=bool(status.missing_approvals),
+        human_boundary=bool(status.ready_for_human_approval and status.missing_approvals),
     )
 
 
@@ -86,6 +86,7 @@ class ExecutionEnvelope:
     operation: str
     arguments: tuple[tuple[str, str], ...]
     candidate: Mapping[str, Any] | None = None
+    context: Mapping[str, Any] | None = None
 
     @property
     def executable(self) -> bool:
@@ -111,6 +112,8 @@ class ExecutionEnvelope:
         }
         if self.candidate is not None:
             body["candidate"] = dict(self.candidate)
+        if self.context is not None:
+            body["context"] = dict(self.context)
         return body
 
     def to_dict(self) -> dict:
@@ -135,6 +138,7 @@ def build_envelope(
     actor_id: str,
     availability: Mapping[str, Any] | None = None,
     candidate: Mapping[str, Any] | None = None,
+    context: Mapping[str, Any] | None = None,
 ) -> ExecutionEnvelope:
     """Build before launch. The responsible actor is explicit and never derived from the runtime."""
     role = snapshot.role
@@ -149,7 +153,7 @@ def build_envelope(
     if stop:
         return ExecutionEnvelope(
             snapshot.swarm, snapshot.work, snapshot.revision, actor_id, role, True,
-            requirements.to_dict(), None, STOP_OPERATION, (("work", snapshot.work),), candidate,
+            requirements.to_dict(), None, STOP_OPERATION, (("work", snapshot.work),), candidate, context,
         )  # fmt: skip
     if binding is None:
         raise EnvelopeError("envelope.binding_missing", "an executable envelope requires a runtime binding")
@@ -159,7 +163,7 @@ def build_envelope(
         raise EnvelopeError("envelope.binding_inadmissible", f"runtime binding is not admissible: {codes}")
     return ExecutionEnvelope(
         snapshot.swarm, snapshot.work, snapshot.revision, actor_id, role, False,
-        requirements.to_dict(), binding, operation, arguments, candidate,
+        requirements.to_dict(), binding, operation, arguments, candidate, context,
     )  # fmt: skip
 
 
@@ -196,7 +200,7 @@ def verify_integrity(payload: Mapping[str, Any]) -> ExecutionEnvelope:
         envelope = ExecutionEnvelope(
             body["work"]["swarm"], body["work"]["id"], body["work"]["revision"],
             body["authority"]["actor_id"], body["authority"]["role"], body["authority"]["human_boundary"],
-            body["requirements"], binding, operation, arguments, body.get("candidate"),
+            body["requirements"], binding, operation, arguments, body.get("candidate"), body.get("context"),
         )  # fmt: skip
     except (KeyError, TypeError, ValueError) as error:
         if isinstance(error, EnvelopeError):

@@ -656,6 +656,7 @@ def main(argv: list[str] | None = None) -> int:
                     actor_reference=decision.actor,
                     runtime_id=args.agent,
                     model=args.model,
+                    decision=decision,
                 )
             except (OSError, ValueError) as error:
                 print(error, file=sys.stderr)

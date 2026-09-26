@@ -17,6 +17,20 @@ _FORBIDDEN_SECURITY_PATTERNS = (
     ("process-spawn", ("child_process", "exec(", "spawn(")),
     ("network-access", ("fetch(", "http://", "https://", "XMLHttpRequest")),
 )
+# Lockfiles are generated dependency metadata (registry URLs, integrity hashes),
+# not product code, so pattern matching them only yields false positives.
+_SECURITY_SCAN_EXEMPT_FILES = frozenset(
+    {
+        "package-lock.json",
+        "npm-shrinkwrap.json",
+        "pnpm-lock.yaml",
+        "yarn.lock",
+        "uv.lock",
+        "poetry.lock",
+        "cargo.lock",
+        "go.sum",
+    }
+)
 _OPERATION_ARTIFACTS = (
     ("operational-readiness", "OPERATIONAL-READINESS.md"),
     ("rollback-procedure", "ROLLBACK-PROCEDURE.md"),
@@ -43,7 +57,7 @@ def _scan_local_product(root: Path, work: str) -> tuple[tuple[str, ...], tuple[s
     findings: list[str] = []
     for relative in paths:
         path = root / relative
-        if not path.is_file():
+        if not path.is_file() or path.name.casefold() in _SECURITY_SCAN_EXEMPT_FILES:
             continue
         try:
             text = path.read_text(encoding="utf-8")

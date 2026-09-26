@@ -32,7 +32,8 @@ from agora_ai_sdlc.flavor_manifest import (
 )
 from agora_ai_sdlc.guided import skill_path
 from agora_ai_sdlc.profile_activation import adoption_profiles
-from agora_ai_sdlc.runtime_discovery import discover_runtimes, render_runtimes\nfrom agora_ai_sdlc.runtime_domain import AgentRuntimeRef, ModelRuntimeRef, RuntimeBinding, normalize_runtime
+from agora_ai_sdlc.runtime_discovery import discover_runtimes, render_runtimes
+from agora_ai_sdlc.runtime_domain import AgentRuntimeRef, ModelRuntimeRef, RuntimeBinding, normalize_runtime
 from agora_ai_sdlc.skill_resources import install_resources
 
 SCHEMA = "agora-ai-sdlc/install-config/v1"

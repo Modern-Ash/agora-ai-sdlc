@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import shlex
-import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -18,15 +16,12 @@ from agora_ai_sdlc.construction_reconciliation import (
 )
 from agora_ai_sdlc.execution_bundle import build_execution_bundle
 from agora_ai_sdlc.execution_context import persist_execution_context, select_execution_context
-from agora_ai_sdlc.executor_launch import (
-    ExecutorLaunchError,
-    _session_failure_diagnostic,
-    load_executor_adapters,
-)
+from agora_ai_sdlc.executor_launch import ExecutorLaunchError, _session_failure_diagnostic
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
 from agora_ai_sdlc.local_delivery import diff_project_file_snapshots, project_file_snapshot
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
+from agora_ai_sdlc.runtime_execution import RuntimeExecutionError, build_governed_runtime_plan
 from agora_ai_sdlc.verification import persisted_verification_diagnostic
 from agora_ai_sdlc.wizard import load_answers
 
@@ -219,30 +214,6 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
     return " ".join(parts)
 
 
-def _runner(runtime: RuntimeDiscovery, root: Path, prompt: str, model: str | None) -> str:
-    adapter = load_executor_adapters().get(runtime.id)
-    if adapter is None or adapter.kind != "agent":
-        raise ExecutorLaunchError(f"Runtime {runtime.id!r} is not a repository executor")
-    executable = runtime.executable or runtime.command
-    values = {
-        "executable": executable,
-        "python": sys.executable,
-        "root": str(root.resolve()),
-        "model": model or "",
-        "prompt": prompt,
-    }
-    argv = [part.format(**values) for part in adapter.argv]
-    if runtime.id == "opencode" and not model:
-        try:
-            index = argv.index("--model")
-        except ValueError:
-            pass
-        else:
-            if index + 1 < len(argv) and argv[index + 1] == "":
-                del argv[index : index + 2]
-    return shlex.join(argv)
-
-
 def _latest_session_progress(workspace, session_id: str) -> str | None:
     """Read the latest bounded executor milestone from Core's durable PROGRESS.md."""
 
@@ -353,12 +324,29 @@ def execute_guided_preparation(
     except (LayaUnavailable, OSError, RuntimeError, ValueError):
         lean = None
     prompt = _prompt(root, decision, str(lean_path) if lean_path is not None else bundle.markdown_path)
-    runner = _runner(runtime, root, prompt, model)
     repair_diagnostic = (
         persisted_verification_diagnostic(root, decision.work) if decision.state == "construction" else None
     )
     before_snapshot = project_file_snapshot(root) if decision.state == "construction" else {}
     workspace = workspace_factory(cwd=root)
+    try:
+        plan = build_governed_runtime_plan(
+            root,
+            decision=decision,
+            bundle=bundle,
+            runtime_id=runtime.id,
+            model=model,
+            workspace=workspace,
+            actor=decision.actor,
+            context={
+                "purpose": "guided-preparation",
+                "guidance": prompt,
+                "bounded_context": str(lean_path) if lean_path is not None else bundle.markdown_path,
+            },
+        )
+    except RuntimeExecutionError as error:
+        raise ExecutorLaunchError(str(error)) from error
+    runner = plan.runner
 
     safe_stage = "".join(ch if ch.isalnum() or ch in "-_" else "-" for ch in (bundle.stage or "step"))
     base_id = f"ai-sdlc-guided-{decision.work}-{safe_stage}"
@@ -369,7 +357,7 @@ def execute_guided_preparation(
         session_id = f"{base_id}-{suffix}"
         suffix += 1
 
-    actor_id = (decision.actor or decision.role or "developer").removeprefix("project:")
+    actor_id = plan.actor_id
     fields = getattr(StartSessionInput, "__dataclass_fields__", {})
     kwargs = {
         "actor_id": actor_id,
@@ -385,9 +373,7 @@ def execute_guided_preparation(
     # Setting executor_id to a synthetic ai-<runtime> identity caused Core to
     # reject valid runtime switches when that actor was not registered.
     if "executor_id" in fields:
-        assigned = (decision.actor or "").removeprefix("project:")
-        if assigned:
-            kwargs["executor_id"] = assigned
+        kwargs["executor_id"] = plan.actor_id
     if "runtime_version" in fields and runtime.version:
         kwargs["runtime_version"] = runtime.version
     if "timeout_seconds" in fields:

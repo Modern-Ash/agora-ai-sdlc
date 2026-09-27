@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -34,7 +34,7 @@ class EconomicsEvent:
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
         data["schema"] = SCHEMA
-        data["at"] = self.at or datetime.now(timezone.utc).isoformat()
+        data["at"] = self.at or datetime.now(UTC).isoformat()
         if data.get("reason"):
             data["reason"] = sanitize(str(data["reason"]))[:500]
         return data

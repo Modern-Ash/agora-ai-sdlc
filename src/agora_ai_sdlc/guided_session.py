@@ -9,6 +9,8 @@ from pathlib import Path
 from threading import Event, Lock, Thread
 from time import monotonic
 
+from agora.workspace import AgoraWorkspace
+
 from agora_ai_sdlc.decision_card import build_decision_card, render_decision_card
 from agora_ai_sdlc.escalation import EscalationError, build_escalation_package, run_escalation_advisor
 from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice, select_executor_model
@@ -356,7 +358,12 @@ def run_interactive(
                             error="executor completed without governed progress",
                             result_path=previous_execution_result_path,
                         )
-                        advisor = run_escalation_advisor(root, package)
+                        advisor = run_escalation_advisor(
+                        root,
+                        package,
+                        workspace=AgoraWorkspace(cwd=root),
+                        actor_id=decision.actor,
+                    )
                     except (EscalationError, OSError, RuntimeError, ValueError) as advisor_error:
                         output_fn(
                             f"No se pudo obtener diagnóstico pago acotado: {advisor_error}"

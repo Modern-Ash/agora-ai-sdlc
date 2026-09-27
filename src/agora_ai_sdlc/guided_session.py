@@ -10,6 +10,7 @@ from threading import Event, Lock, Thread
 from time import monotonic
 
 import yaml
+from agora.model import AddUsageInput
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.advisory_planner import AdvisoryPlannerError, run_advisory_planner
@@ -279,6 +280,69 @@ class _PendingPlannerEscalation:
     planner_binding: RuntimeBinding
     planner_tier: str
     executor: ExecutorRecoveryChoice
+
+
+def _record_planner_usage(
+    root: Path,
+    decision: GuidedDecision,
+    pending: _PendingPlannerEscalation,
+    usage: dict[str, int],
+) -> bool:
+    workspace = AgoraWorkspace(cwd=root)
+    model = pending.planner_binding.model.model if pending.planner_binding.model is not None else None
+    digest = pending.package.digest.removeprefix("sha256:")[:12]
+    usage_id = f"planner-{pending.package.attempts}-{digest}"
+
+    if not usage:
+        record_economic_event(
+            root,
+            work=decision.work,
+            kind="planner-usage-unaccounted",
+            tier=pending.planner_tier,
+            agent=pending.planner_binding.agent.id,
+            model=model,
+            fields={"reason": "provider-telemetry-unavailable"},
+        )
+        return False
+
+    try:
+        if any(record.id == usage_id for record in workspace.list_usage(decision.swarm, decision.work)):
+            return True
+        workspace.add_usage(
+            AddUsageInput(
+                id=usage_id,
+                swarm_id=decision.swarm,
+                work_id=decision.work,
+                actor_id=(decision.actor or decision.role or "developer").removeprefix("project:"),
+                amounts=dict(usage),
+                evidence_refs=[
+                    f"repo://.agora/ai-sdlc/repair-advice/{decision.work}/ADVICE.json",
+                ],
+                measurement="provider-reported",
+            )
+        )
+    except (OSError, PermissionError, RuntimeError, ValueError) as error:
+        record_economic_event(
+            root,
+            work=decision.work,
+            kind="planner-usage-unaccounted",
+            tier=pending.planner_tier,
+            agent=pending.planner_binding.agent.id,
+            model=model,
+            fields={"reason": str(error)[:1000], "reported_usage": dict(usage)},
+        )
+        return False
+
+    record_economic_event(
+        root,
+        work=decision.work,
+        kind="planner-usage-recorded",
+        tier=pending.planner_tier,
+        agent=pending.planner_binding.agent.id,
+        model=model,
+        fields={"usage": dict(usage), "measurement": "provider-reported"},
+    )
+    return True
 
 
 def _bounded_escalation_choice(
@@ -598,6 +662,12 @@ def run_interactive(
                         package=pending_planner.package,
                         binding=pending_planner.planner_binding,
                         tier=pending_planner.planner_tier,
+                    )
+                    _record_planner_usage(
+                        root,
+                        decision,
+                        pending_planner,
+                        planner_outcome.usage,
                     )
                     record_economic_event(
                         root,

@@ -210,7 +210,12 @@ def build_governed_runtime_plan(
         if selection is not None:
             binding = selection.binding
             observed_runtime = observed.get(binding.agent.id)
-            if runtime is None and observed_runtime is not None and observed_runtime.installed and observed_runtime.responsive:
+            if (
+                runtime is None
+                and observed_runtime is not None
+                and observed_runtime.installed
+                and observed_runtime.responsive
+            ):
                 runtime = observed_runtime
             runtime = runtime or runtime_for(root, binding.agent.id)
         elif runtime is not None:

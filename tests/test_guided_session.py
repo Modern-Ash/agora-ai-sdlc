@@ -491,7 +491,6 @@ def test_deterministic_action_confirmation_does_not_claim_llm_execution(monkeypa
     assert not any("Confirm and run with OpenCode" in line for line in outputs)
 
 
-
 def test_local_executor_retries_before_paid_escalation(monkeypatch):
     outputs = []
     calls = {"inspect": 0, "execute": 0}

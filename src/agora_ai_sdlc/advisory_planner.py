@@ -193,7 +193,11 @@ def run_advisory_planner(
     data = _payload(output, mode)
     summary = data.get("summary")
     actions = data.get("actions")
-    if not isinstance(summary, str) or not isinstance(actions, list) or any(not isinstance(item, str) for item in actions):
+    if (
+        not isinstance(summary, str)
+        or not isinstance(actions, list)
+        or any(not isinstance(item, str) for item in actions)
+    ):
         raise AdvisoryPlannerError("planner.malformed_output", "planner requires summary and string-list actions")
     advice = build_repair_advice(
         work=package.work,

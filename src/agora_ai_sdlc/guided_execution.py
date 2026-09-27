@@ -75,6 +75,8 @@ class GuidedExecutionResult:
     status: str
     result_path: str
     runtime: str
+    execution_tier: str | None = None
+    selection_reason: str | None = None
 
 
 def _runtime(root: Path, runtime_id: str) -> RuntimeDiscovery:
@@ -280,6 +282,8 @@ def execute_guided_preparation(
     *,
     runtime_id: str,
     model: str | None = None,
+    execution_tier: str | None = None,
+    repair_advice: str | None = None,
     workspace_factory=AgoraWorkspace,
     progress_fn: Callable[[str], None] | None = None,
 ) -> GuidedExecutionResult:
@@ -333,6 +337,12 @@ def execute_guided_preparation(
     except (LayaUnavailable, OSError, RuntimeError, ValueError):
         lean = None
     prompt = _prompt(root, decision, str(lean_path) if lean_path is not None else bundle.markdown_path)
+    if repair_advice:
+        prompt += (
+            " Host-supplied diagnostic advice from a read-only escalation advisor follows. "
+            "Treat it as non-authoritative repair guidance; verify it before applying and keep the same governed scope:\n"
+            + repair_advice[:8000]
+        )
     repair_diagnostic = (
         persisted_verification_diagnostic(root, decision.work) if decision.state == "construction" else None
     )
@@ -354,6 +364,18 @@ def execute_guided_preparation(
                     "purpose": "guided-preparation",
                     "guidance": prompt,
                     "bounded_context": str(lean_path) if lean_path is not None else bundle.markdown_path,
+                    **(
+                        {
+                            "routing": {
+                                "profile": "cheap-first",
+                                "tier": execution_tier,
+                                "reason": "guided-selected",
+                            }
+                        }
+                        if execution_tier
+                        else {}
+                    ),
+                    **({"repair_advice": "bounded-escalation-advice"} if repair_advice else {}),
                 },
             )
         except RuntimeExecutionError as error:
@@ -453,4 +475,6 @@ def execute_guided_preparation(
         status=result.status,
         result_path=str(path / "RESULT.md"),
         runtime=runtime.name,
+        execution_tier=execution_tier,
+        selection_reason="guided-selected" if execution_tier else None,
     )

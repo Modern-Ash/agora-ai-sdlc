@@ -14,6 +14,7 @@ from typing import Any
 
 import yaml
 
+from agora_ai_sdlc.execution_economics import attempt_count
 from agora_ai_sdlc.execution_policy import EXECUTION_TIERS, ExecutionPolicy, execution_policy_for, tier_rank
 from agora_ai_sdlc.execution_requirements import ExecutionRequirements
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
@@ -49,6 +50,8 @@ class RuntimePool:
     profile: str
     allow_paid_auto: bool
     allow_frontier_auto: bool
+    call_budgets: dict[str, int]
+    retry_limits: dict[str, int]
     candidates: tuple[PoolCandidate, ...]
 
 
@@ -163,12 +166,43 @@ def load_runtime_pool(root: Path) -> RuntimePool | None:
             )
         )
 
+    raw_call_budgets = routing.get("call_budgets") or {}
+    if not isinstance(raw_call_budgets, dict) or any(
+        tier not in EXECUTION_TIERS or not isinstance(limit, int) or isinstance(limit, bool) or limit < 0
+        for tier, limit in raw_call_budgets.items()
+    ):
+        raise RuntimePoolError(
+            "routing.call_budgets",
+            "call_budgets must map known execution tiers to non-negative integer limits",
+        )
+
+    raw_retry_limits = routing.get("retry_limits") or {"local": 2, "free": 2}
+    if not isinstance(raw_retry_limits, dict) or any(
+        tier not in EXECUTION_TIERS or not isinstance(limit, int) or isinstance(limit, bool) or limit < 0
+        for tier, limit in raw_retry_limits.items()
+    ):
+        raise RuntimePoolError(
+            "routing.retry_limits",
+            "retry_limits must map known execution tiers to non-negative integer limits",
+        )
+
     return RuntimePool(
         profile="cheap-first",
         allow_paid_auto=bool(routing.get("allow_paid_auto", False)),
         allow_frontier_auto=bool(routing.get("allow_frontier_auto", False)),
+        call_budgets=dict(raw_call_budgets),
+        retry_limits=dict(raw_retry_limits),
         candidates=tuple(candidates),
     )
+
+
+def retry_limit_for(root: Path, tier: str | None) -> int:
+    if tier is None:
+        return 0
+    pool = load_runtime_pool(root)
+    if pool is None:
+        return 0
+    return int(pool.retry_limits.get(tier, 0))
 
 
 def _candidate_id(binding: RuntimeBinding) -> str:
@@ -177,14 +211,35 @@ def _candidate_id(binding: RuntimeBinding) -> str:
     return f"{binding.agent.id}+{binding.model.provider}/{binding.model.model}"
 
 
-def _eligible(pool: RuntimePool, policy: ExecutionPolicy, activity: str) -> tuple[PoolCandidate, ...]:
+def _eligible(
+    pool: RuntimePool,
+    policy: ExecutionPolicy,
+    activity: str,
+    *,
+    root: Path,
+    work_id: str | None,
+    minimum_tier: str | None,
+    maximum_tier: str | None,
+    allowed_agents: tuple[str, ...] | None,
+) -> tuple[PoolCandidate, ...]:
     values = []
+    lower = tier_rank(minimum_tier) if minimum_tier is not None else 0
+    upper = tier_rank(maximum_tier) if maximum_tier is not None else tier_rank(policy.max_automatic_tier)
+    upper = min(upper, tier_rank(policy.max_automatic_tier))
     for candidate in pool.candidates:
+        rank = tier_rank(candidate.tier)
+        if rank < lower or rank > upper:
+            continue
+        if allowed_agents is not None and candidate.binding.agent.id not in allowed_agents:
+            continue
         if not candidate.applies_to(activity) or not policy.allows(candidate.tier):
             continue
-        if tier_rank(candidate.tier) >= tier_rank("paid-efficient") and not pool.allow_paid_auto:
+        if rank >= tier_rank("paid-efficient") and not pool.allow_paid_auto:
             continue
         if candidate.tier == "frontier" and not pool.allow_frontier_auto:
+            continue
+        limit = pool.call_budgets.get(candidate.tier)
+        if work_id is not None and limit is not None and attempt_count(root, work_id, candidate.tier) >= limit:
             continue
         values.append(candidate)
     return tuple(sorted(values, key=lambda item: (tier_rank(item.tier), item.order)))
@@ -196,6 +251,10 @@ def select_from_runtime_pool(
     *,
     availability: dict[str, RuntimeDiscovery] | None = None,
     budgets: tuple[Budget, ...] = (),
+    work_id: str | None = None,
+    minimum_tier: str | None = None,
+    maximum_tier: str | None = None,
+    allowed_agents: tuple[str, ...] | None = None,
 ) -> PoolSelection | None:
     """Return the cheapest admissible configured binding, or None when routing is not configured."""
 
@@ -203,7 +262,16 @@ def select_from_runtime_pool(
     if pool is None:
         return None
     policy = execution_policy_for(requirements)
-    candidates = _eligible(pool, policy, requirements.activity_class)
+    candidates = _eligible(
+        pool,
+        policy,
+        requirements.activity_class,
+        root=root,
+        work_id=work_id,
+        minimum_tier=minimum_tier,
+        maximum_tier=maximum_tier,
+        allowed_agents=allowed_agents,
+    )
     if not candidates:
         raise RuntimePoolError(
             "routing.no_candidate",

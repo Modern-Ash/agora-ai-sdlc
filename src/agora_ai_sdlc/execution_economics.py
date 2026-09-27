@@ -1,0 +1,118 @@
+"""Non-authoritative execution economics telemetry.
+
+Agora Core remains the source of truth for lifecycle and authoritative usage.
+This ledger records provider-neutral routing/execution facts that help explain
+why a tier was selected and how often each economic tier was actually invoked.
+"""
+
+from __future__ import annotations
+
+import json
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+from agora_ai_sdlc.runtime_adapter import sanitize
+
+SCHEMA = "agora-ai-sdlc/execution-economics/v1"
+
+
+@dataclass(frozen=True)
+class EconomicsEvent:
+    event: str
+    work: str
+    tier: str | None
+    agent: str | None
+    model: str | None
+    purpose: str | None = None
+    reason: str | None = None
+    exit_code: int | None = None
+    core_usage: dict[str, Any] | None = None
+    at: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        data = asdict(self)
+        data["schema"] = SCHEMA
+        data["at"] = self.at or datetime.now(UTC).isoformat()
+        if data.get("reason"):
+            data["reason"] = sanitize(str(data["reason"]))[:500]
+        return data
+
+
+def ledger_path(root: Path, work: str) -> Path:
+    return root / ".agora" / "ai-sdlc" / "economics" / work / "EVENTS.jsonl"
+
+
+def record_event(root: Path, event: EconomicsEvent) -> str:
+    path = ledger_path(root, event.work)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as stream:
+        stream.write(json.dumps(event.to_dict(), sort_keys=True) + "\n")
+    return str(path)
+
+
+def load_events(root: Path, work: str) -> tuple[dict[str, Any], ...]:
+    path = ledger_path(root, work)
+    if not path.is_file():
+        return ()
+    values = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(item, dict) and item.get("schema") == SCHEMA:
+            values.append(item)
+    return tuple(values)
+
+
+def attempt_count(root: Path, work: str, tier: str) -> int:
+    return sum(1 for item in load_events(root, work) if item.get("event") == "attempt" and item.get("tier") == tier)
+
+
+def core_usage_snapshot(workspace: Any, swarm: str, work: str) -> dict[str, Any] | None:
+    summarize = getattr(workspace, "summarize_usage", None)
+    if not callable(summarize):
+        return None
+    try:
+        summary = summarize(swarm, work)
+    except (OSError, RuntimeError, ValueError, FileNotFoundError):
+        return None
+    consumed = dict(getattr(summary, "consumed", {}) or {})
+    measurement = dict(getattr(summary, "consumed_measurement", {}) or {})
+    return {
+        "consumed": consumed,
+        "measurement": measurement,
+        "budget_limits": dict(getattr(summary, "budget_limits", {}) or {}) or None,
+        "remaining": dict(getattr(summary, "remaining", {}) or {}) or None,
+    }
+
+
+def summarize_economics(root: Path, work: str) -> dict[str, Any]:
+    events = load_events(root, work)
+    attempts: dict[str, int] = {}
+    successes: dict[str, int] = {}
+    failures: dict[str, int] = {}
+    escalations = 0
+    for item in events:
+        tier = str(item.get("tier") or "unknown")
+        if item.get("event") == "attempt":
+            attempts[tier] = attempts.get(tier, 0) + 1
+        elif item.get("event") == "success":
+            successes[tier] = successes.get(tier, 0) + 1
+        elif item.get("event") == "failure":
+            failures[tier] = failures.get(tier, 0) + 1
+        elif item.get("event") == "escalation":
+            escalations += 1
+    return {
+        "schema": SCHEMA,
+        "work": work,
+        "attempts": dict(sorted(attempts.items())),
+        "successes": dict(sorted(successes.items())),
+        "failures": dict(sorted(failures.items())),
+        "escalations": escalations,
+        "events": len(events),
+    }

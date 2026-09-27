@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from agora_ai_sdlc.executor_launch import executor_capable
@@ -25,6 +25,7 @@ class ExecutorRecoveryChoice:
     agent: str
     model: str | None
     label: str
+    tier: str | None = field(default=None, compare=False)
 
 
 @dataclass(frozen=True)
@@ -182,11 +183,16 @@ def recovery_choices(
                 label = f"{group.label} · configured model"
             else:
                 label = f"{group.label} · {model} [{_model_badge(model)}]"
+            tier = None
+            if model is not None:
+                badge = _model_badge(model)
+                tier = "local" if badge == "local" else ("free" if badge == "free" else None)
             choices.append(
                 ExecutorRecoveryChoice(
                     agent=group.agent,
                     model=model,
                     label=label,
+                    tier=tier,
                 )
             )
     return tuple(choices)
@@ -343,6 +349,7 @@ def select_executor_model(
                     agent="opencode",
                     model=model,
                     label=f"{group.label} · {model} [local]",
+                    tier="local",
                 )
 
             model = group.models[model_index]
@@ -350,10 +357,15 @@ def select_executor_model(
                 label = f"{group.label} · configured model"
             else:
                 label = f"{group.label} · {model} [{_model_badge(model)}]"
+            tier = None
+            if model is not None:
+                badge = _model_badge(model)
+                tier = "local" if badge == "local" else ("free" if badge == "free" else None)
             return ExecutorRecoveryChoice(
                 agent=group.agent,
                 model=model,
                 label=label,
+                tier=tier,
             )
 
 

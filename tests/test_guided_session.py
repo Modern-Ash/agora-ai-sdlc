@@ -489,3 +489,91 @@ def test_deterministic_action_confirmation_does_not_claim_llm_execution(monkeypa
     assert calls == {"inspect": 2, "action": 1}
     assert "[Enter] Confirm  [A] Adjust  [D] Details  [X] Exit" in outputs
     assert not any("Confirm and run with OpenCode" in line for line in outputs)
+
+
+def test_local_executor_retries_before_paid_escalation(monkeypatch):
+    outputs = []
+    calls = {"inspect": 0, "execute": 0}
+    runtime = SimpleNamespace(
+        agent="opencode",
+        model="ollama/qwen3-coder:latest",
+        label="Ollama · qwen3-coder:latest [local]",
+        tier="local",
+    )
+
+    def inspect(*args, **kwargs):
+        calls["inspect"] += 1
+        return decision() if calls["inspect"] == 1 else None
+
+    def execute(*args, **kwargs):
+        calls["execute"] += 1
+        assert kwargs["execution_tier"] == "local"
+        if calls["execute"] == 1:
+            raise ValueError("test failure")
+        assert kwargs["repair_advice"] is None
+        return SimpleNamespace(runtime="OpenCode", result_path="/tmp/RESULT.md")
+
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.inspect_next", inspect)
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.build_wizard_view", lambda *args, **kwargs: view())
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.advise_workflow", lambda *args, **kwargs: advice(runtime))
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.execute_guided_preparation", execute)
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.retry_limit_for", lambda root, tier: 1)
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_session.run_escalation_advisor",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("advisor must not run before retries")),
+    )
+
+    result = run_interactive(Path("."), input_fn=lambda prompt: "", output_fn=outputs.append)
+
+    assert result.reason == "clear"
+    assert calls == {"inspect": 2, "execute": 2}
+    assert any("Cheap retry 1/1" in line for line in outputs)
+
+
+def test_paid_advisor_returns_guidance_to_same_cheap_executor(monkeypatch):
+    outputs = []
+    calls = {"inspect": 0, "execute": 0, "advisor": 0}
+    runtime = SimpleNamespace(
+        agent="opencode",
+        model="ollama/qwen3-coder:latest",
+        label="Ollama · qwen3-coder:latest [local]",
+        tier="local",
+    )
+
+    def inspect(*args, **kwargs):
+        calls["inspect"] += 1
+        return decision() if calls["inspect"] == 1 else None
+
+    def execute(*args, **kwargs):
+        calls["execute"] += 1
+        if calls["execute"] == 1:
+            assert kwargs["repair_advice"] is None
+            raise ValueError("persistent parser failure")
+        assert kwargs["runtime_id"] == "opencode"
+        assert kwargs["repair_advice"] == "Change parser branch and rerun the focused test."
+        return SimpleNamespace(runtime="OpenCode", result_path="/tmp/RESULT.md")
+
+    def advisor(*args, **kwargs):
+        calls["advisor"] += 1
+        return SimpleNamespace(
+            tier="paid-efficient",
+            advice="Change parser branch and rerun the focused test.",
+        )
+
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.inspect_next", inspect)
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.build_wizard_view", lambda *args, **kwargs: view())
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.advise_workflow", lambda *args, **kwargs: advice(runtime))
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.execute_guided_preparation", execute)
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.retry_limit_for", lambda root, tier: 0)
+    monkeypatch.setattr(
+        "agora_ai_sdlc.guided_session.build_escalation_package",
+        lambda *args, **kwargs: SimpleNamespace(work="first-work"),
+    )
+    monkeypatch.setattr("agora_ai_sdlc.guided_session.run_escalation_advisor", advisor)
+
+    result = run_interactive(Path("."), input_fn=lambda prompt: "", output_fn=outputs.append)
+
+    assert result.reason == "clear"
+    assert calls == {"inspect": 2, "execute": 2, "advisor": 1}
+    assert any("diagnostic advice obtained" in line for line in outputs)
+    assert any("repair returns to Ollama" in line for line in outputs)

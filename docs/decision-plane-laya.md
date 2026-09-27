@@ -94,6 +94,17 @@ The initial questions are intentionally small:
 
 These answers never mutate the execution bundle.
 
+## Cost-aware escalation boundary
+
+Laya remains a classifier, not the paid advisor and not the executor. A confident Laya result can
+place execution in a cheap tier. If a local/free executor repeatedly fails, deterministic retry policy
+may produce a bounded escalation package. A paid-efficient Codex/Claude advisor can then diagnose that
+package in read-only mode and return advice to the same cheap executor. This keeps the high-volume
+edit/test/repair loop local while reserving paid reasoning for bounded diagnosis.
+
+Uncertain Laya output does not trigger this automatic escalation path. Human authority and Core gates
+remain unchanged.
+
 ## Semantic context pruning
 
 Agora first builds the deterministic Context Graph. Laya can only prune candidates from that graph;

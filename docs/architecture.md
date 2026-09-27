@@ -99,6 +99,47 @@ Model names are project configuration, never lifecycle semantics. Teams can bind
 `paid-efficient`, `paid-standard` and `frontier` entries to whichever concrete models or reasoning
 profiles are appropriate without changing Agora. An explicit `--agent`/model choice remains an override.
 
+## Bounded retry, diagnostic escalation and economics
+
+Cheap-first execution uses two additional safeguards before a stronger executor is considered:
+
+1. `retry_limits` bounds automatic retries for `local` and `free` tiers. Ordinary failure does not
+   immediately change provider.
+2. After cheap retries are exhausted, AI-SDLC may build an
+   `agora-ai-sdlc/escalation-package/v1` containing only the Work objective, acceptance criteria,
+   relevant changed/dirty paths, verification commands, deterministic verification diagnosis, failed
+   runtime identity and bounded error text.
+
+When paid automatic routing is enabled, the package can be sent to the cheapest admissible
+`paid-efficient`/ `paid-standard` **read-only advisor** through Codex or Claude. The advisor does not
+become the Work executor and cannot approve or transition anything. Its advice is persisted and handed
+back to the original cheap executor for one governed repair attempt.
+
+The runtime pool also accepts `call_budgets` by economic tier. Actual adapter launches are recorded in
+`.agora/ai-sdlc/economics/<work>/EVENTS.jsonl`; exhausted tier call budgets remove that tier from
+automatic selection. Core token/cost budgets remain authoritative and are also passed into the existing
+runtime selector when Core exposes a budget for the Work.
+
+Example:
+
+```yaml
+routing:
+  profile: cheap-first
+  allow_paid_auto: true
+  allow_frontier_auto: false
+  retry_limits:
+    local: 2
+    free: 1
+  call_budgets:
+    paid-efficient: 6
+    paid-standard: 2
+    frontier: 0
+```
+
+Use `aisdlc economics --work <id>` to inspect attempts, successes, failures and escalations by tier.
+The economics ledger is explanatory telemetry only; lifecycle authority and authoritative usage remain
+in Agora Core.
+
 ## Execution envelope
 
 `agora-ai-sdlc/execution-envelope/v1` (`execution_envelope.py`) carries the exact next authorized operation: work identity and Core state revision, responsible actor and role, `ExecutionRequirements`, the runtime binding (agent + model) and a structured `next_transition` (stable operation id plus ordered typed arguments; the `display` string is derived). Actor, role, agent and model are separate fields; the actor is always explicit and validated against Core, so a runtime name (`claude`) never resolves to an actor (`ai-claude`). A human boundary yields a non-executable `stop.human_authority` envelope. Adapters call `verify_integrity` (digest check rejects any altered operation or argument) and `validate_current` before mutation; stale revision, a new human boundary, revoked authority or an inadmissible binding return typed reasons and require recalculation.

@@ -18,6 +18,7 @@ from agora_ai_sdlc.guided import inspect_next
 from agora_ai_sdlc.inception_validation import validate_inception_output
 from agora_ai_sdlc.llm_failures import recoverable_llm_failure
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
+from agora_ai_sdlc.skill_planner import maybe_plan_skill
 from agora_ai_sdlc.runtime_execution import (
     RuntimeExecutionError,
     build_governed_runtime_plan,
@@ -328,6 +329,7 @@ def launch_inception_executor(
     work_id: str,
     responsible_actor: str = "product-owner",
     model: str | None = None,
+    execution_tier: str | None = None,
     workspace_factory=AgoraWorkspace,
 ) -> InceptionExecutionResult:
     """Launch one governed Inception session and reuse completed work idempotently."""
@@ -340,6 +342,19 @@ def launch_inception_executor(
         if decision is None:
             raise ExecutorLaunchError(f"Cannot resolve governed Inception decision for {swarm_id}/{work_id}")
         bundle = build_execution_bundle(root, swarm=swarm_id, work=work_id, persist=True)
+        skill_plan = None
+        if execution_tier in {"local", "free"}:
+            try:
+                skill_plan = maybe_plan_skill(root, bundle, workspace=workspace)
+            except (OSError, RuntimeError, ValueError):
+                skill_plan = None
+        guidance = _inception_prompt(root, handoff_path)
+        if skill_plan is not None:
+            guidance += (
+                " Host-supplied read-only Skill Planner guidance follows. "
+                "It is advisory and must be verified by the executor:\n"
+                + skill_plan.text[:12000]
+            )
         try:
             plan = build_governed_runtime_plan(
                 root,
@@ -352,8 +367,30 @@ def launch_inception_executor(
                 actor=decision.actor or responsible_actor,
                 context={
                     "purpose": "inception",
-                    "guidance": _inception_prompt(root, handoff_path),
+                    "guidance": guidance,
                     "handoff": str(handoff_path.resolve().relative_to(root)),
+                    **(
+                        {
+                            "routing": {
+                                "profile": "cheap-first",
+                                "tier": execution_tier,
+                                "reason": "start-cheap-first",
+                            }
+                        }
+                        if execution_tier
+                        else {}
+                    ),
+                    **(
+                        {
+                            "skill_planner": {
+                                "tier": skill_plan.tier,
+                                "path": str(Path(skill_plan.path).resolve().relative_to(root)),
+                                "reused": skill_plan.reused,
+                            }
+                        }
+                        if skill_plan is not None
+                        else {}
+                    ),
                 },
             )
         except RuntimeExecutionError as error:

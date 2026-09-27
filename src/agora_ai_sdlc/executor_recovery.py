@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from agora_ai_sdlc.executor_launch import executor_capable
@@ -25,7 +25,7 @@ class ExecutorRecoveryChoice:
     agent: str
     model: str | None
     label: str
-    tier: str | None = None
+    tier: str | None = field(default=None, compare=False)
 
 
 @dataclass(frozen=True)

@@ -24,13 +24,13 @@ from agora.workspace import AgoraWorkspace
 from agora_ai_sdlc import profile_activation
 from agora_ai_sdlc.depth_profiles import ORDER as DEPTH_ORDER
 from agora_ai_sdlc.depth_profiles import asset_root
+from agora_ai_sdlc.execution_policy import EXECUTION_TIERS
 from agora_ai_sdlc.flavor_manifest import (
     ManifestError,
     check_core_compatibility,
     installed_core_version,
     load_packaged_manifest,
 )
-from agora_ai_sdlc.execution_policy import EXECUTION_TIERS
 from agora_ai_sdlc.guided import skill_path
 from agora_ai_sdlc.profile_activation import adoption_profiles
 from agora_ai_sdlc.runtime_discovery import discover_runtimes, render_runtimes

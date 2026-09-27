@@ -470,3 +470,96 @@ def test_advisory_planner_rejects_provider_agent_mismatch(tmp_path, monkeypatch)
             tier="paid-efficient",
             runner=lambda argv, stdin, root: (0, "{}"),
         )
+
+
+def test_codex_planner_captures_reported_tokens(tmp_path, monkeypatch):
+    monkeypatch.setattr("agora_ai_sdlc.advisory_planner.shutil.which", lambda name: f"/bin/{name}")
+    req = requirements_for_activity("construction.implementation", tier="standard")
+    binding = RuntimeBinding(
+        AgentRuntimeRef("codex", "codex"),
+        ModelRuntimeRef("openai", "openai", "configured-efficient"),
+    )
+    package = build_escalation_package(
+        swarm="delivery",
+        work="issue-x",
+        requirements=req,
+        failed_tier="local",
+        failed_binding=binding,
+        attempts=3,
+        diagnostic="failure",
+    )
+
+    outcome = run_advisory_planner(
+        tmp_path,
+        package=package,
+        binding=binding,
+        tier="paid-efficient",
+        runner=lambda argv, stdin, root: (
+            0,
+            '{"summary":"Use the bounded fix","actions":["Apply the fix"]}\ntokens used\n1,234\n',
+        ),
+    )
+
+    assert outcome.usage == {"tokens": 1234}
+
+
+def test_claude_planner_captures_reported_tokens(tmp_path, monkeypatch):
+    monkeypatch.setattr("agora_ai_sdlc.advisory_planner.shutil.which", lambda name: f"/bin/{name}")
+    req = requirements_for_activity("construction.implementation", tier="standard")
+    binding = RuntimeBinding(
+        AgentRuntimeRef("claude", "claude-code"),
+        ModelRuntimeRef("anthropic", "anthropic", "configured-efficient"),
+    )
+    package = build_escalation_package(
+        swarm="delivery",
+        work="issue-x",
+        requirements=req,
+        failed_tier="local",
+        failed_binding=binding,
+        attempts=3,
+        diagnostic="failure",
+    )
+    result = '{"summary":"Use the bounded fix","actions":["Apply the fix"]}'
+    outer = {
+        "result": result,
+        "usage": {
+            "input_tokens": 100,
+            "output_tokens": 25,
+            "cache_read_input_tokens": 10,
+        },
+    }
+
+    outcome = run_advisory_planner(
+        tmp_path,
+        package=package,
+        binding=binding,
+        tier="paid-efficient",
+        runner=lambda argv, stdin, root: (0, __import__("json").dumps(outer)),
+    )
+
+    assert outcome.usage == {"tokens": 135}
+
+
+def test_unaccounted_paid_usage_blocks_later_paid_routing(tmp_path):
+    project(tmp_path, paid=True, frontier=True)
+    record_economic_event(
+        tmp_path,
+        work="issue-x",
+        kind="planner-usage-unaccounted",
+        tier="paid-efficient",
+        agent="codex",
+        model="configured-efficient",
+        fields={"reason": "provider-telemetry-unavailable"},
+    )
+    req = requirements_for_activity("construction.implementation", tier="frontier")
+
+    with pytest.raises(RuntimePoolError, match="routing.blocked"):
+        select_from_runtime_pool(
+            tmp_path,
+            req,
+            availability=availability(local=False, free=False, codex=True, claude=True),
+            work="issue-x",
+        )
+
+    summary = summarize_economics(tmp_path, "issue-x")
+    assert summary["unaccounted_paid_usage"] == 1

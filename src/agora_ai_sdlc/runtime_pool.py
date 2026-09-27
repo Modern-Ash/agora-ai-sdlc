@@ -14,6 +14,7 @@ from typing import Any
 
 import yaml
 
+from agora_ai_sdlc.economic_telemetry import summarize_economics
 from agora_ai_sdlc.execution_policy import EXECUTION_TIERS, ExecutionPolicy, execution_policy_for, tier_rank
 from agora_ai_sdlc.execution_requirements import ExecutionRequirements
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
@@ -38,10 +39,11 @@ class PoolCandidate:
     binding: RuntimeBinding
     order: int
     activities: tuple[str, ...] = ()
+    purposes: tuple[str, ...] = ("executor", "planner", "reviewer")
     projected_usage: dict[str, int | None] | None = None
 
-    def applies_to(self, activity: str) -> bool:
-        return not self.activities or activity in self.activities
+    def applies_to(self, activity: str, purpose: str) -> bool:
+        return (not self.activities or activity in self.activities) and purpose in self.purposes
 
 
 @dataclass(frozen=True)
@@ -49,6 +51,7 @@ class RuntimePool:
     profile: str
     allow_paid_auto: bool
     allow_frontier_auto: bool
+    tier_call_limits: dict[str, int]
     candidates: tuple[PoolCandidate, ...]
 
 
@@ -142,6 +145,14 @@ def load_runtime_pool(root: Path) -> RuntimePool | None:
             not isinstance(item, str) or not item.strip() for item in activities_value
         ):
             raise RuntimePoolError("routing.activities", "candidate activities must be a string list")
+        purposes_value = value.get("purposes") or ("executor", "planner", "reviewer")
+        if not isinstance(purposes_value, (list, tuple)) or any(
+            item not in {"executor", "planner", "reviewer"} for item in purposes_value
+        ):
+            raise RuntimePoolError(
+                "routing.purposes",
+                "candidate purposes must contain executor, planner and/or reviewer",
+            )
         usage = value.get("projected_usage")
         if usage is not None and (
             not isinstance(usage, dict)
@@ -159,14 +170,28 @@ def load_runtime_pool(root: Path) -> RuntimePool | None:
                 binding=_binding(value),
                 order=order,
                 activities=tuple(activities_value),
+                purposes=tuple(purposes_value),
                 projected_usage=dict(usage or {}),
             )
         )
 
+    limits_value = routing.get("tier_call_limits") or {}
+    if not isinstance(limits_value, dict) or any(
+        tier not in EXECUTION_TIERS
+        or not isinstance(limit, int)
+        or isinstance(limit, bool)
+        or limit < 0
+        for tier, limit in limits_value.items()
+    ):
+        raise RuntimePoolError(
+            "routing.tier_call_limits",
+            "tier call limits must map known tiers to non-negative integers",
+        )
     return RuntimePool(
         profile="cheap-first",
         allow_paid_auto=bool(routing.get("allow_paid_auto", False)),
         allow_frontier_auto=bool(routing.get("allow_frontier_auto", False)),
+        tier_call_limits=dict(limits_value),
         candidates=tuple(candidates),
     )
 
@@ -182,11 +207,15 @@ def _eligible(
     policy: ExecutionPolicy,
     activity: str,
     *,
+    purpose: str,
     minimum_tier_exclusive: str | None = None,
+    exhausted_tiers: frozenset[str] = frozenset(),
 ) -> tuple[PoolCandidate, ...]:
     values = []
     for candidate in pool.candidates:
-        if not candidate.applies_to(activity) or not policy.allows(candidate.tier):
+        if not candidate.applies_to(activity, purpose) or not policy.allows(candidate.tier):
+            continue
+        if candidate.tier in exhausted_tiers:
             continue
         if minimum_tier_exclusive is not None and tier_rank(candidate.tier) <= tier_rank(minimum_tier_exclusive):
             continue
@@ -205,6 +234,8 @@ def select_from_runtime_pool(
     availability: dict[str, RuntimeDiscovery] | None = None,
     budgets: tuple[Budget, ...] = (),
     minimum_tier_exclusive: str | None = None,
+    purpose: str = "executor",
+    work: str | None = None,
 ) -> PoolSelection | None:
     """Return the cheapest admissible configured binding, or None when routing is not configured."""
 
@@ -212,16 +243,29 @@ def select_from_runtime_pool(
     if pool is None:
         return None
     policy = execution_policy_for(requirements)
+    if purpose not in {"executor", "planner", "reviewer"}:
+        raise RuntimePoolError("routing.purpose", f"unknown runtime purpose {purpose!r}")
+    exhausted_tiers: frozenset[str] = frozenset()
+    if work is not None and pool.tier_call_limits:
+        counts = summarize_economics(root, work).get("runtime_selections_by_tier", {})
+        exhausted_tiers = frozenset(
+            tier
+            for tier, limit in pool.tier_call_limits.items()
+            if int(counts.get(tier, 0)) >= limit
+        )
     candidates = _eligible(
         pool,
         policy,
         requirements.activity_class,
+        purpose=purpose,
         minimum_tier_exclusive=minimum_tier_exclusive,
+        exhausted_tiers=exhausted_tiers,
     )
     if not candidates:
         raise RuntimePoolError(
             "routing.no_candidate",
-            f"no automatic candidate is permitted for {requirements.activity_class}/{requirements.reasoning_tier}",
+            f"no automatic {purpose} candidate is permitted for "
+            f"{requirements.activity_class}/{requirements.reasoning_tier}",
         )
 
     observed = availability

@@ -210,10 +210,14 @@ def maybe_plan_skill(
     Absence/failure of the optional planner fails open to the normal executor.
     """
 
-    requirements = requirements_for(bundle, provider=LayaDecisionProvider())
     try:
+        requirements = requirements_for(bundle, provider=LayaDecisionProvider())
         policy = execution_policy_for(requirements)
-    except ValueError:
+    except (AttributeError, OSError, RuntimeError, ValueError):
+        # Skill planning is an optional advisory optimization. Legacy/minimal
+        # execution-bundle seams used by supported executors may not expose the
+        # full canonical bundle contract, so planning must fail open rather
+        # than breaking the underlying governed execution path.
         return None
     if policy.planner_tier is None:
         return None

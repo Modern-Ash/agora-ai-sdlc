@@ -798,3 +798,64 @@ def test_prepare_start_uses_preflight_resolved_swarm_everywhere(tmp_path):
     assert workspace.created_work_inputs[0].swarm_id == "issue-15-delivery"
     assert workspace.invocations[0].swarm_id == "issue-15-delivery"
     assert "swarm.resolved:delivery->issue-15-delivery" in result.preflight_actions
+
+
+def test_start_prefers_local_pool_executor_over_available_paid_runtime(tmp_path):
+    workspace = FakeWorkspace(tmp_path)
+    config = tmp_path / "ai-sdlc" / "project.yaml"
+    config.parent.mkdir(parents=True)
+    config.write_text(
+        """
+routing:
+  profile: cheap-first
+  allow_paid_auto: true
+  allow_frontier_auto: false
+  candidates:
+    - tier: local
+      agent: opencode
+      model: ollama/qwen3-coder:latest
+    - tier: paid-efficient
+      agent: codex
+      model: openai/configured-efficient
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    observed = {}
+
+    def executor(root, **kwargs):
+        observed.update(kwargs)
+        return _execution(root, **kwargs)
+
+    ollama = RuntimeDiscovery(
+        id="ollama",
+        name="Ollama",
+        command="ollama",
+        installed=True,
+        executable="/bin/ollama",
+        responsive=True,
+        version="1.0",
+        configured=True,
+        service="responsive",
+        models=("qwen3-coder:latest",),
+    )
+
+    result = _prepare_start(
+        tmp_path,
+        issue=11,
+        project="Modern-Ash/agorix",
+        workspace_factory=lambda cwd: workspace,
+        runtime_discovery=lambda root: (
+            runtime("codex", configured=True),
+            runtime("opencode", configured=True),
+            ollama,
+        ),
+        executor_launcher=executor,
+    )
+
+    assert result.runtime_id == "opencode"
+    assert result.runtime_model == "ollama/qwen3-coder:latest"
+    assert result.runtime_tier == "local"
+    assert observed["runtime"].id == "opencode"
+    assert observed["model"] == "ollama/qwen3-coder:latest"
+    assert observed["execution_tier"] == "local"

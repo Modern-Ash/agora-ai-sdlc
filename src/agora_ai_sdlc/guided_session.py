@@ -10,6 +10,7 @@ from threading import Event, Lock, Thread
 from time import monotonic
 
 import yaml
+from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.advisory_planner import AdvisoryPlannerError, run_advisory_planner
 from agora_ai_sdlc.decision_card import build_decision_card, render_decision_card
@@ -31,7 +32,7 @@ from agora_ai_sdlc.laya_provider import LayaDecisionProvider
 from agora_ai_sdlc.opencode_runner import list_available_models, list_ollama_agent_models
 from agora_ai_sdlc.runtime_discovery import discover_runtimes
 from agora_ai_sdlc.runtime_domain import RuntimeBinding
-from agora_ai_sdlc.runtime_execution import binding_for
+from agora_ai_sdlc.runtime_execution import binding_for, work_budgets
 from agora_ai_sdlc.runtime_pool import RuntimePoolError
 from agora_ai_sdlc.wizard import build_wizard_view, render_wizard, save_answer
 from agora_ai_sdlc.wizard_actions import execute_in_session_action
@@ -308,11 +309,13 @@ def _bounded_escalation_choice(
             objective=bundle.objective,
         )
         path = persist_escalation_package(root, package)
+        planner_budgets = work_budgets(AgoraWorkspace(cwd=root), decision.swarm, decision.work)
         selected = recommend_escalation(
             root,
             requirements,
             failed_tier=tier,
             work=decision.work,
+            budgets=planner_budgets,
         )
         record_economic_event(
             root,

@@ -179,6 +179,7 @@ def run_escalation_advisor(
             work_id=package.work,
             minimum_tier="paid-efficient",
             maximum_tier="paid-standard",
+            allowed_agents=("codex", "claude"),
         )
     except RuntimePoolError as error:
         raise EscalationError(error.code, str(error).split(": ", 1)[-1]) from error

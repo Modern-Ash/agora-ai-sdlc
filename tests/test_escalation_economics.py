@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -8,7 +7,7 @@ from agora_ai_sdlc.escalation import EscalationPackage, run_escalation_advisor
 from agora_ai_sdlc.execution_economics import EconomicsEvent, attempt_count, record_event, summarize_economics
 from agora_ai_sdlc.execution_requirements import requirements_for_activity
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
-from agora_ai_sdlc.runtime_pool import RuntimePoolError, retry_limit_for, select_from_runtime_pool
+from agora_ai_sdlc.runtime_pool import retry_limit_for, select_from_runtime_pool
 
 
 def discovery(runtime_id, *, ok=True, models=()):

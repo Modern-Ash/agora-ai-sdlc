@@ -98,6 +98,7 @@ def recommend_escalation(
     *,
     failed_tier: str,
     availability: dict[str, RuntimeDiscovery] | None = None,
+    work: str | None = None,
 ) -> PoolSelection | None:
     """Recommend, but never launch, the next authorized more expensive tier."""
 
@@ -106,4 +107,6 @@ def recommend_escalation(
         requirements,
         availability=availability,
         minimum_tier_exclusive=failed_tier,
+        purpose="planner",
+        work=work,
     )

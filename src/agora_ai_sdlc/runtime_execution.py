@@ -183,7 +183,7 @@ def _availability(root: Path) -> dict[str, RuntimeDiscovery]:
     return {item.id: item for item in discover_runtimes(root)}
 
 
-def _work_budgets(workspace: Any, swarm: str, work: str) -> tuple[Budget, ...]:
+def work_budgets(workspace: Any, swarm: str, work: str) -> tuple[Budget, ...]:
     summarizer = getattr(workspace, "summarize_usage", None)
     if not callable(summarizer):
         return ()
@@ -215,7 +215,7 @@ def build_governed_runtime_plan(
     workspace = workspace or AgoraWorkspace(cwd=root)
     requirements = requirements_for(bundle, provider=LayaDecisionProvider())
     observed = availability or _availability(root)
-    budgets = _work_budgets(workspace, decision.swarm, decision.work)
+    budgets = work_budgets(workspace, decision.swarm, decision.work)
 
     selection = None
     if runtime_id is None:

@@ -117,7 +117,11 @@ the planner runs through a dedicated read-only transport (currently Codex or Cla
 write tools unavailable; it returns JSON advice rather than an execution envelope. Planner output is
 persisted as non-authoritative `RepairAdvice`, then the same cheap executor receives the bounded
 hand-back and remains the component that applies repository changes. Planner selection is subject to
-the same durable Core Work budget as executor routing.
+the same durable Core Work budget as executor routing. When the planner CLI reports authoritative token
+telemetry, AI-SDLC records it in Agora Core Usage as `provider-reported` with the persisted
+`RepairAdvice` as evidence. Missing or rejected planner usage is never estimated: it is recorded as
+`planner-usage-unaccounted`, and subsequent paid/frontier routing for that Work fails closed until
+the accounting gap is resolved.
 
 Economic routing events are append-only JSONL under
 `.agora/ai-sdlc/economics/<work>/events.jsonl`. `aisdlc economics --work <id>` reports selections by

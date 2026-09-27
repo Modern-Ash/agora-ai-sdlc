@@ -154,8 +154,7 @@ def launch_construction_executor(
     if skill_plan is not None:
         prompt += (
             " Host-supplied read-only Skill Planner guidance follows. "
-            "It is advisory; verify it before applying and keep the governed scope:\n"
-            + skill_plan.text[:12000]
+            "It is advisory; verify it before applying and keep the governed scope:\n" + skill_plan.text[:12000]
         )
     plan = None
     if governed_plan:

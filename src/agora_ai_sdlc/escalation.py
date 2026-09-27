@@ -9,17 +9,22 @@ from __future__ import annotations
 
 import hashlib
 import json
-import subprocess
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from agora_ai_sdlc.adapters import default_registry
+from agora.model import AddUsageInput
+
 from agora_ai_sdlc.execution_bundle import build_execution_bundle
-from agora_ai_sdlc.execution_economics import EconomicsEvent, core_usage_snapshot, record_event
-from agora_ai_sdlc.execution_envelope import ExecutionEnvelope
+from agora_ai_sdlc.execution_economics import (
+    EconomicsEvent,
+    core_budgets,
+    core_usage_snapshot,
+    record_event,
+)
 from agora_ai_sdlc.execution_requirements import requirements_for_activity
-from agora_ai_sdlc.runtime_adapter import AdapterError, sanitize
+from agora_ai_sdlc.repair_advice import render_executor_handback
+from agora_ai_sdlc.runtime_adapter import sanitize
 from agora_ai_sdlc.runtime_domain import RuntimeBinding
 from agora_ai_sdlc.runtime_pool import RuntimePoolError, select_from_runtime_pool
 from agora_ai_sdlc.verification import persisted_verification_diagnostic
@@ -112,53 +117,80 @@ def persist_package(root: Path, package: EscalationPackage) -> str:
     return str(target)
 
 
-def _advisory_envelope(
+def _record_planner_usage(
+    root: Path,
     package: EscalationPackage,
+    *,
+    workspace: Any | None,
+    actor_id: str | None,
+    tier: str,
     binding: RuntimeBinding,
-    package_path: str,
-) -> ExecutionEnvelope:
-    requirements = requirements_for_activity("exploration.read_only", tier="standard")
-    context = {
-        "purpose": "diagnostic-advisor",
-        "package": package_path,
-        "instruction": (
-            "Diagnose the bounded failure package. Do not modify files, run destructive commands, "
-            "approve anything, or execute the Work transition. Return a concise repair plan for the "
-            "original cheap executor."
-        ),
-    }
-    return ExecutionEnvelope(
-        package.swarm,
-        package.work,
-        "diagnostic-only",
-        "project:diagnostic-advisor",
-        "advisor",
-        False,
-        requirements.to_dict(),
-        binding,
-        "diagnostic.advise",
-        (("work", package.work),),
-        None,
-        context,
-    )
-
-
-def _run(root: Path, argv: tuple[str, ...], stdin: str) -> tuple[int, str]:
-    try:
-        result = subprocess.run(
-            list(argv),
-            input=stdin,
-            cwd=root,
-            capture_output=True,
-            text=True,
-            check=False,
+    usage: dict[str, int],
+    advice_path: str,
+) -> bool:
+    model = binding.model.model if binding.model is not None else None
+    if not usage or workspace is None or not actor_id:
+        record_event(
+            root,
+            EconomicsEvent(
+                "planner-usage-unaccounted",
+                package.work,
+                tier,
+                binding.agent.id,
+                model,
+                purpose="diagnostic-advisor",
+                reason="provider-telemetry-or-core-actor-unavailable",
+            ),
         )
-    except OSError as error:
-        return 127, error.__class__.__name__
-    output = result.stdout or ""
-    if result.stderr:
-        output = output + ("\n" if output else "") + result.stderr
-    return result.returncode, output
+        return False
+
+    digest = str(package.to_dict()["digest"]).removeprefix("sha256:")[:12]
+    usage_id = f"planner-{package.attempts}-{digest}"
+    try:
+        existing = getattr(workspace, "list_usage", lambda *_: [])(package.swarm, package.work)
+        if not any(getattr(item, "id", None) == usage_id for item in existing):
+            workspace.add_usage(
+                AddUsageInput(
+                    id=usage_id,
+                    swarm_id=package.swarm,
+                    work_id=package.work,
+                    actor_id=actor_id,
+                    amounts=dict(usage),
+                    evidence_refs=[
+                        "repo://" + str(Path(advice_path).resolve().relative_to(root.resolve())),
+                    ],
+                    measurement="provider-reported",
+                )
+            )
+    except (OSError, PermissionError, RuntimeError, ValueError) as error:
+        record_event(
+            root,
+            EconomicsEvent(
+                "planner-usage-unaccounted",
+                package.work,
+                tier,
+                binding.agent.id,
+                model,
+                purpose="diagnostic-advisor",
+                reason=str(error),
+            ),
+        )
+        return False
+
+    record_event(
+        root,
+        EconomicsEvent(
+            "planner-usage-recorded",
+            package.work,
+            tier,
+            binding.agent.id,
+            model,
+            purpose="diagnostic-advisor",
+            reason="provider-reported",
+            core_usage=core_usage_snapshot(workspace, package.swarm, package.work),
+        ),
+    )
+    return True
 
 
 def run_escalation_advisor(
@@ -167,8 +199,11 @@ def run_escalation_advisor(
     *,
     availability=None,
     workspace=None,
+    actor_id: str | None = None,
 ) -> AdvisorResult:
-    """Use the cheapest configured paid advisor and return read-only repair advice."""
+    """Use the cheapest permitted paid planner, read-only, then hand advice back."""
+
+    from agora_ai_sdlc.advisory_planner import AdvisoryPlannerError, run_advisory_planner
 
     requirements = requirements_for_activity("exploration.read_only", tier="standard")
     try:
@@ -176,10 +211,12 @@ def run_escalation_advisor(
             root,
             requirements,
             availability=availability,
+            budgets=core_budgets(workspace, package.swarm, package.work) if workspace is not None else (),
             work_id=package.work,
             minimum_tier="paid-efficient",
             maximum_tier="paid-standard",
             allowed_agents=("codex", "claude"),
+            purpose="planner",
         )
     except RuntimePoolError as error:
         raise EscalationError(error.code, str(error).split(": ", 1)[-1]) from error
@@ -187,25 +224,29 @@ def run_escalation_advisor(
         raise EscalationError("escalation.routing_unconfigured", "cheap-first routing is not configured")
 
     package_path = persist_package(root, package)
-    envelope = _advisory_envelope(package, selection.binding, package_path)
-    adapter = default_registry(root).get(selection.binding.agent)
+    model = selection.binding.model.model if selection.binding.model is not None else None
+    record_event(
+        root,
+        EconomicsEvent(
+            "attempt",
+            package.work,
+            selection.tier,
+            selection.binding.agent.id,
+            model,
+            purpose="diagnostic-advisor",
+            reason="repeated-failure",
+            core_usage=core_usage_snapshot(workspace, package.swarm, package.work) if workspace else None,
+        ),
+    )
+
     try:
-        prepared = adapter.prepare_execution(envelope.to_dict())
-        record_event(
+        outcome = run_advisory_planner(
             root,
-            EconomicsEvent(
-                "attempt",
-                package.work,
-                selection.tier,
-                selection.binding.agent.id,
-                selection.binding.model.model if selection.binding.model else None,
-                purpose="diagnostic-advisor",
-                reason="repeated-failure",
-                core_usage=core_usage_snapshot(workspace, package.swarm, package.work) if workspace else None,
-            ),
+            package=package,
+            binding=selection.binding,
+            tier=selection.tier,
         )
-        outcome = adapter.launch(prepared, lambda argv, stdin: _run(root, argv, stdin))
-    except (AdapterError, OSError, RuntimeError, ValueError) as error:
+    except (AdvisoryPlannerError, OSError, RuntimeError, ValueError) as error:
         record_event(
             root,
             EconomicsEvent(
@@ -213,32 +254,25 @@ def run_escalation_advisor(
                 package.work,
                 selection.tier,
                 selection.binding.agent.id,
-                selection.binding.model.model if selection.binding.model else None,
+                model,
                 purpose="diagnostic-advisor",
                 reason=error.__class__.__name__,
             ),
         )
         raise EscalationError("escalation.advisor_failed", str(error)) from error
 
-    if outcome.exit_code != 0 or not outcome.output.strip():
-        record_event(
-            root,
-            EconomicsEvent(
-                "failure",
-                package.work,
-                selection.tier,
-                selection.binding.agent.id,
-                selection.binding.model.model if selection.binding.model else None,
-                purpose="diagnostic-advisor",
-                reason=f"advisor-exit-{outcome.exit_code}",
-                exit_code=int(outcome.exit_code),
-            ),
-        )
-        raise EscalationError("escalation.advisor_failed", f"advisor exited with {outcome.exit_code}")
+    _record_planner_usage(
+        root,
+        package,
+        workspace=workspace,
+        actor_id=actor_id,
+        tier=selection.tier,
+        binding=selection.binding,
+        usage=outcome.usage,
+        advice_path=outcome.path,
+    )
+    advice = render_executor_handback(outcome.advice)
 
-    advice = sanitize(outcome.output).strip()
-    advice_path = root / ".agora" / "ai-sdlc" / "escalations" / package.work / f"attempt-{package.attempts}-ADVICE.md"
-    advice_path.write_text(advice + "\n", encoding="utf-8")
     record_event(
         root,
         EconomicsEvent(
@@ -246,7 +280,7 @@ def run_escalation_advisor(
             package.work,
             selection.tier,
             selection.binding.agent.id,
-            selection.binding.model.model if selection.binding.model else None,
+            model,
             purpose="diagnostic-advisor",
             reason="repair-advice-produced",
             core_usage=core_usage_snapshot(workspace, package.swarm, package.work) if workspace else None,
@@ -259,9 +293,9 @@ def run_escalation_advisor(
             package.work,
             selection.tier,
             selection.binding.agent.id,
-            selection.binding.model.model if selection.binding.model else None,
+            model,
             purpose="diagnostic-advisor",
             reason="repeated-failure",
         ),
     )
-    return AdvisorResult(selection.binding, selection.tier, advice, package_path, str(advice_path))
+    return AdvisorResult(selection.binding, selection.tier, advice, package_path, outcome.path)

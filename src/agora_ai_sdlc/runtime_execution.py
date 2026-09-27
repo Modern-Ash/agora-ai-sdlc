@@ -18,6 +18,7 @@ import yaml
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.adapters import default_registry
+from agora_ai_sdlc.economic_telemetry import record_economic_event
 from agora_ai_sdlc.execution_bundle import ExecutionBundle
 from agora_ai_sdlc.execution_envelope import CoreSnapshot, ExecutionEnvelope, build_envelope
 from agora_ai_sdlc.execution_requirements import ExecutionRequirements, requirements_for
@@ -267,6 +268,22 @@ def build_governed_runtime_plan(
     target = root / ".agora" / "ai-sdlc" / "execution-envelopes" / bundle.work / f"{bundle.stage or 'step'}.json"
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(json.dumps(envelope.to_dict(), indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    try:
+        selected_model = binding.model.model if binding.model is not None else None
+        record_economic_event(
+            root,
+            work=bundle.work,
+            kind="runtime-selected",
+            tier=selection.tier if selection is not None else None,
+            agent=binding.agent.id,
+            model=selected_model,
+            fields={
+                "automatic": selection is not None,
+                "reason": selection.reason if selection is not None else "explicit-override",
+            },
+        )
+    except OSError:
+        pass
     argv = (
         sys.executable,
         "-m",

@@ -257,7 +257,9 @@ def maybe_plan_skill(
                 purpose="skill-planner",
                 reason="policy-planner",
                 core_usage=(
-                    core_usage_snapshot(workspace, str(bundle.swarm), str(bundle.work)) if workspace is not None else None
+                    core_usage_snapshot(workspace, str(bundle.swarm), str(bundle.work))
+                    if workspace is not None
+                    else None
                 ),
             ),
         )

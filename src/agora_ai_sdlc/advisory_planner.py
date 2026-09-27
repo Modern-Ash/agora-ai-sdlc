@@ -70,6 +70,18 @@ def _model(binding: RuntimeBinding) -> str | None:
 
 def _invocation(binding: RuntimeBinding, root: Path) -> tuple[tuple[str, ...], str]:
     agent = binding.agent.id
+    if binding.model is not None:
+        provider = binding.model.provider.casefold()
+        if agent == "codex" and provider != "openai":
+            raise AdvisoryPlannerError(
+                "planner.model_unsupported",
+                f"Codex planner cannot serve provider {binding.model.provider!r}",
+            )
+        if agent == "claude" and provider != "anthropic":
+            raise AdvisoryPlannerError(
+                "planner.model_unsupported",
+                f"Claude planner cannot serve provider {binding.model.provider!r}",
+            )
     model = _model(binding)
     model_flags = () if model is None else ("--model", model)
 

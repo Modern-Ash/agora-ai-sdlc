@@ -16,7 +16,7 @@ from typing import Any
 
 from agora_ai_sdlc.adapters import default_registry
 from agora_ai_sdlc.execution_bundle import build_execution_bundle
-from agora_ai_sdlc.execution_economics import EconomicsEvent, core_usage_snapshot, record_event
+from agora_ai_sdlc.execution_economics import EconomicsEvent, core_budgets, core_usage_snapshot, record_event
 from agora_ai_sdlc.execution_envelope import ExecutionEnvelope
 from agora_ai_sdlc.execution_requirements import requirements_for_activity
 from agora_ai_sdlc.runtime_adapter import AdapterError, sanitize
@@ -176,6 +176,7 @@ def run_escalation_advisor(
             root,
             requirements,
             availability=availability,
+            budgets=core_budgets(workspace, package.swarm, package.work) if workspace is not None else (),
             work_id=package.work,
             minimum_tier="paid-efficient",
             maximum_tier="paid-standard",

@@ -6,17 +6,30 @@ import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+
+import yaml
 from threading import Event, Lock, Thread
 from time import monotonic
 
 from agora_ai_sdlc.decision_card import build_decision_card, render_decision_card
+from agora_ai_sdlc.economic_telemetry import record_economic_event
+from agora_ai_sdlc.escalation import (
+    build_escalation_package,
+    persist_escalation_package,
+    recommend_escalation,
+)
+from agora_ai_sdlc.execution_bundle import build_execution_bundle
+from agora_ai_sdlc.execution_requirements import requirements_for
 from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice, select_executor_model
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next, render
 from agora_ai_sdlc.guided_execution import execute_guided_preparation
 from agora_ai_sdlc.i18n import t
 from agora_ai_sdlc.iteration_status import inspect_iteration, render_terminal_summary
+from agora_ai_sdlc.laya_provider import LayaDecisionProvider
 from agora_ai_sdlc.opencode_runner import list_available_models, list_ollama_agent_models
 from agora_ai_sdlc.runtime_discovery import discover_runtimes
+from agora_ai_sdlc.runtime_execution import binding_for
+from agora_ai_sdlc.runtime_pool import RuntimePoolError
 from agora_ai_sdlc.wizard import build_wizard_view, render_wizard, save_answer
 from agora_ai_sdlc.wizard_actions import execute_in_session_action
 from agora_ai_sdlc.workflow_advisor import advise_workflow
@@ -232,6 +245,88 @@ def _decision_fingerprint(decision: GuidedDecision) -> tuple[object, ...]:
     )
 
 
+def _cheap_retry_limit(root: Path) -> int:
+    path = root / "ai-sdlc" / "project.yaml"
+    if not path.is_file():
+        return 0
+    try:
+        payload = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError):
+        return 0
+    routing = payload.get("routing") if isinstance(payload, dict) else None
+    if not isinstance(routing, dict) or routing.get("profile") != "cheap-first":
+        return 0
+    value = routing.get("local_retries", 3)
+    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else 3
+
+
+def _choice_tier(choice: ExecutorRecoveryChoice) -> str | None:
+    label = choice.label.casefold()
+    for tier in ("local", "free", "paid-efficient", "paid-standard", "frontier"):
+        if f"[{tier}]" in label:
+            return tier
+    return None
+
+
+def _bounded_escalation_choice(
+    root: Path,
+    decision: GuidedDecision,
+    choice: ExecutorRecoveryChoice,
+    *,
+    attempts: int,
+    diagnostic: str,
+) -> ExecutorRecoveryChoice | None:
+    tier = _choice_tier(choice)
+    if tier not in {"local", "free"}:
+        return None
+    try:
+        bundle = build_execution_bundle(root, swarm=decision.swarm, work=decision.work, persist=False)
+        requirements = requirements_for(bundle, provider=LayaDecisionProvider())
+        binding = binding_for(root, choice.agent, choice.model)
+        package = build_escalation_package(
+            swarm=decision.swarm,
+            work=decision.work,
+            requirements=requirements,
+            failed_tier=tier,
+            failed_binding=binding,
+            attempts=attempts,
+            diagnostic=diagnostic,
+            changed_paths=tuple(bundle.changed_paths),
+            verification_commands=tuple(bundle.verification_commands),
+            objective=bundle.objective,
+        )
+        path = persist_escalation_package(root, package)
+        selected = recommend_escalation(root, requirements, failed_tier=tier)
+        record_economic_event(
+            root,
+            work=decision.work,
+            kind="escalation-recommended",
+            tier=selected.tier if selected is not None else None,
+            agent=selected.binding.agent.id if selected is not None else None,
+            model=selected.binding.model.model if selected is not None and selected.binding.model is not None else None,
+            fields={"attempts": attempts, "package": str(path.relative_to(root)), "from_tier": tier},
+        )
+    except (OSError, RuntimeError, ValueError, RuntimePoolError):
+        return None
+    if selected is None:
+        return None
+    model = selected.binding.model
+    if model is None or model.model == "configured-default":
+        model_value = None
+        model_label = "configured model"
+    elif selected.binding.agent.id == "opencode":
+        model_value = f"{model.provider}/{model.model}"
+        model_label = model_value
+    else:
+        model_value = model.model
+        model_label = model.model
+    return ExecutorRecoveryChoice(
+        agent=selected.binding.agent.id,
+        model=model_value,
+        label=f"{selected.binding.agent.id} · {model_label} [{selected.tier}]",
+    )
+
+
 def _confirm_current_decision(
     root: Path,
     decision: GuidedDecision,
@@ -294,6 +389,7 @@ def run_interactive(
 
     selected_runtime: ExecutorRecoveryChoice | None = initial_runtime
     failed_runtimes: set[tuple[str, str | None]] = set()
+    failure_attempts: dict[tuple[str, str | None], int] = {}
     previous_execution_fingerprint: tuple[object, ...] | None = None
     previous_execution_result_path: str | None = None
 
@@ -469,18 +565,41 @@ def run_interactive(
             if execution_error is None:
                 break
 
-            failed_runtimes.add((selected_runtime.agent, selected_runtime.model))
+            key = (selected_runtime.agent, selected_runtime.model)
+            failure_attempts[key] = failure_attempts.get(key, 0) + 1
+            attempts = failure_attempts[key]
             _render_execution_error(
                 execution_error,
                 selected_runtime,
                 output_fn,
                 lang=lang,
             )
-            selected_runtime = None
+
+            tier = _choice_tier(selected_runtime)
+            retry_limit = _cheap_retry_limit(root)
+            if tier in {"local", "free"} and attempts < retry_limit:
+                output_fn(
+                    (
+                        f"Cheap executor retry {attempts + 1}/{retry_limit}; keeping {selected_runtime.label}."
+                        if lang == "en"
+                        else f"Reintento barato {attempts + 1}/{retry_limit}; se mantiene {selected_runtime.label}."
+                    )
+                )
+                continue
+
+            failed_runtimes.add(key)
+            escalation = _bounded_escalation_choice(
+                root,
+                decision,
+                selected_runtime,
+                attempts=attempts,
+                diagnostic=str(execution_error),
+            )
+            selected_runtime = escalation
             confirmation, selected_runtime = _confirm_current_decision(
                 root,
                 decision,
-                selected_runtime=None,
+                selected_runtime=selected_runtime,
                 input_fn=input_fn,
                 output_fn=output_fn,
                 lang=lang,

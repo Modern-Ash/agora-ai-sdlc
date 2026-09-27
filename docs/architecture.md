@@ -66,6 +66,10 @@ is considered only when cheaper candidates are inadmissible.
 Projects opt in with `routing.profile: cheap-first` in `ai-sdlc/project.yaml`. Paid automatic routing
 requires `allow_paid_auto: true`; frontier additionally requires `allow_frontier_auto: true`. This
 makes the expensive path fail closed by default while still allowing explicit runtime/model overrides.
+`local_retries` bounds retries on the same local/free binding before an escalation is proposed.
+`tier_call_limits` bounds the number of runtime selections per economic tier for a Work; Core's
+durable token/cost budgets are also fed into the existing runtime selector, so a candidate with
+unknown projected usage cannot silently bypass a configured Core budget.
 
 Example:
 
@@ -74,6 +78,11 @@ routing:
   profile: cheap-first
   allow_paid_auto: true
   allow_frontier_auto: false
+  local_retries: 3
+  tier_call_limits:
+    paid-efficient: 6
+    paid-standard: 2
+    frontier: 0
   candidates:
     - tier: local
       agent: opencode
@@ -98,6 +107,18 @@ routing:
 Model names are project configuration, never lifecycle semantics. Teams can bind each provider's
 `paid-efficient`, `paid-standard` and `frontier` entries to whichever concrete models or reasoning
 profiles are appropriate without changing Agora. An explicit `--agent`/model choice remains an override.
+
+Candidates may also declare `purposes: [executor]`, `[planner]` or `[reviewer]`. After the configured
+local/free retry budget is exhausted, AI-SDLC persists a bounded
+`agora-ai-sdlc/escalation-package/v1` containing the objective, failed binding/tier, focused
+diagnostic, changed paths and verification commands. The next more expensive *planner* candidate may
+be recommended, but is never launched as an implicit provider hop. Planner output is represented as
+non-authoritative `RepairAdvice`; the cheap executor receives the bounded hand-back and remains the
+component that applies repository changes.
+
+Economic routing events are append-only JSONL under
+`.agora/ai-sdlc/economics/<work>/events.jsonl`. `aisdlc economics --work <id>` reports selections by
+tier, paid events and frontier events without invoking an LLM.
 
 ## Execution envelope
 

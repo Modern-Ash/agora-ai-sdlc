@@ -226,6 +226,9 @@ def build_governed_runtime_plan(
                 "automatic runtime selection requires routing.profile=cheap-first or an explicit runtime",
             )
     else:
+        observed_runtime = observed.get(runtime_id)
+        if runtime is None and observed_runtime is not None and observed_runtime.installed and observed_runtime.responsive:
+            runtime = observed_runtime
         runtime = runtime or runtime_for(root, runtime_id)
         binding = binding_for(root, runtime_id, model)
 

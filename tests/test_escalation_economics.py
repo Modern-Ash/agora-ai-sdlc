@@ -3,9 +3,11 @@ from types import SimpleNamespace
 
 import yaml
 
+from agora_ai_sdlc.advisory_planner import PlannerOutcome
 from agora_ai_sdlc.escalation import EscalationPackage, run_escalation_advisor
 from agora_ai_sdlc.execution_economics import EconomicsEvent, attempt_count, record_event, summarize_economics
 from agora_ai_sdlc.execution_requirements import requirements_for_activity
+from agora_ai_sdlc.repair_advice import build_repair_advice, persist_repair_advice
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 from agora_ai_sdlc.runtime_pool import retry_limit_for, select_from_runtime_pool
 
@@ -125,8 +127,6 @@ class FakeRegistry:
 
 def test_paid_advisor_is_read_only_and_hands_back_advice(tmp_path, monkeypatch):
     write_config(tmp_path)
-    adapter = FakeAdapter()
-    monkeypatch.setattr("agora_ai_sdlc.escalation.default_registry", lambda root: FakeRegistry(adapter))
     package = EscalationPackage(
         swarm="delivery",
         work="w",
@@ -144,6 +144,25 @@ def test_paid_advisor_is_read_only_and_hands_back_advice(tmp_path, monkeypatch):
         verification_commands=("pnpm test",),
         risks=(),
     )
+    advice = build_repair_advice(
+        work="w",
+        escalation_digest=str(package.to_dict()["digest"]),
+        planner_tier="paid-efficient",
+        planner_agent="codex",
+        summary="Parser branch diagnosis",
+        actions=("Change the parser branch before retrying.",),
+    )
+    advice_path = persist_repair_advice(tmp_path, advice)
+
+    monkeypatch.setattr(
+        "agora_ai_sdlc.advisory_planner.run_advisory_planner",
+        lambda root, *, package, binding, tier: PlannerOutcome(
+            advice=advice,
+            path=str(advice_path),
+            raw_output="ok",
+            usage={},
+        ),
+    )
 
     result = run_escalation_advisor(tmp_path, package, availability=availability())
 
@@ -152,7 +171,7 @@ def test_paid_advisor_is_read_only_and_hands_back_advice(tmp_path, monkeypatch):
     assert "parser branch" in result.advice
     assert Path(result.package_path).is_file()
     assert Path(result.advice_path).is_file()
-    assert adapter.payload["next_transition"]["operation"] == "diagnostic.advise"
     events = summarize_economics(tmp_path, "w")
     assert events["attempts"]["paid-efficient"] == 1
     assert events["escalations"] == 1
+

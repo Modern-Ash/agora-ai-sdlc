@@ -363,3 +363,49 @@ def test_preview_treats_linked_git_worktree_as_existing_repository(tmp_path):
 
     assert (linked / ".git").is_file()
     assert plan["existing_repository"] is True
+
+
+def test_installer_accepts_and_persists_cheap_first_routing(tmp_path):
+    config = base_config()
+    config["routing"] = {
+        "profile": "cheap-first",
+        "allow_paid_auto": True,
+        "allow_frontier_auto": False,
+        "retry_limits": {"local": 3, "free": 1},
+        "call_budgets": {"paid-efficient": 4, "paid-standard": 2, "frontier": 0},
+        "candidates": [
+            {
+                "tier": "local",
+                "agent": "opencode",
+                "model": "ollama/qwen3-coder:latest",
+                "purposes": ["executor"],
+            },
+            {
+                "tier": "paid-efficient",
+                "agent": "codex",
+                "model": "openai/configured-efficient",
+                "purposes": ["planner", "reviewer"],
+            },
+        ],
+    }
+
+    normalized = validate_config(config)
+    assert normalized["routing"]["profile"] == "cheap-first"
+    assert normalized["routing"]["retry_limits"]["local"] == 3
+    assert normalized["routing"]["call_budgets"]["frontier"] == 0
+
+    target, home = tmp_path / "project", tmp_path / "home"
+    apply(config, target, home)
+    metadata = yaml.safe_load((target / "ai-sdlc" / "project.yaml").read_text(encoding="utf-8"))
+    assert metadata["routing"] == normalized["routing"]
+
+
+def test_installer_rejects_unknown_routing_tier():
+    config = base_config()
+    config["routing"] = {
+        "profile": "cheap-first",
+        "candidates": [{"tier": "warp-speed", "agent": "opencode", "model": "ollama/qwen"}],
+    }
+    with pytest.raises(InstallerError) as error:
+        validate_config(config)
+    assert error.value.code == "installer.routing"

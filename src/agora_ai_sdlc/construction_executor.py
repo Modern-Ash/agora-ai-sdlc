@@ -23,13 +23,13 @@ from agora_ai_sdlc.guided import inspect_next
 from agora_ai_sdlc.guided_execution import _construction_relevant_changes
 from agora_ai_sdlc.local_delivery import diff_project_file_snapshots, project_file_snapshot
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
-from agora_ai_sdlc.skill_planner import maybe_plan_skill
 from agora_ai_sdlc.runtime_execution import (
     RuntimeExecutionError,
     build_governed_runtime_plan,
     configured_agent_for_role,
     supports_governed_runtime_plan,
 )
+from agora_ai_sdlc.skill_planner import maybe_plan_skill
 
 CONSTRUCTION_TIMEOUT_SECONDS = 900
 

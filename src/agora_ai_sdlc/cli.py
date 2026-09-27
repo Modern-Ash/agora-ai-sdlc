@@ -193,6 +193,10 @@ def main(argv: list[str] | None = None) -> int:
     decision.add_argument("--work", help="Limit to one work item")
     decision.add_argument("--threshold", type=float, default=0.90, help="confidence required to avoid escalation")
     decision.add_argument("--json", action="store_true", help="Print machine-readable decision output")
+    economics = sub.add_parser("economics", help="Show local/free/paid execution routing telemetry for one Work")
+    economics.add_argument("--root", default=".", help="Project root")
+    economics.add_argument("--work", required=True, help="Work id whose economic routing ledger should be summarized")
+    economics.add_argument("--json", action="store_true", help="Print machine-readable economics summary")
     status = sub.add_parser("status", help="Show rich local/Core iteration status without invoking an LLM")
     status.add_argument("--root", default=".", help="Project root")
     status.add_argument("--swarm", help="Limit to one delivery swarm")
@@ -451,6 +455,26 @@ def main(argv: list[str] | None = None) -> int:
             for name, answer in evaluation.result.answers.items():
                 suffix = "ESCALATE" if name in evaluation.escalated else "confident"
                 print(f"- {name}: {answer.value} confidence={answer.confidence:.3f} {suffix}")
+        return 0
+
+    if args.command == "economics":
+        from agora_ai_sdlc.execution_economics import summarize_economics
+
+        summary = summarize_economics(Path(args.root).expanduser(), args.work)
+        if args.json:
+            print(json.dumps(summary, sort_keys=True))
+        else:
+            print(f"Agora AI-SDLC execution economics · {args.work}")
+            print("Attempts:")
+            for tier, count in summary["attempts"].items():
+                print(f"  {tier}: {count}")
+            print("Successes:")
+            for tier, count in summary["successes"].items():
+                print(f"  {tier}: {count}")
+            print("Failures:")
+            for tier, count in summary["failures"].items():
+                print(f"  {tier}: {count}")
+            print(f"Escalations: {summary['escalations']}")
         return 0
 
     if args.command == "runtimes" and args.capabilities:

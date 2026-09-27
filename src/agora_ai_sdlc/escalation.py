@@ -15,12 +15,14 @@ from pathlib import Path
 from typing import Any
 
 from agora_ai_sdlc.adapters import default_registry
+from agora_ai_sdlc.execution_bundle import build_execution_bundle
 from agora_ai_sdlc.execution_economics import EconomicsEvent, core_usage_snapshot, record_event
 from agora_ai_sdlc.execution_envelope import ExecutionEnvelope
 from agora_ai_sdlc.execution_requirements import requirements_for_activity
 from agora_ai_sdlc.runtime_adapter import AdapterError, sanitize
 from agora_ai_sdlc.runtime_domain import RuntimeBinding
 from agora_ai_sdlc.runtime_pool import RuntimePoolError, select_from_runtime_pool
+from agora_ai_sdlc.verification import persisted_verification_diagnostic
 
 SCHEMA = "agora-ai-sdlc/escalation-package/v1"
 
@@ -63,6 +65,44 @@ class AdvisorResult:
     advice: str
     package_path: str
     advice_path: str
+
+
+def build_escalation_package(
+    root: Path,
+    decision: Any,
+    *,
+    failed_agent: str,
+    failed_model: str | None,
+    failed_tier: str | None,
+    attempts: int,
+    error: BaseException | str,
+    result_path: str | None = None,
+) -> EscalationPackage:
+    bundle = build_execution_bundle(
+        root,
+        swarm=decision.swarm,
+        work=decision.work,
+        persist=False,
+    )
+    diagnostic = persisted_verification_diagnostic(root, decision.work)
+    return EscalationPackage(
+        swarm=decision.swarm,
+        work=decision.work,
+        stage=bundle.stage,
+        objective=bundle.objective or "",
+        acceptance_criteria=tuple(bundle.acceptance_criteria),
+        failed_agent=failed_agent,
+        failed_model=failed_model,
+        failed_tier=failed_tier,
+        attempts=attempts,
+        error=sanitize(str(error))[:1600],
+        verification_diagnostic=diagnostic,
+        changed_paths=tuple(bundle.changed_paths),
+        dirty_paths=tuple(bundle.dirty_paths),
+        verification_commands=tuple(bundle.verification_commands),
+        risks=tuple(bundle.risks),
+        result_path=result_path,
+    )
 
 
 def persist_package(root: Path, package: EscalationPackage) -> str:

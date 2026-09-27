@@ -21,6 +21,7 @@ from agora_ai_sdlc.guided import GuidedDecision, inspect_next
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
 from agora_ai_sdlc.local_delivery import diff_project_file_snapshots, project_file_snapshot
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
+from agora_ai_sdlc.skill_planner import maybe_plan_skill
 from agora_ai_sdlc.runtime_execution import (
     RuntimeExecutionError,
     build_governed_runtime_plan,
@@ -77,6 +78,9 @@ class GuidedExecutionResult:
     runtime: str
     execution_tier: str | None = None
     selection_reason: str | None = None
+    planner_tier: str | None = None
+    planner_path: str | None = None
+    planner_reused: bool = False
 
 
 def _runtime(root: Path, runtime_id: str) -> RuntimeDiscovery:
@@ -324,6 +328,7 @@ def execute_guided_preparation(
             f"decision={decision.state!r}, bundle={bundle.stage!r}. "
             "Re-read Agora Core instead of executing stale context."
         )
+    workspace = workspace_factory(cwd=root)
     lean_path = None
     if progress_fn is not None:
         progress_fn("context")
@@ -336,7 +341,20 @@ def execute_guided_preparation(
         lean_path = persist_execution_context(root, decision.work, lean)
     except (LayaUnavailable, OSError, RuntimeError, ValueError):
         lean = None
+    skill_plan = None
+    if repair_advice is None:
+        try:
+            skill_plan = maybe_plan_skill(root, bundle, workspace=workspace)
+        except (OSError, RuntimeError, ValueError):
+            skill_plan = None
+
     prompt = _prompt(root, decision, str(lean_path) if lean_path is not None else bundle.markdown_path)
+    if skill_plan is not None:
+        prompt += (
+            " Host-supplied read-only Skill Planner guidance follows. "
+            "It is advisory, bounded to this Work, and does not replace verification or Core authority:\n"
+            + skill_plan.text[:12000]
+        )
     if repair_advice:
         prompt += (
             " Host-supplied diagnostic advice from a read-only escalation advisor follows. "
@@ -347,7 +365,6 @@ def execute_guided_preparation(
         persisted_verification_diagnostic(root, decision.work) if decision.state == "construction" else None
     )
     before_snapshot = project_file_snapshot(root) if decision.state == "construction" else {}
-    workspace = workspace_factory(cwd=root)
     plan = None
     if supports_governed_runtime_plan(workspace):
         try:
@@ -376,6 +393,17 @@ def execute_guided_preparation(
                         else {}
                     ),
                     **({"repair_advice": "bounded-escalation-advice"} if repair_advice else {}),
+                    **(
+                        {
+                            "skill_planner": {
+                                "tier": skill_plan.tier,
+                                "path": str(Path(skill_plan.path).resolve().relative_to(root)),
+                                "reused": skill_plan.reused,
+                            }
+                        }
+                        if skill_plan is not None
+                        else {}
+                    ),
                 },
             )
         except RuntimeExecutionError as error:
@@ -477,4 +505,7 @@ def execute_guided_preparation(
         runtime=runtime.name,
         execution_tier=execution_tier,
         selection_reason="guided-selected" if execution_tier else None,
+        planner_tier=skill_plan.tier if skill_plan is not None else None,
+        planner_path=skill_plan.path if skill_plan is not None else None,
+        planner_reused=skill_plan.reused if skill_plan is not None else False,
     )

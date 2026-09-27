@@ -352,8 +352,7 @@ def launch_inception_executor(
         if skill_plan is not None:
             guidance += (
                 " Host-supplied read-only Skill Planner guidance follows. "
-                "It is advisory and must be verified by the executor:\n"
-                + skill_plan.text[:12000]
+                "It is advisory and must be verified by the executor:\n" + skill_plan.text[:12000]
             )
         try:
             plan = build_governed_runtime_plan(

@@ -46,6 +46,7 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
             "paid_events": 0,
             "frontier_events": 0,
             "runtime_selections_by_tier": {},
+            "unaccounted_paid_usage": 0,
         }
     tiers: Counter[str] = Counter()
     kinds: Counter[str] = Counter()
@@ -53,6 +54,7 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
     paid = 0
     frontier = 0
     selections: Counter[str] = Counter()
+    unaccounted_paid_usage = 0
     for line in path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
@@ -74,6 +76,8 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
             kinds[kind] += 1
             if kind == "runtime-selected" and isinstance(tier, str):
                 selections[tier] += 1
+            if kind == "planner-usage-unaccounted":
+                unaccounted_paid_usage += 1
     return {
         "work": work,
         "events": total,
@@ -82,4 +86,5 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
         "paid_events": paid,
         "frontier_events": frontier,
         "runtime_selections_by_tier": dict(sorted(selections.items())),
+        "unaccounted_paid_usage": unaccounted_paid_usage,
     }

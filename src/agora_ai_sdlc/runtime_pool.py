@@ -246,9 +246,7 @@ def select_from_runtime_pool(
     if work is not None:
         economics = summarize_economics(root, work)
         counts = economics.get("runtime_selections_by_tier", {})
-        exhausted = {
-            tier for tier, limit in pool.tier_call_limits.items() if int(counts.get(tier, 0)) >= limit
-        }
+        exhausted = {tier for tier, limit in pool.tier_call_limits.items() if int(counts.get(tier, 0)) >= limit}
         if int(economics.get("unaccounted_paid_usage", 0)) > 0:
             exhausted.update({"paid-efficient", "paid-standard", "frontier"})
         exhausted_tiers = frozenset(exhausted)

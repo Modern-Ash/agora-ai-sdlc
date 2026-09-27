@@ -335,11 +335,9 @@ def run_interactive(
                 retry_limit = retry_limit_for(root, tier)
                 if tier in {"local", "free"} and attempts <= retry_limit:
                     output_fn(
-                        (
-                            f"Reintento barato {attempts}/{retry_limit}: la sesión terminó sin progreso gobernado."
-                            if lang == "es"
-                            else f"Cheap retry {attempts}/{retry_limit}: session completed without governed progress."
-                        )
+                        f"Reintento barato {attempts}/{retry_limit}: la sesión terminó sin progreso gobernado."
+                        if lang == "es"
+                        else f"Cheap retry {attempts}/{retry_limit}: session completed without governed progress."
                     )
                     previous_execution_fingerprint = None
                     previous_execution_result_path = None
@@ -361,20 +359,16 @@ def run_interactive(
                         advisor = run_escalation_advisor(root, package)
                     except (EscalationError, OSError, RuntimeError, ValueError) as advisor_error:
                         output_fn(
-                            (
-                                f"No se pudo obtener diagnóstico pago acotado: {advisor_error}"
-                                if lang == "es"
-                                else f"Bounded paid diagnostic advice unavailable: {advisor_error}"
-                            )
+                            f"No se pudo obtener diagnóstico pago acotado: {advisor_error}"
+                            if lang == "es"
+                            else f"Bounded paid diagnostic advice unavailable: {advisor_error}"
                         )
                     else:
                         repair_advice_by_runtime[runtime_key] = advisor.advice
                         output_fn(
-                            (
-                                f"Diagnóstico {advisor.tier} obtenido; la reparación vuelve a {selected_runtime.label}."
-                                if lang == "es"
-                                else f"{advisor.tier} diagnostic advice obtained; repair returns to {selected_runtime.label}."
-                            )
+                            f"Diagnóstico {advisor.tier} obtenido; la reparación vuelve a {selected_runtime.label}."
+                            if lang == "es"
+                            else f"{advisor.tier} diagnostic advice obtained; repair returns to {selected_runtime.label}."
                         )
                         previous_execution_fingerprint = None
                         previous_execution_result_path = None

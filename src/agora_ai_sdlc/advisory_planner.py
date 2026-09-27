@@ -38,6 +38,7 @@ class PlannerOutcome:
     advice: RepairAdvice
     path: str
     raw_output: str
+    usage: dict[str, int]
 
 
 def _subprocess_runner(argv: tuple[str, ...], stdin: str, root: Path) -> tuple[int, str]:
@@ -178,6 +179,32 @@ def _payload(output: str, mode: str) -> dict:
     return _extract_json(output)
 
 
+def _reported_usage(output: str, mode: str) -> dict[str, int]:
+    if mode == "claude-json":
+        outer = _extract_json(output)
+        usage = outer.get("usage")
+        if not isinstance(usage, dict):
+            return {}
+        token_values = [
+            value
+            for name, value in usage.items()
+            if isinstance(name, str)
+            and name.endswith("_tokens")
+            and isinstance(value, int)
+            and not isinstance(value, bool)
+            and value >= 0
+        ]
+        return {"tokens": sum(token_values)} if token_values else {}
+
+    match = re.search(
+        r"(?im)^\s*tokens used\s*$\s*^\s*([0-9][0-9,]*)\s*$",
+        output,
+    )
+    if match is None:
+        return {}
+    return {"tokens": int(match.group(1).replace(",", ""))}
+
+
 def run_advisory_planner(
     root: Path,
     *,
@@ -208,4 +235,9 @@ def run_advisory_planner(
         actions=tuple(actions),
     )
     path = persist_repair_advice(root, advice)
-    return PlannerOutcome(advice=advice, path=str(path), raw_output=sanitize(output)[:6000])
+    return PlannerOutcome(
+        advice=advice,
+        path=str(path),
+        raw_output=sanitize(output)[:6000],
+        usage=_reported_usage(output, mode),
+    )

@@ -226,6 +226,7 @@ def _eligible(
     work_id: str | None,
     minimum_tier: str | None,
     maximum_tier: str | None,
+    allowed_agents: tuple[str, ...] | None,
 ) -> tuple[PoolCandidate, ...]:
     values = []
     lower = tier_rank(minimum_tier) if minimum_tier is not None else 0
@@ -234,6 +235,8 @@ def _eligible(
     for candidate in pool.candidates:
         rank = tier_rank(candidate.tier)
         if rank < lower or rank > upper:
+            continue
+        if allowed_agents is not None and candidate.binding.agent.id not in allowed_agents:
             continue
         if not candidate.applies_to(activity) or not policy.allows(candidate.tier):
             continue
@@ -257,6 +260,7 @@ def select_from_runtime_pool(
     work_id: str | None = None,
     minimum_tier: str | None = None,
     maximum_tier: str | None = None,
+    allowed_agents: tuple[str, ...] | None = None,
 ) -> PoolSelection | None:
     """Return the cheapest admissible configured binding, or None when routing is not configured."""
 
@@ -272,6 +276,7 @@ def select_from_runtime_pool(
         work_id=work_id,
         minimum_tier=minimum_tier,
         maximum_tier=maximum_tier,
+        allowed_agents=allowed_agents,
     )
     if not candidates:
         raise RuntimePoolError(

@@ -21,7 +21,7 @@ from agora_ai_sdlc.repair_advice import RepairAdvice, build_repair_advice, persi
 from agora_ai_sdlc.runtime_adapter import sanitize
 from agora_ai_sdlc.runtime_domain import RuntimeBinding
 
-_SAFE_MODEL = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:\\[\\]-]{0,63}$")
+_SAFE_MODEL = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:\[\]-]{0,63}$")
 _DEFAULT = {"", "default", "configured-default"}
 _FENCE = chr(96) * 3
 Runner = Callable[[tuple[str, ...], str, Path], tuple[int, str]]

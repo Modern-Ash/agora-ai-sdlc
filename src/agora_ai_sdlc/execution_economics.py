@@ -70,11 +70,7 @@ def load_events(root: Path, work: str) -> tuple[dict[str, Any], ...]:
 
 
 def attempt_count(root: Path, work: str, tier: str) -> int:
-    return sum(
-        1
-        for item in load_events(root, work)
-        if item.get("event") == "attempt" and item.get("tier") == tier
-    )
+    return sum(1 for item in load_events(root, work) if item.get("event") == "attempt" and item.get("tier") == tier)
 
 
 def core_usage_snapshot(workspace: Any, swarm: str, work: str) -> dict[str, Any] | None:

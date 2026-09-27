@@ -177,10 +177,18 @@ def _candidate_id(binding: RuntimeBinding) -> str:
     return f"{binding.agent.id}+{binding.model.provider}/{binding.model.model}"
 
 
-def _eligible(pool: RuntimePool, policy: ExecutionPolicy, activity: str) -> tuple[PoolCandidate, ...]:
+def _eligible(
+    pool: RuntimePool,
+    policy: ExecutionPolicy,
+    activity: str,
+    *,
+    minimum_tier_exclusive: str | None = None,
+) -> tuple[PoolCandidate, ...]:
     values = []
     for candidate in pool.candidates:
         if not candidate.applies_to(activity) or not policy.allows(candidate.tier):
+            continue
+        if minimum_tier_exclusive is not None and tier_rank(candidate.tier) <= tier_rank(minimum_tier_exclusive):
             continue
         if tier_rank(candidate.tier) >= tier_rank("paid-efficient") and not pool.allow_paid_auto:
             continue
@@ -196,6 +204,7 @@ def select_from_runtime_pool(
     *,
     availability: dict[str, RuntimeDiscovery] | None = None,
     budgets: tuple[Budget, ...] = (),
+    minimum_tier_exclusive: str | None = None,
 ) -> PoolSelection | None:
     """Return the cheapest admissible configured binding, or None when routing is not configured."""
 
@@ -203,7 +212,12 @@ def select_from_runtime_pool(
     if pool is None:
         return None
     policy = execution_policy_for(requirements)
-    candidates = _eligible(pool, policy, requirements.activity_class)
+    candidates = _eligible(
+        pool,
+        policy,
+        requirements.activity_class,
+        minimum_tier_exclusive=minimum_tier_exclusive,
+    )
     if not candidates:
         raise RuntimePoolError(
             "routing.no_candidate",

@@ -8,8 +8,8 @@ from agora_ai_sdlc.escalation import build_escalation_package, persist_escalatio
 from agora_ai_sdlc.execution_bundle import ExecutionBundle
 from agora_ai_sdlc.execution_policy import ExecutionPolicyError, execution_policy_for
 from agora_ai_sdlc.execution_requirements import requirements_for_activity
-from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 from agora_ai_sdlc.repair_advice import build_repair_advice, render_executor_handback
+from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 from agora_ai_sdlc.runtime_execution import build_governed_runtime_plan
 from agora_ai_sdlc.runtime_pool import RuntimePoolError, load_runtime_pool, select_from_runtime_pool
 

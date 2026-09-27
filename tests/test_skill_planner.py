@@ -176,3 +176,20 @@ def test_local_construction_does_not_pay_for_planning(tmp_path, monkeypatch):
 
     assert result is None
     assert adapter.launches == 0
+
+
+def test_partial_legacy_bundle_fails_open_without_planner_call(tmp_path, monkeypatch):
+    config(tmp_path)
+    adapter = FakeAdapter()
+    monkeypatch.setattr("agora_ai_sdlc.skill_planner.default_registry", lambda root: FakeRegistry(adapter))
+    partial = SimpleNamespace(
+        swarm="delivery",
+        work="legacy-work",
+        stage="inception",
+        markdown_path=str(tmp_path / "EXECUTION_BUNDLE.md"),
+    )
+
+    result = maybe_plan_skill(tmp_path, partial, availability=availability())
+
+    assert result is None
+    assert adapter.launches == 0

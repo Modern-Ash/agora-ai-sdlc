@@ -12,10 +12,12 @@ from pathlib import Path
 from agora_ai_sdlc.delivery_submission import pull_request_delivery_enabled
 from agora_ai_sdlc.execution_bundle import build_execution_bundle
 from agora_ai_sdlc.execution_decisions import advise_execution
+from agora_ai_sdlc.execution_requirements import project_requirements
 from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice, recovery_choices
 from agora_ai_sdlc.guided import GuidedDecision
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
 from agora_ai_sdlc.local_delivery import local_artifacts_delivery_enabled
+from agora_ai_sdlc.runtime_pool import RuntimePoolError, select_from_runtime_pool
 from agora_ai_sdlc.verification import persisted_verification_failed
 
 
@@ -297,6 +299,7 @@ def advise_workflow(
     change_risk_confidence = None
     validation_focus = None
     validation_focus_confidence = None
+    pool_recommended: ExecutorRecoveryChoice | None = None
 
     try:
         bundle = build_execution_bundle(
@@ -330,13 +333,31 @@ def advise_workflow(
             validation_focus = str(focus.value)
             validation_focus_confidence = focus.confidence
 
+        requirements = project_requirements(bundle, evaluated)
+        try:
+            pool_selection = select_from_runtime_pool(root, requirements)
+        except RuntimePoolError:
+            pool_selection = None
+        if pool_selection is not None:
+            model = pool_selection.binding.model
+            model_label = model.model if model is not None else "configured model"
+            pool_recommended = ExecutorRecoveryChoice(
+                agent=pool_selection.binding.agent.id,
+                model=None if model is None or model.model == "configured-default" else (
+                    f"{model.provider}/{model.model}" if pool_selection.binding.agent.id == "opencode" else model.model
+                ),
+                label=(
+                    f"{pool_selection.binding.agent.id} · {model_label} "
+                    f"[{pool_selection.tier}]"
+                ),
+            )
+
     except (LayaUnavailable, OSError, RuntimeError, ValueError):
         pass
 
-    recommended = None
-    # Token-saving default: automatically preselect only local/free executors.
-    # Paid/configured providers still require the user's explicit runtime choice.
-    if source == "laya" and tier in {"local", "standard"} and not escalation:
+    recommended = pool_recommended
+    # Backward-compatible behavior when no cost-aware pool is configured.
+    if recommended is None and source == "laya" and tier in {"local", "standard"} and not escalation:
         recommended = _free_runtime(root)
 
     if tier == "human" and not escalation:

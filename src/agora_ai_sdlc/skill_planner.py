@@ -23,7 +23,7 @@ from agora_ai_sdlc.execution_policy import execution_policy_for
 from agora_ai_sdlc.execution_requirements import requirements_for, requirements_for_activity
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider
 from agora_ai_sdlc.runtime_adapter import AdapterError, sanitize
-from agora_ai_sdlc.runtime_domain import RuntimeBinding
+from agora_ai_sdlc.runtime_domain import AgentRuntimeRef, ModelRuntimeRef, RuntimeBinding
 from agora_ai_sdlc.runtime_pool import RuntimePoolError, select_from_runtime_pool
 
 SCHEMA = "agora-ai-sdlc/skill-plan/v1"
@@ -98,8 +98,6 @@ def _cached(root: Path, bundle: ExecutionBundle, digest: str) -> SkillPlan | Non
     model = runtime.get("model")
     if not isinstance(agent, dict):
         return None
-    from agora_ai_sdlc.runtime_domain import AgentRuntimeRef, ModelRuntimeRef
-
     agent_id = str(agent.get("id") or "")
     integration = str(agent.get("integration") or "")
     if not agent_id or not integration:

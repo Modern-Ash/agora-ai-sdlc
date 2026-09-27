@@ -112,9 +112,12 @@ Candidates may also declare `purposes: [executor]`, `[planner]` or `[reviewer]`.
 local/free retry budget is exhausted, AI-SDLC persists a bounded
 `agora-ai-sdlc/escalation-package/v1` containing the objective, failed binding/tier, focused
 diagnostic, changed paths and verification commands. The next more expensive *planner* candidate may
-be recommended, but is never launched as an implicit provider hop. Planner output is represented as
-non-authoritative `RepairAdvice`; the cheap executor receives the bounded hand-back and remains the
-component that applies repository changes.
+be recommended, but is never launched as an implicit provider hop. After explicit wizard confirmation,
+the planner runs through a dedicated read-only transport (currently Codex or Claude), with repository
+write tools unavailable; it returns JSON advice rather than an execution envelope. Planner output is
+persisted as non-authoritative `RepairAdvice`, then the same cheap executor receives the bounded
+hand-back and remains the component that applies repository changes. Planner selection is subject to
+the same durable Core Work budget as executor routing.
 
 Economic routing events are append-only JSONL under
 `.agora/ai-sdlc/economics/<work>/events.jsonl`. `aisdlc economics --work <id>` reports selections by

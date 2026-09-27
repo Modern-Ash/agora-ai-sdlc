@@ -333,23 +333,26 @@ def advise_workflow(
             validation_focus = str(focus.value)
             validation_focus_confidence = focus.confidence
 
-        requirements = project_requirements(bundle, evaluated)
-        try:
-            pool_selection = select_from_runtime_pool(root, requirements)
-        except RuntimePoolError:
-            pool_selection = None
-        if pool_selection is not None:
-            model = pool_selection.binding.model
-            model_label = model.model if model is not None else "configured model"
-            pool_recommended = ExecutorRecoveryChoice(
-                agent=pool_selection.binding.agent.id,
-                model=None
-                if model is None or model.model == "configured-default"
-                else (
-                    f"{model.provider}/{model.model}" if pool_selection.binding.agent.id == "opencode" else model.model
-                ),
-                label=(f"{pool_selection.binding.agent.id} · {model_label} [{pool_selection.tier}]"),
-            )
+        if not escalation and tier != "human":
+            try:
+                requirements = project_requirements(bundle, evaluated)
+                pool_selection = select_from_runtime_pool(root, requirements)
+            except (AttributeError, RuntimePoolError):
+                pool_selection = None
+            if pool_selection is not None:
+                model = pool_selection.binding.model
+                model_label = model.model if model is not None else "configured model"
+                pool_recommended = ExecutorRecoveryChoice(
+                    agent=pool_selection.binding.agent.id,
+                    model=None
+                    if model is None or model.model == "configured-default"
+                    else (
+                        f"{model.provider}/{model.model}"
+                        if pool_selection.binding.agent.id == "opencode"
+                        else model.model
+                    ),
+                    label=(f"{pool_selection.binding.agent.id} · {model_label} [{pool_selection.tier}]"),
+                )
 
     except (LayaUnavailable, OSError, RuntimeError, ValueError):
         pass

@@ -133,7 +133,7 @@ def _select_runtime(
     output_fn: Callable[[str], None],
     current: ExecutorRecoveryChoice | None = None,
     lang: str = "en",
-) -> _PendingPlannerEscalation | None:
+) -> ExecutorRecoveryChoice | None:
     choice = select_executor_model(
         root,
         input_fn=input_fn,
@@ -287,7 +287,7 @@ def _bounded_escalation_choice(
     *,
     attempts: int,
     diagnostic: str,
-) -> ExecutorRecoveryChoice | None:
+) -> _PendingPlannerEscalation | None:
     tier = _choice_tier(choice)
     if tier not in {"local", "free"}:
         return None

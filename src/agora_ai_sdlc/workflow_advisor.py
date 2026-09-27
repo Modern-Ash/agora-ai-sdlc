@@ -352,6 +352,7 @@ def advise_workflow(
                         else model.model
                     ),
                     label=(f"{pool_selection.binding.agent.id} · {model_label} [{pool_selection.tier}]"),
+                    tier=pool_selection.tier,
                 )
 
     except (LayaUnavailable, OSError, RuntimeError, ValueError):

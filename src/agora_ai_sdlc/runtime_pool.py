@@ -177,10 +177,7 @@ def load_runtime_pool(root: Path) -> RuntimePool | None:
 
     limits_value = routing.get("tier_call_limits") or {}
     if not isinstance(limits_value, dict) or any(
-        tier not in EXECUTION_TIERS
-        or not isinstance(limit, int)
-        or isinstance(limit, bool)
-        or limit < 0
+        tier not in EXECUTION_TIERS or not isinstance(limit, int) or isinstance(limit, bool) or limit < 0
         for tier, limit in limits_value.items()
     ):
         raise RuntimePoolError(
@@ -249,9 +246,7 @@ def select_from_runtime_pool(
     if work is not None and pool.tier_call_limits:
         counts = summarize_economics(root, work).get("runtime_selections_by_tier", {})
         exhausted_tiers = frozenset(
-            tier
-            for tier, limit in pool.tier_call_limits.items()
-            if int(counts.get(tier, 0)) >= limit
+            tier for tier, limit in pool.tier_call_limits.items() if int(counts.get(tier, 0)) >= limit
         )
     candidates = _eligible(
         pool,

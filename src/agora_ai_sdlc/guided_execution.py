@@ -21,12 +21,12 @@ from agora_ai_sdlc.guided import GuidedDecision, inspect_next
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
 from agora_ai_sdlc.local_delivery import diff_project_file_snapshots, project_file_snapshot
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
-from agora_ai_sdlc.skill_planner import maybe_plan_skill
 from agora_ai_sdlc.runtime_execution import (
     RuntimeExecutionError,
     build_governed_runtime_plan,
     supports_governed_runtime_plan,
 )
+from agora_ai_sdlc.skill_planner import maybe_plan_skill
 from agora_ai_sdlc.verification import persisted_verification_diagnostic
 from agora_ai_sdlc.wizard import load_answers
 

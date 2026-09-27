@@ -359,11 +359,11 @@ def run_interactive(
                             result_path=previous_execution_result_path,
                         )
                         advisor = run_escalation_advisor(
-                        root,
-                        package,
-                        workspace=AgoraWorkspace(cwd=root),
-                        actor_id=decision.actor,
-                    )
+                            root,
+                            package,
+                            workspace=AgoraWorkspace(cwd=root),
+                            actor_id=decision.actor,
+                        )
                     except (EscalationError, OSError, RuntimeError, ValueError) as advisor_error:
                         output_fn(
                             f"No se pudo obtener diagnóstico pago acotado: {advisor_error}"

@@ -11,6 +11,7 @@ from agora_ai_sdlc.execution_requirements import ExecutionRequirements
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 from agora_ai_sdlc.runtime_domain import RuntimeBinding
 from agora_ai_sdlc.runtime_pool import PoolSelection, select_from_runtime_pool
+from agora_ai_sdlc.runtime_selection import Budget
 
 SCHEMA = "agora-ai-sdlc/escalation-package/v1"
 
@@ -99,6 +100,7 @@ def recommend_escalation(
     failed_tier: str,
     availability: dict[str, RuntimeDiscovery] | None = None,
     work: str | None = None,
+    budgets: tuple[Budget, ...] = (),
 ) -> PoolSelection | None:
     """Recommend, but never launch, the next authorized more expensive tier."""
 
@@ -109,4 +111,5 @@ def recommend_escalation(
         minimum_tier_exclusive=failed_tier,
         purpose="planner",
         work=work,
+        budgets=budgets,
     )

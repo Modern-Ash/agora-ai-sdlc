@@ -3,6 +3,7 @@ from types import SimpleNamespace
 import pytest
 import yaml
 
+from agora_ai_sdlc.advisory_planner import run_advisory_planner
 from agora_ai_sdlc.economic_telemetry import record_economic_event, summarize_economics
 from agora_ai_sdlc.escalation import build_escalation_package, persist_escalation_package, recommend_escalation
 from agora_ai_sdlc.execution_bundle import ExecutionBundle
@@ -10,8 +11,10 @@ from agora_ai_sdlc.execution_policy import ExecutionPolicyError, execution_polic
 from agora_ai_sdlc.execution_requirements import requirements_for_activity
 from agora_ai_sdlc.repair_advice import build_repair_advice, render_executor_handback
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
+from agora_ai_sdlc.runtime_domain import AgentRuntimeRef, ModelRuntimeRef, RuntimeBinding
 from agora_ai_sdlc.runtime_execution import build_governed_runtime_plan
 from agora_ai_sdlc.runtime_pool import RuntimePoolError, load_runtime_pool, select_from_runtime_pool
+from agora_ai_sdlc.runtime_selection import Budget
 
 
 def discovered(runtime_id, *, ok=True, models=()):
@@ -348,4 +351,96 @@ def test_economic_summary_separates_selection_tiers(tmp_path):
     summary = summarize_economics(tmp_path, "issue-x")
     assert summary["events"] == 2
     assert summary["runtime_selections_by_tier"] == {"local": 1}
+    assert summary["paid_events"] == 0
+
+
+def test_planner_escalation_respects_core_budget(tmp_path):
+    project(tmp_path, paid=True)
+    config_path = tmp_path / "ai-sdlc" / "project.yaml"
+    payload = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    for candidate in payload["routing"]["candidates"]:
+        if candidate["tier"] == "paid-efficient":
+            candidate["projected_usage"] = {"tokens": 100}
+    config_path.write_text(yaml.safe_dump(payload, sort_keys=False), encoding="utf-8")
+
+    req = requirements_for_activity("construction.implementation", tier="standard")
+    budget = Budget(
+        scope="work:delivery/issue-x",
+        limits={"tokens": 1000},
+        consumed={"tokens": 950},
+        measurement={"tokens": "provider-reported"},
+    )
+    with pytest.raises(RuntimePoolError, match="routing.blocked"):
+        recommend_escalation(
+            tmp_path,
+            req,
+            failed_tier="local",
+            availability=availability(local=False, free=False, codex=True, claude=True),
+            work="issue-x",
+            budgets=(budget,),
+        )
+
+
+def test_advisory_planner_is_read_only_and_persists_bounded_advice(tmp_path, monkeypatch):
+    monkeypatch.setattr("agora_ai_sdlc.advisory_planner.shutil.which", lambda name: f"/bin/{name}")
+    req = requirements_for_activity("construction.implementation", tier="standard")
+    binding = RuntimeBinding(
+        AgentRuntimeRef("codex", "codex"),
+        ModelRuntimeRef("openai", "openai", "configured-efficient"),
+    )
+    package = build_escalation_package(
+        swarm="delivery",
+        work="issue-x",
+        requirements=req,
+        failed_tier="local",
+        failed_binding=binding,
+        attempts=3,
+        diagnostic="Focused failing assertion",
+        objective="Repair one boundary condition",
+    )
+    seen = {}
+
+    def runner(argv, stdin, root):
+        seen["argv"] = argv
+        seen["stdin"] = stdin
+        seen["root"] = root
+        return 0, '{"summary":"Boundary is inverted","actions":["Invert the condition","Run the focused test"]}'
+
+    outcome = run_advisory_planner(
+        tmp_path,
+        package=package,
+        binding=binding,
+        tier="paid-efficient",
+        runner=runner,
+    )
+
+    assert "--sandbox" in seen["argv"]
+    sandbox_index = seen["argv"].index("--sandbox")
+    assert seen["argv"][sandbox_index + 1] == "read-only"
+    assert "READ-ONLY" in seen["stdin"]
+    assert "Do not edit files" in seen["stdin"]
+    assert outcome.advice.planner_agent == "codex"
+    assert outcome.advice.actions == ("Invert the condition", "Run the focused test")
+    assert (tmp_path / ".agora" / "ai-sdlc" / "repair-advice" / "issue-x" / "ADVICE.json").is_file()
+
+
+def test_paid_telemetry_counts_actual_activity_not_recommendations(tmp_path):
+    record_economic_event(
+        tmp_path,
+        work="issue-x",
+        kind="escalation-recommended",
+        tier="paid-efficient",
+        agent="codex",
+        model="small",
+    )
+    record_economic_event(
+        tmp_path,
+        work="issue-x",
+        kind="runtime-selected",
+        tier="paid-efficient",
+        agent="codex",
+        model="small",
+    )
+    summary = summarize_economics(tmp_path, "issue-x")
     assert summary["paid_events"] == 1
+    assert summary["runtime_selections_by_tier"] == {"paid-efficient": 1}

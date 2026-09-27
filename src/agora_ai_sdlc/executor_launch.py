@@ -18,12 +18,12 @@ from agora_ai_sdlc.guided import inspect_next
 from agora_ai_sdlc.inception_validation import validate_inception_output
 from agora_ai_sdlc.llm_failures import recoverable_llm_failure
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
-from agora_ai_sdlc.skill_planner import maybe_plan_skill
 from agora_ai_sdlc.runtime_execution import (
     RuntimeExecutionError,
     build_governed_runtime_plan,
     supports_governed_runtime_plan,
 )
+from agora_ai_sdlc.skill_planner import maybe_plan_skill
 
 SCHEMA = "agora-ai-sdlc/executor-adapters/v1"
 MAX_PRESENTATION_CHARS = 6000

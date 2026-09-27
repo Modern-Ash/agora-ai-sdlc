@@ -14,7 +14,7 @@ from typing import Any
 
 import yaml
 
-from agora_ai_sdlc.execution_economics import attempt_count
+from agora_ai_sdlc.execution_economics import attempt_count, summarize_economics
 from agora_ai_sdlc.execution_policy import EXECUTION_TIERS, ExecutionPolicy, execution_policy_for, tier_rank
 from agora_ai_sdlc.execution_requirements import ExecutionRequirements
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
@@ -39,10 +39,11 @@ class PoolCandidate:
     binding: RuntimeBinding
     order: int
     activities: tuple[str, ...] = ()
+    purposes: tuple[str, ...] = ("executor", "planner", "reviewer")
     projected_usage: dict[str, int | None] | None = None
 
-    def applies_to(self, activity: str) -> bool:
-        return not self.activities or activity in self.activities
+    def applies_to(self, activity: str, purpose: str) -> bool:
+        return (not self.activities or activity in self.activities) and purpose in self.purposes
 
 
 @dataclass(frozen=True)
@@ -145,6 +146,14 @@ def load_runtime_pool(root: Path) -> RuntimePool | None:
             not isinstance(item, str) or not item.strip() for item in activities_value
         ):
             raise RuntimePoolError("routing.activities", "candidate activities must be a string list")
+        purposes_value = value.get("purposes") or ("executor", "planner", "reviewer")
+        if not isinstance(purposes_value, (list, tuple)) or any(
+            item not in {"executor", "planner", "reviewer"} for item in purposes_value
+        ):
+            raise RuntimePoolError(
+                "routing.purposes",
+                "candidate purposes must contain executor, planner and/or reviewer",
+            )
         usage = value.get("projected_usage")
         if usage is not None and (
             not isinstance(usage, dict)
@@ -162,6 +171,7 @@ def load_runtime_pool(root: Path) -> RuntimePool | None:
                 binding=_binding(value),
                 order=order,
                 activities=tuple(activities_value),
+                purposes=tuple(purposes_value),
                 projected_usage=dict(usage or {}),
             )
         )
@@ -221,8 +231,12 @@ def _eligible(
     minimum_tier: str | None,
     maximum_tier: str | None,
     allowed_agents: tuple[str, ...] | None,
+    purpose: str,
 ) -> tuple[PoolCandidate, ...]:
     values = []
+    paid_accounting_blocked = bool(
+        work_id is not None and summarize_economics(root, work_id).get("unaccounted_paid_usage", 0)
+    )
     lower = tier_rank(minimum_tier) if minimum_tier is not None else 0
     upper = tier_rank(maximum_tier) if maximum_tier is not None else tier_rank(policy.max_automatic_tier)
     upper = min(upper, tier_rank(policy.max_automatic_tier))
@@ -232,7 +246,9 @@ def _eligible(
             continue
         if allowed_agents is not None and candidate.binding.agent.id not in allowed_agents:
             continue
-        if not candidate.applies_to(activity) or not policy.allows(candidate.tier):
+        if not candidate.applies_to(activity, purpose) or not policy.allows(candidate.tier):
+            continue
+        if paid_accounting_blocked and rank >= tier_rank("paid-efficient"):
             continue
         if rank >= tier_rank("paid-efficient") and not pool.allow_paid_auto:
             continue
@@ -255,12 +271,15 @@ def select_from_runtime_pool(
     minimum_tier: str | None = None,
     maximum_tier: str | None = None,
     allowed_agents: tuple[str, ...] | None = None,
+    purpose: str = "executor",
 ) -> PoolSelection | None:
     """Return the cheapest admissible configured binding, or None when routing is not configured."""
 
     pool = load_runtime_pool(root)
     if pool is None:
         return None
+    if purpose not in {"executor", "planner", "reviewer"}:
+        raise RuntimePoolError("routing.purpose", f"unknown runtime purpose {purpose!r}")
     policy = execution_policy_for(requirements)
     candidates = _eligible(
         pool,
@@ -271,6 +290,7 @@ def select_from_runtime_pool(
         minimum_tier=minimum_tier,
         maximum_tier=maximum_tier,
         allowed_agents=allowed_agents,
+        purpose=purpose,
     )
     if not candidates:
         raise RuntimePoolError(

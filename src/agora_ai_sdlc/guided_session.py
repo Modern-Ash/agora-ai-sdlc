@@ -10,6 +10,7 @@ from threading import Event, Lock, Thread
 from time import monotonic
 
 from agora_ai_sdlc.decision_card import build_decision_card, render_decision_card
+from agora_ai_sdlc.escalation import EscalationError, build_escalation_package, run_escalation_advisor
 from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice, select_executor_model
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next, render
 from agora_ai_sdlc.guided_execution import execute_guided_preparation
@@ -17,6 +18,7 @@ from agora_ai_sdlc.i18n import t
 from agora_ai_sdlc.iteration_status import inspect_iteration, render_terminal_summary
 from agora_ai_sdlc.opencode_runner import list_available_models, list_ollama_agent_models
 from agora_ai_sdlc.runtime_discovery import discover_runtimes
+from agora_ai_sdlc.runtime_pool import retry_limit_for
 from agora_ai_sdlc.wizard import build_wizard_view, render_wizard, save_answer
 from agora_ai_sdlc.wizard_actions import execute_in_session_action
 from agora_ai_sdlc.workflow_advisor import advise_workflow
@@ -296,6 +298,9 @@ def run_interactive(
     failed_runtimes: set[tuple[str, str | None]] = set()
     previous_execution_fingerprint: tuple[object, ...] | None = None
     previous_execution_result_path: str | None = None
+    attempts_by_runtime: dict[tuple[str, str | None], int] = {}
+    repair_advice_by_runtime: dict[tuple[str, str | None], str] = {}
+    advised_runtimes: set[tuple[str, str | None]] = set()
 
     while True:
         decision = inspect_next(root, swarm=swarm, work=work, lang=lang)
@@ -454,11 +459,14 @@ def run_interactive(
             progress.start()
             execution_error: BaseException | None = None
             try:
+                runtime_key = (selected_runtime.agent, selected_runtime.model)
                 result = execute_guided_preparation(
                     root,
                     decision,
                     runtime_id=selected_runtime.agent,
                     model=selected_runtime.model,
+                    execution_tier=getattr(selected_runtime, "tier", None),
+                    repair_advice=repair_advice_by_runtime.get(runtime_key),
                     progress_fn=progress.update,
                 )
             except (OSError, RuntimeError, ValueError) as error:
@@ -469,13 +477,62 @@ def run_interactive(
             if execution_error is None:
                 break
 
-            failed_runtimes.add((selected_runtime.agent, selected_runtime.model))
+            runtime_key = (selected_runtime.agent, selected_runtime.model)
+            attempts = attempts_by_runtime.get(runtime_key, 0) + 1
+            attempts_by_runtime[runtime_key] = attempts
             _render_execution_error(
                 execution_error,
                 selected_runtime,
                 output_fn,
                 lang=lang,
             )
+
+            tier = getattr(selected_runtime, "tier", None)
+            retry_limit = retry_limit_for(root, tier)
+            if tier in {"local", "free"} and attempts <= retry_limit:
+                message = (
+                    f"Reintento barato {attempts}/{retry_limit} con {selected_runtime.label}; "
+                    "todavía no se escala a un modelo pago."
+                    if lang == "es"
+                    else f"Cheap retry {attempts}/{retry_limit} with {selected_runtime.label}; "
+                    "no paid-model escalation yet."
+                )
+                output_fn(message)
+                continue
+
+            if tier in {"local", "free"} and runtime_key not in advised_runtimes:
+                advised_runtimes.add(runtime_key)
+                try:
+                    package = build_escalation_package(
+                        root,
+                        decision,
+                        failed_agent=selected_runtime.agent,
+                        failed_model=selected_runtime.model,
+                        failed_tier=tier,
+                        attempts=attempts,
+                        error=execution_error,
+                    )
+                    advisor = run_escalation_advisor(root, package)
+                except (EscalationError, OSError, RuntimeError, ValueError) as advisor_error:
+                    output_fn(
+                        (
+                            f"No se pudo obtener diagnóstico pago acotado: {advisor_error}"
+                            if lang == "es"
+                            else f"Bounded paid diagnostic advice unavailable: {advisor_error}"
+                        )
+                    )
+                else:
+                    repair_advice_by_runtime[runtime_key] = advisor.advice
+                    output_fn(
+                        (
+                            f"Diagnóstico {advisor.tier} obtenido; la reparación vuelve a {selected_runtime.label}."
+                            if lang == "es"
+                            else f"{advisor.tier} diagnostic advice obtained; repair returns to {selected_runtime.label}."
+                        )
+                    )
+                    continue
+
+            failed_runtimes.add(runtime_key)
             selected_runtime = None
             confirmation, selected_runtime = _confirm_current_decision(
                 root,

@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from agora_ai_sdlc.runtime_adapter import sanitize
+from agora_ai_sdlc.runtime_selection import Budget, budget_from_core
 
 SCHEMA = "agora-ai-sdlc/execution-economics/v1"
 
@@ -73,6 +74,19 @@ def attempt_count(root: Path, work: str, tier: str) -> int:
     return sum(1 for item in load_events(root, work) if item.get("event") == "attempt" and item.get("tier") == tier)
 
 
+def core_budgets(workspace: Any, swarm: str, work: str) -> tuple[Budget, ...]:
+    summarize = getattr(workspace, "summarize_usage", None)
+    if not callable(summarize):
+        return ()
+    try:
+        summary = summarize(swarm, work)
+    except (OSError, RuntimeError, ValueError, FileNotFoundError):
+        return ()
+    if not getattr(summary, "budget_limits", None):
+        return ()
+    return (budget_from_core(summary, scope=f"work:{swarm}/{work}"),)
+
+
 def core_usage_snapshot(workspace: Any, swarm: str, work: str) -> dict[str, Any] | None:
     summarize = getattr(workspace, "summarize_usage", None)
     if not callable(summarize):
@@ -97,6 +111,7 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
     successes: dict[str, int] = {}
     failures: dict[str, int] = {}
     escalations = 0
+    unaccounted_paid_usage = 0
     for item in events:
         tier = str(item.get("tier") or "unknown")
         if item.get("event") == "attempt":
@@ -107,6 +122,8 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
             failures[tier] = failures.get(tier, 0) + 1
         elif item.get("event") == "escalation":
             escalations += 1
+        elif item.get("event") == "planner-usage-unaccounted":
+            unaccounted_paid_usage += 1
     return {
         "schema": SCHEMA,
         "work": work,
@@ -114,5 +131,6 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
         "successes": dict(sorted(successes.items())),
         "failures": dict(sorted(failures.items())),
         "escalations": escalations,
+        "unaccounted_paid_usage": unaccounted_paid_usage,
         "events": len(events),
     }

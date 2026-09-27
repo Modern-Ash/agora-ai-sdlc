@@ -575,11 +575,9 @@ def run_interactive(
             if pending_planner is not None and selected_runtime == pending_planner.planner:
                 output_fn("")
                 output_fn(
-                    (
-                        f"Running read-only planner {selected_runtime.label}; repository writes are disabled."
-                        if lang == "en"
-                        else f"Ejecutando planner de solo lectura {selected_runtime.label}; las escrituras están deshabilitadas."
-                    )
+                    f"Running read-only planner {selected_runtime.label}; repository writes are disabled."
+                    if lang == "en"
+                    else f"Ejecutando planner de solo lectura {selected_runtime.label}; las escrituras están deshabilitadas."
                 )
                 try:
                     record_economic_event(
@@ -648,11 +646,9 @@ def run_interactive(
                 retry_limit = _cheap_retry_limit(root)
                 failure_attempts[(cheap_executor.agent, cheap_executor.model)] = max(0, retry_limit - 1)
                 output_fn(
-                    (
-                        f"Planner advice persisted; returning execution to {cheap_executor.label}."
-                        if lang == "en"
-                        else f"Advice del planner persistido; la ejecución vuelve a {cheap_executor.label}."
-                    )
+                    f"Planner advice persisted; returning execution to {cheap_executor.label}."
+                    if lang == "en"
+                    else f"Advice del planner persistido; la ejecución vuelve a {cheap_executor.label}."
                 )
                 selected_runtime = cheap_executor
                 pending_planner = None

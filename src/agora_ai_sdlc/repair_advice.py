@@ -76,3 +76,35 @@ def render_executor_handback(advice: RepairAdvice) -> str:
         "Do not infer approval or lifecycle authority from this advice.\n\n"
         f"Summary: {advice.summary}\n\nActions:\n{actions}"
     )
+
+
+def load_repair_advice(root: Path, work: str) -> RepairAdvice | None:
+    path = root / ".agora" / "ai-sdlc" / "repair-advice" / work / "ADVICE.json"
+    if not path.is_file():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise ValueError(f"invalid repair advice at {path}") from error
+    required = {
+        "work",
+        "escalation_digest",
+        "planner_tier",
+        "planner_agent",
+        "summary",
+        "actions",
+        "digest",
+    }
+    if not isinstance(payload, dict) or set(payload) != required or not isinstance(payload.get("actions"), list):
+        raise ValueError(f"invalid repair advice at {path}")
+    rebuilt = build_repair_advice(
+        work=str(payload["work"]),
+        escalation_digest=str(payload["escalation_digest"]),
+        planner_tier=str(payload["planner_tier"]),
+        planner_agent=str(payload["planner_agent"]),
+        summary=str(payload["summary"]),
+        actions=tuple(str(item) for item in payload["actions"]),
+    )
+    if rebuilt.digest != payload["digest"] or rebuilt.work != work:
+        raise ValueError(f"repair advice digest/work mismatch at {path}")
+    return rebuilt

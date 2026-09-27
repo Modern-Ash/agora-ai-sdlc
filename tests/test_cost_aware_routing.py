@@ -3,10 +3,13 @@ from types import SimpleNamespace
 import pytest
 import yaml
 
+from agora_ai_sdlc.economic_telemetry import record_economic_event, summarize_economics
+from agora_ai_sdlc.escalation import build_escalation_package, persist_escalation_package, recommend_escalation
 from agora_ai_sdlc.execution_bundle import ExecutionBundle
 from agora_ai_sdlc.execution_policy import ExecutionPolicyError, execution_policy_for
 from agora_ai_sdlc.execution_requirements import requirements_for_activity
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
+from agora_ai_sdlc.repair_advice import build_repair_advice, render_executor_handback
 from agora_ai_sdlc.runtime_execution import build_governed_runtime_plan
 from agora_ai_sdlc.runtime_pool import RuntimePoolError, load_runtime_pool, select_from_runtime_pool
 
@@ -248,3 +251,101 @@ def test_governed_plan_auto_selects_pool_but_explicit_runtime_is_override(tmp_pa
     )
     assert explicit.binding.agent.id == "codex"
     assert explicit.execution_tier is None
+
+
+def test_tier_call_limit_blocks_repeated_paid_selection(tmp_path):
+    project(tmp_path, paid=True)
+    payload = yaml.safe_load((tmp_path / "ai-sdlc" / "project.yaml").read_text(encoding="utf-8"))
+    payload["routing"]["tier_call_limits"] = {"paid-efficient": 1}
+    (tmp_path / "ai-sdlc" / "project.yaml").write_text(
+        yaml.safe_dump(payload, sort_keys=False),
+        encoding="utf-8",
+    )
+    req = requirements_for_activity("construction.implementation", tier="standard")
+    observed = availability(local=False, free=False, codex=True, claude=True)
+
+    first = select_from_runtime_pool(tmp_path, req, availability=observed, work="issue-x")
+    assert first is not None and first.tier == "paid-efficient"
+    record_economic_event(
+        tmp_path,
+        work="issue-x",
+        kind="runtime-selected",
+        tier="paid-efficient",
+        agent="codex",
+        model="configured-efficient",
+    )
+
+    second = select_from_runtime_pool(tmp_path, req, availability=observed, work="issue-x")
+    assert second is not None
+    assert second.tier == "paid-standard"
+    assert second.binding.agent.id == "claude"
+
+
+def test_escalation_package_is_bounded_and_planner_selection_is_more_expensive(tmp_path):
+    project(tmp_path, paid=True)
+    req = requirements_for_activity("construction.implementation", tier="standard")
+    failed = load_runtime_pool(tmp_path).candidates[0].binding
+    package = build_escalation_package(
+        swarm="delivery",
+        work="issue-x",
+        requirements=req,
+        failed_tier="local",
+        failed_binding=failed,
+        attempts=3,
+        diagnostic="x" * 7000,
+        changed_paths=tuple(f"src/file-{index}.ts" for index in range(150)),
+        verification_commands=("pnpm test",),
+        objective="Repair the implementation",
+    )
+    path = persist_escalation_package(tmp_path, package)
+    assert path.is_file()
+    assert len(package.diagnostic) == 6000
+    assert len(package.changed_paths) == 100
+
+    selected = recommend_escalation(
+        tmp_path,
+        req,
+        failed_tier="local",
+        availability=availability(local=False, free=False, codex=True, claude=True),
+        work="issue-x",
+    )
+    assert selected is not None
+    assert selected.tier == "paid-efficient"
+
+
+def test_repair_advice_is_non_authoritative_bounded_handback():
+    advice = build_repair_advice(
+        work="issue-x",
+        escalation_digest="sha256:abc",
+        planner_tier="paid-efficient",
+        planner_agent="codex",
+        summary="The failing test indicates an incorrect boundary.",
+        actions=("Change the boundary condition.", "Run the focused test."),
+    )
+    handback = render_executor_handback(advice)
+    assert "non-authoritative planner" in handback
+    assert "Do not infer approval" in handback
+    assert "Change the boundary condition." in handback
+
+
+def test_economic_summary_separates_selection_tiers(tmp_path):
+    record_economic_event(
+        tmp_path,
+        work="issue-x",
+        kind="runtime-selected",
+        tier="local",
+        agent="opencode",
+        model="qwen",
+    )
+    record_economic_event(
+        tmp_path,
+        work="issue-x",
+        kind="escalation-recommended",
+        tier="paid-efficient",
+        agent="codex",
+        model="small",
+    )
+    summary = summarize_economics(tmp_path, "issue-x")
+    assert summary["events"] == 2
+    assert summary["runtime_selections_by_tier"] == {"local": 1}
+    assert summary["paid_events"] == 1

@@ -26,6 +26,7 @@ from agora_ai_sdlc.laya_provider import LayaDecisionProvider
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
 from agora_ai_sdlc.runtime_domain import AgentRuntimeRef, ModelRuntimeRef, RuntimeBinding, normalize_runtime
 from agora_ai_sdlc.runtime_pool import RuntimePoolError, select_from_runtime_pool
+from agora_ai_sdlc.runtime_selection import Budget, budget_from_core
 
 
 class RuntimeExecutionError(ValueError):
@@ -182,6 +183,19 @@ def _availability(root: Path) -> dict[str, RuntimeDiscovery]:
     return {item.id: item for item in discover_runtimes(root)}
 
 
+def _work_budgets(workspace: Any, swarm: str, work: str) -> tuple[Budget, ...]:
+    summarizer = getattr(workspace, "summarize_usage", None)
+    if not callable(summarizer):
+        return ()
+    try:
+        summary = summarizer(swarm, work)
+    except (OSError, RuntimeError, ValueError, FileNotFoundError):
+        return ()
+    if not getattr(summary, "budget_limits", None):
+        return ()
+    return (budget_from_core(summary, scope=f"work:{swarm}/{work}"),)
+
+
 def build_governed_runtime_plan(
     root: Path,
     *,
@@ -201,6 +215,7 @@ def build_governed_runtime_plan(
     workspace = workspace or AgoraWorkspace(cwd=root)
     requirements = requirements_for(bundle, provider=LayaDecisionProvider())
     observed = availability or _availability(root)
+    budgets = _work_budgets(workspace, decision.swarm, decision.work)
 
     selection = None
     if runtime_id is None:
@@ -209,6 +224,7 @@ def build_governed_runtime_plan(
                 root,
                 requirements,
                 availability=observed,
+                budgets=budgets,
                 work=bundle.work,
             )
         except RuntimePoolError as error:

@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 import yaml
 
-from agora_ai_sdlc.advisory_planner import run_advisory_planner
+from agora_ai_sdlc.advisory_planner import AdvisoryPlannerError, run_advisory_planner
 from agora_ai_sdlc.economic_telemetry import record_economic_event, summarize_economics
 from agora_ai_sdlc.escalation import build_escalation_package, persist_escalation_package, recommend_escalation
 from agora_ai_sdlc.execution_bundle import ExecutionBundle
@@ -444,3 +444,29 @@ def test_paid_telemetry_counts_actual_activity_not_recommendations(tmp_path):
     summary = summarize_economics(tmp_path, "issue-x")
     assert summary["paid_events"] == 1
     assert summary["runtime_selections_by_tier"] == {"paid-efficient": 1}
+
+
+def test_advisory_planner_rejects_provider_agent_mismatch(tmp_path, monkeypatch):
+    monkeypatch.setattr("agora_ai_sdlc.advisory_planner.shutil.which", lambda name: f"/bin/{name}")
+    req = requirements_for_activity("construction.implementation", tier="standard")
+    binding = RuntimeBinding(
+        AgentRuntimeRef("codex", "codex"),
+        ModelRuntimeRef("anthropic", "anthropic", "claude-haiku"),
+    )
+    package = build_escalation_package(
+        swarm="delivery",
+        work="issue-x",
+        requirements=req,
+        failed_tier="local",
+        failed_binding=binding,
+        attempts=3,
+        diagnostic="failure",
+    )
+    with pytest.raises(AdvisoryPlannerError, match="planner.model_unsupported"):
+        run_advisory_planner(
+            tmp_path,
+            package=package,
+            binding=binding,
+            tier="paid-efficient",
+            runner=lambda argv, stdin, root: (0, "{}"),
+        )

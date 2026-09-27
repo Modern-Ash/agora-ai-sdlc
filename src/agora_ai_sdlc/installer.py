@@ -24,6 +24,7 @@ from agora.workspace import AgoraWorkspace
 from agora_ai_sdlc import profile_activation
 from agora_ai_sdlc.depth_profiles import ORDER as DEPTH_ORDER
 from agora_ai_sdlc.depth_profiles import asset_root
+from agora_ai_sdlc.execution_policy import EXECUTION_TIERS
 from agora_ai_sdlc.flavor_manifest import (
     ManifestError,
     check_core_compatibility,
@@ -123,6 +124,7 @@ def validate_config(config: dict) -> dict:
         "integrations",
         "runtimes",
         "role_execution",
+        "routing",
         "swarm",
         "objective",
         "work",
@@ -233,6 +235,97 @@ def validate_config(config: dict) -> dict:
                 f"{role} must reference human or a declared runtime",
             )
 
+    routing = config.get("routing")
+    normalized_routing = None
+    if routing is not None:
+        if not isinstance(routing, dict) or routing.get("profile") != "cheap-first":
+            raise InstallerError("installer.routing", "routing.profile must be cheap-first")
+        allowed_routing = {
+            "profile",
+            "allow_paid_auto",
+            "allow_frontier_auto",
+            "retry_limits",
+            "call_budgets",
+            "candidates",
+        }
+        unknown_routing = set(routing) - allowed_routing
+        if unknown_routing:
+            raise InstallerError(
+                "installer.routing",
+                f"unknown routing fields: {', '.join(sorted(unknown_routing))}",
+            )
+        for flag in ("allow_paid_auto", "allow_frontier_auto"):
+            if flag in routing and not isinstance(routing[flag], bool):
+                raise InstallerError("installer.routing", f"{flag} must be boolean")
+
+        retry_limits = routing.get("retry_limits") or {"local": 2, "free": 2}
+        call_budgets = routing.get("call_budgets") or {}
+        for name, values in (("retry_limits", retry_limits), ("call_budgets", call_budgets)):
+            if not isinstance(values, dict) or any(
+                tier not in EXECUTION_TIERS or not isinstance(limit, int) or isinstance(limit, bool) or limit < 0
+                for tier, limit in values.items()
+            ):
+                raise InstallerError(
+                    "installer.routing",
+                    f"{name} must map known tiers to non-negative integers",
+                )
+
+        candidates = routing.get("candidates")
+        if not isinstance(candidates, list) or not candidates:
+            raise InstallerError("installer.routing", "cheap-first routing requires candidates")
+        normalized_candidates = []
+        for candidate in candidates:
+            if not isinstance(candidate, dict):
+                raise InstallerError("installer.routing", "routing candidate must be a mapping")
+            tier = candidate.get("tier")
+            if tier not in EXECUTION_TIERS:
+                raise InstallerError("installer.routing", f"unknown candidate tier {tier!r}")
+            agent = candidate.get("agent")
+            if not isinstance(agent, (str, dict)):
+                raise InstallerError("installer.routing", "routing candidate requires agent text or mapping")
+            model = candidate.get("model")
+            if model is not None and not isinstance(model, (str, dict)):
+                raise InstallerError("installer.routing", "routing model must be text or mapping")
+            purposes = candidate.get("purposes")
+            if purposes is not None and (
+                not isinstance(purposes, list)
+                or any(item not in {"executor", "planner", "reviewer"} for item in purposes)
+            ):
+                raise InstallerError(
+                    "installer.routing",
+                    "routing purposes must contain executor, planner and/or reviewer",
+                )
+            activities = candidate.get("activities")
+            if activities is not None and (
+                not isinstance(activities, list)
+                or any(not isinstance(item, str) or not item.strip() for item in activities)
+            ):
+                raise InstallerError("installer.routing", "routing activities must be a string list")
+            projected = candidate.get("projected_usage")
+            if projected is not None and (
+                not isinstance(projected, dict)
+                or any(
+                    not isinstance(name, str)
+                    or not name
+                    or (amount is not None and (not isinstance(amount, int) or isinstance(amount, bool) or amount < 0))
+                    for name, amount in projected.items()
+                )
+            ):
+                raise InstallerError(
+                    "installer.routing",
+                    "routing projected_usage must contain non-negative integers",
+                )
+            normalized_candidates.append(dict(candidate))
+
+        normalized_routing = {
+            "profile": "cheap-first",
+            "allow_paid_auto": bool(routing.get("allow_paid_auto", False)),
+            "allow_frontier_auto": bool(routing.get("allow_frontier_auto", False)),
+            "retry_limits": dict(retry_limits),
+            "call_budgets": dict(call_budgets),
+            "candidates": normalized_candidates,
+        }
+
     swarm = _slug(config.get("swarm", "delivery"), "swarm id")
     objective = _text(config.get("objective"), "objective")
     work = config.get("work")
@@ -275,6 +368,7 @@ def validate_config(config: dict) -> dict:
         "integrations": integrations,
         "runtimes": normalized_runtimes,
         "role_execution": {role: role_execution[role] for role in EXECUTION_ROLES},
+        "routing": normalized_routing,
         "method": {"id": METHOD_ID, "version": METHOD_VERSION},
         "swarm": swarm,
         "objective": objective,
@@ -319,6 +413,7 @@ def preview(config: dict, target: Path) -> dict:
         "integrations": normalized["integrations"],
         "runtimes": [normalize_runtime(item).to_dict() for item in normalized["runtimes"]],
         "role_execution": normalized["role_execution"],
+        "routing": normalized["routing"],
         "method": normalized["method"],
         "writes": [
             ".agora project state",
@@ -345,6 +440,8 @@ def _write_project_metadata(target: Path, normalized: dict) -> None:
         "role_execution": normalized["role_execution"],
         "method": normalized["method"],
     }
+    if normalized["routing"] is not None:
+        payload["routing"] = normalized["routing"]
     (directory / "project.yaml").write_text(
         yaml.safe_dump(payload, sort_keys=False, allow_unicode=True),
         encoding="utf-8",

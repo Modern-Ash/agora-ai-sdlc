@@ -243,11 +243,15 @@ def select_from_runtime_pool(
     if purpose not in {"executor", "planner", "reviewer"}:
         raise RuntimePoolError("routing.purpose", f"unknown runtime purpose {purpose!r}")
     exhausted_tiers: frozenset[str] = frozenset()
-    if work is not None and pool.tier_call_limits:
-        counts = summarize_economics(root, work).get("runtime_selections_by_tier", {})
-        exhausted_tiers = frozenset(
+    if work is not None:
+        economics = summarize_economics(root, work)
+        counts = economics.get("runtime_selections_by_tier", {})
+        exhausted = {
             tier for tier, limit in pool.tier_call_limits.items() if int(counts.get(tier, 0)) >= limit
-        )
+        }
+        if int(economics.get("unaccounted_paid_usage", 0)) > 0:
+            exhausted.update({"paid-efficient", "paid-standard", "frontier"})
+        exhausted_tiers = frozenset(exhausted)
     candidates = _eligible(
         pool,
         policy,

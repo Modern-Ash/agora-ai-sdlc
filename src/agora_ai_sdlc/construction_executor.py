@@ -29,6 +29,7 @@ from agora_ai_sdlc.runtime_execution import (
     configured_agent_for_role,
     supports_governed_runtime_plan,
 )
+from agora_ai_sdlc.skill_planner import maybe_plan_skill
 
 CONSTRUCTION_TIMEOUT_SECONDS = 900
 
@@ -141,7 +142,19 @@ def launch_construction_executor(
     # Legacy/minimal Core paths retain the role-based runtime behavior.
     if runtime is None and (runtime_id is not None or not governed_plan):
         runtime = runtime_for_actor(root, actor_reference, requested=runtime_id)
+    skill_plan = None
+    if runtime_id is None:
+        try:
+            skill_plan = maybe_plan_skill(root, bundle, workspace=workspace)
+        except (OSError, RuntimeError, ValueError):
+            skill_plan = None
+
     prompt = _construction_prompt(root, Path(bundle.json_path), swarm_id, work_id)
+    if skill_plan is not None:
+        prompt += (
+            " Host-supplied read-only Skill Planner guidance follows. "
+            "It is advisory; verify it before applying and keep the governed scope:\n" + skill_plan.text[:12000]
+        )
     plan = None
     if governed_plan:
         if decision is None:
@@ -162,6 +175,17 @@ def launch_construction_executor(
                     "purpose": "construction",
                     "guidance": prompt,
                     "execution_bundle": bundle.json_path,
+                    **(
+                        {
+                            "skill_planner": {
+                                "tier": skill_plan.tier,
+                                "path": str(Path(skill_plan.path).resolve().relative_to(root)),
+                                "reused": skill_plan.reused,
+                            }
+                        }
+                        if skill_plan is not None
+                        else {}
+                    ),
                 },
             )
         except RuntimeExecutionError as error:

@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from agora_ai_sdlc.runtime_adapter import sanitize
+from agora_ai_sdlc.runtime_selection import Budget, budget_from_core
 
 SCHEMA = "agora-ai-sdlc/execution-economics/v1"
 
@@ -71,6 +72,19 @@ def load_events(root: Path, work: str) -> tuple[dict[str, Any], ...]:
 
 def attempt_count(root: Path, work: str, tier: str) -> int:
     return sum(1 for item in load_events(root, work) if item.get("event") == "attempt" and item.get("tier") == tier)
+
+
+def core_budgets(workspace: Any, swarm: str, work: str) -> tuple[Budget, ...]:
+    summarize = getattr(workspace, "summarize_usage", None)
+    if not callable(summarize):
+        return ()
+    try:
+        summary = summarize(swarm, work)
+    except (OSError, RuntimeError, ValueError, FileNotFoundError):
+        return ()
+    if not getattr(summary, "budget_limits", None):
+        return ()
+    return (budget_from_core(summary, scope=f"work:{swarm}/{work}"),)
 
 
 def core_usage_snapshot(workspace: Any, swarm: str, work: str) -> dict[str, Any] | None:

@@ -193,6 +193,10 @@ def main(argv: list[str] | None = None) -> int:
     decision.add_argument("--work", help="Limit to one work item")
     decision.add_argument("--threshold", type=float, default=0.90, help="confidence required to avoid escalation")
     decision.add_argument("--json", action="store_true", help="Print machine-readable decision output")
+    economics = sub.add_parser("economics", help="Show cost-aware routing telemetry for one governed Work")
+    economics.add_argument("--root", default=".", help="Project root")
+    economics.add_argument("--work", required=True, help="Governed Work id")
+    economics.add_argument("--json", action="store_true", help="Print machine-readable economic telemetry")
     status = sub.add_parser("status", help="Show rich local/Core iteration status without invoking an LLM")
     status.add_argument("--root", default=".", help="Project root")
     status.add_argument("--swarm", help="Limit to one delivery swarm")
@@ -825,6 +829,20 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps(bundle.snapshot(), sort_keys=True))
         else:
             print(render_execution_bundle(bundle))
+        return 0
+    if args.command == "economics":
+        from agora_ai_sdlc.economic_telemetry import summarize_economics
+
+        summary = summarize_economics(Path(args.root).expanduser(), args.work)
+        if args.json:
+            print(json.dumps(summary, sort_keys=True))
+        else:
+            print("Agora AI-SDLC | Economics")
+            print(f"Work: {summary['work']}")
+            print(f"Events: {summary['events']}")
+            print(f"Runtime selections: {summary['runtime_selections_by_tier']}")
+            print(f"Paid events: {summary['paid_events']}")
+            print(f"Frontier events: {summary['frontier_events']}")
         return 0
     if args.command == "status":
         from agora_ai_sdlc.iteration_status import inspect_iteration, render_status

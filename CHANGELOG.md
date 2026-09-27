@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+## 0.3.0 - 2026-09-27
+
+- Add provider-neutral cost-aware routing with ordered economic tiers: `local -> free -> paid-efficient -> paid-standard -> frontier`.
+- Prefer OpenCode + local/free model execution and keep paid providers behind explicit policy, availability, capability and budget admission.
+- Add bounded local/free retries before escalation, per-tier call budgets, Core Work-budget enforcement and economic telemetry through `aisdlc economics`.
+- Add bounded escalation packages and a read-only paid planner path that returns non-authoritative repair advice to the original cheap executor instead of taking over repository execution.
+- Record provider-reported planner usage in Agora Core when supported and fail closed on additional paid routing when paid usage cannot be accounted.
+- Add `purpose=executor|planner|reviewer` runtime candidates so expensive planning/review can be separated from high-volume implementation.
+- Add the paid Skill Planner: Codex/Claude may interpret bounded Skills at `paid-efficient`/standard tiers, while OpenCode/Ollama or other cheap executors perform implementation/test/repair loops.
+- Cache Skill Planner output by input digest so retries reuse paid planning work instead of repeating model calls.
+- Make `aisdlc start` honor `cheap-first` routing when no explicit runtime/model override is provided.
+- Extend the installer to validate and persist cheap-first routing configuration, retry limits, call budgets and runtime purposes.
+- Keep Laya advisory and provider-neutral: it classifies reasoning demand and context relevance but never selects or authorizes a provider.
+
+
 ## 0.2.0 - 2026-09-26
 
 - Publish a single-tool installation surface that exposes `agora`, `aisdlc` and `agora-ai-sdlc` from the Agora AI-SDLC distribution while resolving Agora Core as a normal dependency.

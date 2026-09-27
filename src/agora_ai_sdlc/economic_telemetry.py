@@ -65,9 +65,10 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
         kind = event.get("kind")
         if isinstance(tier, str):
             tiers[tier] += 1
-            if tier.startswith("paid-") or tier == "frontier":
+            chargeable = kind in {"runtime-selected", "planner-advice", "planner-failed"}
+            if chargeable and (tier.startswith("paid-") or tier == "frontier"):
                 paid += 1
-            if tier == "frontier":
+            if chargeable and tier == "frontier":
                 frontier += 1
         if isinstance(kind, str):
             kinds[kind] += 1

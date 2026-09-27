@@ -205,7 +205,12 @@ def build_governed_runtime_plan(
     selection = None
     if runtime_id is None:
         try:
-            selection = select_from_runtime_pool(root, requirements, availability=observed)
+            selection = select_from_runtime_pool(
+                root,
+                requirements,
+                availability=observed,
+                work=bundle.work,
+            )
         except RuntimePoolError as error:
             raise RuntimeExecutionError(error.code, str(error).split(": ", 1)[-1]) from error
         if selection is not None:

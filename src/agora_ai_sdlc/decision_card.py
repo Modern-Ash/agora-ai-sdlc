@@ -133,6 +133,9 @@ def build_decision_card(
         if getattr(advice, "reasoning_tier", None):
             tier = _localized_value("tier", advice.reasoning_tier, lang=lang) or advice.reasoning_tier
             intelligence += f" → {tier}"
+    planner_tier = getattr(advice, "planner_tier", None)
+    if planner_tier:
+        intelligence += f" · planner={planner_tier}"
 
     context_summary = None
     if getattr(advice, "context_candidates", 0):

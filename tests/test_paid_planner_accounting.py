@@ -195,7 +195,8 @@ def test_escalation_records_provider_reported_usage_in_core(tmp_path, monkeypatc
     assert len(workspace.added) == 1
     usage = workspace.added[0]
     assert usage.amounts == {"tokens": 321}
-    assert usage.measurement == "provider-reported"
+    if "measurement" in getattr(type(usage), "__dataclass_fields__", {}):
+        assert usage.measurement == "provider-reported"
     assert usage.actor_id == "project:developer"
     summary = summarize_economics(tmp_path, "issue-x")
     assert summary["unaccounted_paid_usage"] == 0

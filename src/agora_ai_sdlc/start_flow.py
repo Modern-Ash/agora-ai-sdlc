@@ -24,6 +24,7 @@ from agora.workspace import AgoraWorkspace
 from agora_ai_sdlc.depth_profiles import asset_root
 from agora_ai_sdlc.deterministic_clarification import record_zero_question_clarification
 from agora_ai_sdlc.deterministic_inception import build_deterministic_inception
+from agora_ai_sdlc.execution_requirements import requirements_for_activity
 from agora_ai_sdlc.executor_launch import (
     ExecutorLaunchError,
     InceptionExecutionResult,
@@ -33,7 +34,6 @@ from agora_ai_sdlc.executor_launch import (
 from agora_ai_sdlc.i18n import t
 from agora_ai_sdlc.inception_handoff import write_inception_handoff
 from agora_ai_sdlc.inception_materialization import materialize_deterministic_inception
-from agora_ai_sdlc.execution_requirements import requirements_for_activity
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
 from agora_ai_sdlc.runtime_pool import RuntimePoolError, select_from_runtime_pool
 from agora_ai_sdlc.start_preflight import (

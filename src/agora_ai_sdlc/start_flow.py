@@ -33,7 +33,9 @@ from agora_ai_sdlc.executor_launch import (
 from agora_ai_sdlc.i18n import t
 from agora_ai_sdlc.inception_handoff import write_inception_handoff
 from agora_ai_sdlc.inception_materialization import materialize_deterministic_inception
+from agora_ai_sdlc.execution_requirements import requirements_for_activity
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
+from agora_ai_sdlc.runtime_pool import RuntimePoolError, select_from_runtime_pool
 from agora_ai_sdlc.start_preflight import (
     StartPreparationResult,
     ensure_start_ready,
@@ -94,6 +96,7 @@ class StartFlowResult:
     inception_output: str | None = None
     deterministic_inception_path: str | None = None
     semantic_gaps: tuple[str, ...] = ()
+    runtime_tier: str | None = None
     status: str = "inception-prepared"
 
     def snapshot(self) -> dict:
@@ -203,6 +206,31 @@ def _select_runtime(
         "Install or configure OpenCode, Codex, or Claude Code. "
         "Ollama alone is a model provider, not the repository executor."
     )
+
+
+def _cheap_first_start_choice(
+    root: Path,
+    *,
+    discovery: Callable[[Path], tuple[RuntimeDiscovery, ...]],
+) -> tuple[RuntimeDiscovery, str | None, str] | None:
+    found = tuple(discovery(root))
+    availability = {item.id: item for item in found}
+    requirements = requirements_for_activity("inception.elaboration", tier="standard")
+    try:
+        selected = select_from_runtime_pool(root, requirements, availability=availability)
+    except RuntimePoolError:
+        return None
+    if selected is None:
+        return None
+    runtime = availability.get(selected.binding.agent.id)
+    if runtime is None or not runtime.installed or not runtime.responsive or not executor_capable(runtime.id):
+        return None
+
+    model = selected.binding.model
+    model_arg = None
+    if model is not None and model.model != "configured-default":
+        model_arg = f"{model.provider}/{model.model}" if runtime.id == "opencode" else model.model
+    return runtime, model_arg, selected.tier
 
 
 _LEGACY_PRODUCT_OWNER_TOOL_CAPABILITIES = (
@@ -418,6 +446,11 @@ def prepare_start(
     notify("start.workspace-ready")
     project = project or infer_project(root)
     runtime = _select_runtime(root, agent, discovery=runtime_discovery)
+    runtime_tier = None
+    if agent is None and model is None:
+        cheap_choice = _cheap_first_start_choice(root, discovery=runtime_discovery)
+        if cheap_choice is not None:
+            runtime, model, runtime_tier = cheap_choice
     if model and runtime.id == "ollama":
         raise StartFlowError("Ollama is a model runtime; select an agent host and pass --model provider/model")
     notify("start.runtime-ready")
@@ -594,6 +627,7 @@ def prepare_start(
                 work_id=work_record.id,
                 responsible_actor=actor,
                 model=model,
+                execution_tier=runtime_tier,
                 workspace_factory=workspace_factory,
             )
         except ExecutorLaunchError as error:
@@ -648,6 +682,7 @@ def prepare_start(
         inception_output=inception_output,
         deterministic_inception_path=deterministic.path,
         semantic_gaps=deterministic.semantic_gaps,
+        runtime_tier=runtime_tier,
         status=status,
     )
 

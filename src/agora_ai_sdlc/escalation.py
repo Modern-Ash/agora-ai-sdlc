@@ -149,19 +149,20 @@ def _record_planner_usage(
     try:
         existing = getattr(workspace, "list_usage", lambda *_: [])(package.swarm, package.work)
         if not any(getattr(item, "id", None) == usage_id for item in existing):
-            workspace.add_usage(
-                AddUsageInput(
-                    id=usage_id,
-                    swarm_id=package.swarm,
-                    work_id=package.work,
-                    actor_id=actor_id,
-                    amounts=dict(usage),
-                    evidence_refs=[
-                        "repo://" + str(Path(advice_path).resolve().relative_to(root.resolve())),
-                    ],
-                    measurement="provider-reported",
-                )
-            )
+            usage_kwargs = {
+                "id": usage_id,
+                "swarm_id": package.swarm,
+                "work_id": package.work,
+                "actor_id": actor_id,
+                "amounts": dict(usage),
+                "evidence_refs": [
+                    "repo://" + str(Path(advice_path).resolve().relative_to(root.resolve())),
+                ],
+            }
+            usage_fields = getattr(AddUsageInput, "__dataclass_fields__", {})
+            if "measurement" in usage_fields:
+                usage_kwargs["measurement"] = "provider-reported"
+            workspace.add_usage(AddUsageInput(**usage_kwargs))
     except (OSError, PermissionError, RuntimeError, ValueError) as error:
         record_event(
             root,
@@ -186,7 +187,11 @@ def _record_planner_usage(
             binding.agent.id,
             model,
             purpose="diagnostic-advisor",
-            reason="provider-reported",
+            reason=(
+                "provider-reported"
+                if "measurement" in getattr(AddUsageInput, "__dataclass_fields__", {})
+                else "provider-reported-core-legacy"
+            ),
             core_usage=core_usage_snapshot(workspace, package.swarm, package.work),
         ),
     )

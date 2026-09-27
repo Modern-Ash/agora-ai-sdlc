@@ -38,12 +38,21 @@ def record_economic_event(
 def summarize_economics(root: Path, work: str) -> dict[str, Any]:
     path = root / ".agora" / "ai-sdlc" / "economics" / work / "events.jsonl"
     if not path.is_file():
-        return {"work": work, "events": 0, "tiers": {}, "kinds": {}, "paid_events": 0, "frontier_events": 0}
+        return {
+            "work": work,
+            "events": 0,
+            "tiers": {},
+            "kinds": {},
+            "paid_events": 0,
+            "frontier_events": 0,
+            "runtime_selections_by_tier": {},
+        }
     tiers: Counter[str] = Counter()
     kinds: Counter[str] = Counter()
     total = 0
     paid = 0
     frontier = 0
+    selections: Counter[str] = Counter()
     for line in path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
@@ -62,6 +71,8 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
                 frontier += 1
         if isinstance(kind, str):
             kinds[kind] += 1
+            if kind == "runtime-selected" and isinstance(tier, str):
+                selections[tier] += 1
     return {
         "work": work,
         "events": total,
@@ -69,4 +80,5 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
         "kinds": dict(sorted(kinds.items())),
         "paid_events": paid,
         "frontier_events": frontier,
+        "runtime_selections_by_tier": dict(sorted(selections.items())),
     }

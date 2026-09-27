@@ -328,7 +328,59 @@ def run_interactive(
                 )
             )
             if selected_runtime is not None:
-                failed_runtimes.add((selected_runtime.agent, selected_runtime.model))
+                runtime_key = (selected_runtime.agent, selected_runtime.model)
+                attempts = attempts_by_runtime.get(runtime_key, 0) + 1
+                attempts_by_runtime[runtime_key] = attempts
+                tier = getattr(selected_runtime, "tier", None)
+                retry_limit = retry_limit_for(root, tier)
+                if tier in {"local", "free"} and attempts <= retry_limit:
+                    output_fn(
+                        (
+                            f"Reintento barato {attempts}/{retry_limit}: la sesión terminó sin progreso gobernado."
+                            if lang == "es"
+                            else f"Cheap retry {attempts}/{retry_limit}: session completed without governed progress."
+                        )
+                    )
+                    previous_execution_fingerprint = None
+                    previous_execution_result_path = None
+                    continue
+
+                if tier in {"local", "free"} and runtime_key not in advised_runtimes:
+                    advised_runtimes.add(runtime_key)
+                    try:
+                        package = build_escalation_package(
+                            root,
+                            decision,
+                            failed_agent=selected_runtime.agent,
+                            failed_model=selected_runtime.model,
+                            failed_tier=tier,
+                            attempts=attempts,
+                            error="executor completed without governed progress",
+                            result_path=previous_execution_result_path,
+                        )
+                        advisor = run_escalation_advisor(root, package)
+                    except (EscalationError, OSError, RuntimeError, ValueError) as advisor_error:
+                        output_fn(
+                            (
+                                f"No se pudo obtener diagnóstico pago acotado: {advisor_error}"
+                                if lang == "es"
+                                else f"Bounded paid diagnostic advice unavailable: {advisor_error}"
+                            )
+                        )
+                    else:
+                        repair_advice_by_runtime[runtime_key] = advisor.advice
+                        output_fn(
+                            (
+                                f"Diagnóstico {advisor.tier} obtenido; la reparación vuelve a {selected_runtime.label}."
+                                if lang == "es"
+                                else f"{advisor.tier} diagnostic advice obtained; repair returns to {selected_runtime.label}."
+                            )
+                        )
+                        previous_execution_fingerprint = None
+                        previous_execution_result_path = None
+                        continue
+
+                failed_runtimes.add(runtime_key)
             selected_runtime = None
             previous_execution_fingerprint = None
             previous_execution_result_path = None

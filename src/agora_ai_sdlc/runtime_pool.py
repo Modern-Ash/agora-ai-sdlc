@@ -178,10 +178,7 @@ def load_runtime_pool(root: Path) -> RuntimePool | None:
 
     raw_retry_limits = routing.get("retry_limits") or {"local": 2, "free": 2}
     if not isinstance(raw_retry_limits, dict) or any(
-        tier not in EXECUTION_TIERS
-        or not isinstance(limit, int)
-        or isinstance(limit, bool)
-        or limit < 0
+        tier not in EXECUTION_TIERS or not isinstance(limit, int) or isinstance(limit, bool) or limit < 0
         for tier, limit in raw_retry_limits.items()
     ):
         raise RuntimePoolError(

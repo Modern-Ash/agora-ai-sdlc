@@ -55,6 +55,50 @@ Adding an adapter: register a manifest in `agent_capabilities.py` via `build_man
 
 `select_runtime(..., requirements=, availability=)` evaluates each candidate in configured order: policy, budget, availability, agent capabilities, model binding; the first admissible candidate wins, with no scoring or LLM call. Blocker codes: `runtime.agent_required` (model runtime alone, e.g. Ollama), `runtime.agent_unknown`, `runtime.capability_missing` (with `missing_capabilities` per considered candidate), `runtime.model_binding_missing` (local tier without a model binding), `runtime.integration_unavailable`, `runtime.model_unavailable`, `runtime.human_authority_required` (terminal). Static manifests are never mixed with discovery observations. Fallback after an admission failure needs the explicit signals `runtime-unavailable` or the opt-in `capability-mismatch`; ordinary task failure still cannot change runtime.
 
+## Cost-aware execution policy and runtime pools
+
+Executor routing is deliberately separate from Laya classification and Core authority. `execution_policy.py`
+maps provider-neutral reasoning demand to an economic ceiling using the ordered tiers
+`local -> free -> paid-efficient -> paid-standard -> frontier`. Execution always starts from the
+cheapest configured tier that satisfies policy, availability, capabilities and budget. A stronger tier
+is considered only when cheaper candidates are inadmissible.
+
+Projects opt in with `routing.profile: cheap-first` in `ai-sdlc/project.yaml`. Paid automatic routing
+requires `allow_paid_auto: true`; frontier additionally requires `allow_frontier_auto: true`. This
+makes the expensive path fail closed by default while still allowing explicit runtime/model overrides.
+
+Example:
+
+```yaml
+routing:
+  profile: cheap-first
+  allow_paid_auto: true
+  allow_frontier_auto: false
+  candidates:
+    - tier: local
+      agent: opencode
+      model: ollama/qwen3-coder:latest
+    - tier: free
+      agent: opencode
+      model: opencode/free-coder
+    - tier: paid-efficient
+      agent: codex
+      model: openai/configured-efficient
+    - tier: paid-efficient
+      agent: claude
+      model: anthropic/configured-efficient
+    - tier: paid-standard
+      agent: codex
+      model: openai/configured-standard
+    - tier: frontier
+      agent: codex
+      model: openai/configured-frontier
+```
+
+Model names are project configuration, never lifecycle semantics. Teams can bind each provider's
+`paid-efficient`, `paid-standard` and `frontier` entries to whichever concrete models or reasoning
+profiles are appropriate without changing Agora. An explicit `--agent`/model choice remains an override.
+
 ## Execution envelope
 
 `agora-ai-sdlc/execution-envelope/v1` (`execution_envelope.py`) carries the exact next authorized operation: work identity and Core state revision, responsible actor and role, `ExecutionRequirements`, the runtime binding (agent + model) and a structured `next_transition` (stable operation id plus ordered typed arguments; the `display` string is derived). Actor, role, agent and model are separate fields; the actor is always explicit and validated against Core, so a runtime name (`claude`) never resolves to an actor (`ai-claude`). A human boundary yields a non-executable `stop.human_authority` envelope. Adapters call `verify_integrity` (digest check rejects any altered operation or argument) and `validate_current` before mutation; stale revision, a new human boundary, revoked authority or an inadmissible binding return typed reasons and require recalculation.

@@ -24,6 +24,7 @@ from agora_ai_sdlc.execution_requirements import ExecutionRequirements, requirem
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
 from agora_ai_sdlc.runtime_domain import AgentRuntimeRef, ModelRuntimeRef, RuntimeBinding, normalize_runtime
+from agora_ai_sdlc.runtime_pool import RuntimePoolError, select_from_runtime_pool
 
 
 class RuntimeExecutionError(ValueError):
@@ -42,6 +43,8 @@ class GovernedRuntimePlan:
     actor_id: str
     runner: str
     envelope_path: str
+    execution_tier: str | None = None
+    selection_reason: str | None = None
 
 
 def _project_bindings(root: Path) -> tuple[RuntimeBinding, ...]:
@@ -183,8 +186,8 @@ def build_governed_runtime_plan(
     *,
     decision: Any,
     bundle: ExecutionBundle,
-    runtime_id: str,
-    model: str | None,
+    runtime_id: str | None = None,
+    model: str | None = None,
     runtime: RuntimeDiscovery | None = None,
     availability: dict[str, RuntimeDiscovery] | None = None,
     workspace: Any | None = None,
@@ -195,16 +198,58 @@ def build_governed_runtime_plan(
     """Build and preflight an exact adapter-backed execution plan."""
     root = root.resolve()
     workspace = workspace or AgoraWorkspace(cwd=root)
-    runtime = runtime or runtime_for(root, runtime_id)
-    binding = binding_for(root, runtime_id, model)
     requirements = requirements_for(bundle, provider=LayaDecisionProvider())
+    observed = availability or _availability(root)
+
+    selection = None
+    if runtime_id is None:
+        try:
+            selection = select_from_runtime_pool(root, requirements, availability=observed)
+        except RuntimePoolError as error:
+            raise RuntimeExecutionError(error.code, str(error).split(": ", 1)[-1]) from error
+        if selection is not None:
+            binding = selection.binding
+            observed_runtime = observed.get(binding.agent.id)
+            if (
+                runtime is None
+                and observed_runtime is not None
+                and observed_runtime.installed
+                and observed_runtime.responsive
+            ):
+                runtime = observed_runtime
+            runtime = runtime or runtime_for(root, binding.agent.id)
+        elif runtime is not None:
+            binding = binding_for(root, runtime.id, model)
+        else:
+            raise RuntimeExecutionError(
+                "runtime.routing.unconfigured",
+                "automatic runtime selection requires routing.profile=cheap-first or an explicit runtime",
+            )
+    else:
+        observed_runtime = observed.get(runtime_id)
+        if (
+            runtime is None
+            and observed_runtime is not None
+            and observed_runtime.installed
+            and observed_runtime.responsive
+        ):
+            runtime = observed_runtime
+        runtime = runtime or runtime_for(root, runtime_id)
+        binding = binding_for(root, runtime_id, model)
+
     requested_actor = actor or getattr(decision, "actor", None) or getattr(decision, "role", None)
     actor_reference, actor_id = _actor_reference(workspace, requested_actor)
     snapshot = snapshot_for_decision(workspace, decision, actor_reference)
 
-    observed = availability or _availability(root)
     if runtime.id not in observed:
         observed = {**observed, runtime.id: runtime}
+    envelope_context = dict(context or {})
+    if selection is not None:
+        envelope_context["routing"] = {
+            "profile": "cheap-first",
+            "tier": selection.tier,
+            "reason": selection.reason,
+        }
     envelope = build_envelope(
         snapshot,
         requirements,
@@ -213,7 +258,7 @@ def build_governed_runtime_plan(
         actor_id=actor_reference,
         availability=observed,
         candidate=candidate,
-        context=context,
+        context=envelope_context or None,
     )
     adapter = default_registry(root).get(binding.agent)
     # Fail before creating a Core session if the runtime, envelope or transition is invalid.
@@ -240,4 +285,6 @@ def build_governed_runtime_plan(
         actor_id=actor_id,
         runner=shlex.join(argv),
         envelope_path=str(target),
+        execution_tier=selection.tier if selection is not None else None,
+        selection_reason=selection.reason if selection is not None else None,
     )

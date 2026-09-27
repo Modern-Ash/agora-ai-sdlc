@@ -56,9 +56,12 @@ aisdlc continue
 If Laya is not installed, Agora fails open to deterministic/Core and generative behavior; delivery is not blocked.
 
 `continue` uses deterministic Core state first, then Laya for cheap local classification when that can
-simplify the next interaction. It presents one recommended next action, Enter accepts that default, and
-a local/free executor is preselected automatically when one is already available. Paid/external
-providers are never silently selected.
+simplify the next interaction. It presents one recommended next action and Enter accepts that default. Without an explicit
+cost-aware pool, a local/free executor is preselected automatically when one is already available.
+Projects that opt into `routing.profile: cheap-first` can additionally define `paid-efficient`,
+`paid-standard` and `frontier` fallbacks. Paid automatic selection is disabled unless
+`allow_paid_auto: true`; frontier has a separate `allow_frontier_auto` guard. Laya still names
+only the reasoning tier, never a provider or concrete model.
 
 When the recommendation is preparatory AI work, Enter now runs one governed executor session, stops before any approval/transition boundary, then immediately re-reads Core and recalculates the next action. The user no longer has to copy a handoff into another terminal for the normal happy path.
 

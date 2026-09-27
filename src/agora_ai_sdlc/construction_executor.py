@@ -135,11 +135,15 @@ def launch_construction_executor(
     if bundle.json_path is None:
         raise ExecutorLaunchError("Construction execution bundle was not persisted.")
 
-    runtime = runtime or runtime_for_actor(root, actor_reference, requested=runtime_id)
     workspace = workspace_factory(cwd=root)
+    governed_plan = supports_governed_runtime_plan(workspace)
+    # With no explicit --agent/runtime, let the configured cheap-first pool choose.
+    # Legacy/minimal Core paths retain the role-based runtime behavior.
+    if runtime is None and (runtime_id is not None or not governed_plan):
+        runtime = runtime_for_actor(root, actor_reference, requested=runtime_id)
     prompt = _construction_prompt(root, Path(bundle.json_path), swarm_id, work_id)
     plan = None
-    if supports_governed_runtime_plan(workspace):
+    if governed_plan:
         if decision is None:
             decision = inspect_next(root, swarm=swarm_id, work=work_id)
         if decision is None:
@@ -149,7 +153,7 @@ def launch_construction_executor(
                 root,
                 decision=decision,
                 bundle=bundle,
-                runtime_id=runtime.id,
+                runtime_id=runtime.id if runtime is not None else None,
                 model=model,
                 runtime=runtime,
                 workspace=workspace,
@@ -162,8 +166,11 @@ def launch_construction_executor(
             )
         except RuntimeExecutionError as error:
             raise ExecutorLaunchError(str(error), recoverable=True) from error
+        runtime = plan.runtime
         runner = plan.runner
     else:
+        if runtime is None:
+            runtime = runtime_for_actor(root, actor_reference, requested=runtime_id)
         runner = build_runtime_runner(runtime, root, prompt, model=model)
 
     base_id = f"ai-sdlc-construction-{work_id}"

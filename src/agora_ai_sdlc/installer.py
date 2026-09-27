@@ -262,10 +262,7 @@ def validate_config(config: dict) -> dict:
         call_budgets = routing.get("call_budgets") or {}
         for name, values in (("retry_limits", retry_limits), ("call_budgets", call_budgets)):
             if not isinstance(values, dict) or any(
-                tier not in EXECUTION_TIERS
-                or not isinstance(limit, int)
-                or isinstance(limit, bool)
-                or limit < 0
+                tier not in EXECUTION_TIERS or not isinstance(limit, int) or isinstance(limit, bool) or limit < 0
                 for tier, limit in values.items()
             ):
                 raise InstallerError(
@@ -310,10 +307,7 @@ def validate_config(config: dict) -> dict:
                 or any(
                     not isinstance(name, str)
                     or not name
-                    or (
-                        amount is not None
-                        and (not isinstance(amount, int) or isinstance(amount, bool) or amount < 0)
-                    )
+                    or (amount is not None and (not isinstance(amount, int) or isinstance(amount, bool) or amount < 0))
                     for name, amount in projected.items()
                 )
             ):

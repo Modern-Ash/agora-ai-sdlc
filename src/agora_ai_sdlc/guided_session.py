@@ -6,10 +6,10 @@ import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-
-import yaml
 from threading import Event, Lock, Thread
 from time import monotonic
+
+import yaml
 
 from agora_ai_sdlc.decision_card import build_decision_card, render_decision_card
 from agora_ai_sdlc.economic_telemetry import record_economic_event
@@ -584,11 +584,9 @@ def run_interactive(
             retry_limit = _cheap_retry_limit(root)
             if tier in {"local", "free"} and attempts < retry_limit:
                 output_fn(
-                    (
-                        f"Cheap executor retry {attempts + 1}/{retry_limit}; keeping {selected_runtime.label}."
-                        if lang == "en"
-                        else f"Reintento barato {attempts + 1}/{retry_limit}; se mantiene {selected_runtime.label}."
-                    )
+                    f"Cheap executor retry {attempts + 1}/{retry_limit}; keeping {selected_runtime.label}."
+                    if lang == "en"
+                    else f"Reintento barato {attempts + 1}/{retry_limit}; se mantiene {selected_runtime.label}."
                 )
                 continue
 

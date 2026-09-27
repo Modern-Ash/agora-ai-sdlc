@@ -17,7 +17,7 @@ from typing import Any
 
 from agora_ai_sdlc.adapters import default_registry
 from agora_ai_sdlc.execution_bundle import ExecutionBundle
-from agora_ai_sdlc.execution_economics import EconomicsEvent, core_usage_snapshot, record_event
+from agora_ai_sdlc.execution_economics import EconomicsEvent, core_budgets, core_usage_snapshot, record_event
 from agora_ai_sdlc.execution_envelope import ExecutionEnvelope
 from agora_ai_sdlc.execution_policy import execution_policy_for
 from agora_ai_sdlc.execution_requirements import requirements_for, requirements_for_activity
@@ -231,6 +231,7 @@ def maybe_plan_skill(
             root,
             planner_requirements,
             availability=availability,
+            budgets=core_budgets(workspace, str(bundle.swarm), str(bundle.work)) if workspace is not None else (),
             work_id=str(bundle.work or "unknown"),
             minimum_tier="paid-efficient",
             maximum_tier=policy.planner_tier,

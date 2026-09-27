@@ -99,6 +99,36 @@ Model names are project configuration, never lifecycle semantics. Teams can bind
 `paid-efficient`, `paid-standard` and `frontier` entries to whichever concrete models or reasoning
 profiles are appropriate without changing Agora. An explicit `--agent`/model choice remains an override.
 
+## Skill planner and cheap executor separation
+
+A cost-aware workflow can use paid reasoning without turning the paid runtime into the implementation worker.
+`skill_planner.py` evaluates the provider-neutral `ExecutionPolicy.planner_tier` and, when paid automatic
+routing is explicitly enabled, selects the cheapest admissible Codex/Claude planner from
+`paid-efficient -> paid-standard` with `purpose=planner`. The planner receives only the installed guided
+Skill, phase guidance and deterministic ExecutionBundle through a read-only `planning.advise` envelope.
+
+The resulting plan is persisted under `.agora/ai-sdlc/planning/<work>/` and handed to the selected executor
+as non-authoritative guidance. Planner input is content-addressed: identical Skill + bundle input reuses
+the existing plan, so local retries do not repeat the paid planning call.
+
+This creates a deliberate split:
+
+```text
+Core + Laya
+   |
+   +--> Skill Planner: Codex/Claude paid-efficient first (read-only, bounded)
+   |         |
+   |         +--> persisted advisory plan
+   |
+   +--> Executor: OpenCode + local/free model first
+             |
+             +--> edit / build / test / repair loop
+```
+
+`aisdlc start` also honors an opt-in `cheap-first` pool when no explicit `--agent` or `--model`
+override is supplied, so initial Inception execution does not silently default to a paid worker.
+Explicit runtime/model choices remain overrides.
+
 ## Bounded retry, diagnostic escalation and economics
 
 Cheap-first execution uses two additional safeguards before a stronger executor is considered:

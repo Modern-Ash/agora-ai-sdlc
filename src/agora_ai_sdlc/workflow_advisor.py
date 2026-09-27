@@ -12,6 +12,7 @@ from pathlib import Path
 from agora_ai_sdlc.delivery_submission import pull_request_delivery_enabled
 from agora_ai_sdlc.execution_bundle import build_execution_bundle
 from agora_ai_sdlc.execution_decisions import advise_execution
+from agora_ai_sdlc.execution_policy import execution_policy_for
 from agora_ai_sdlc.execution_requirements import project_requirements
 from agora_ai_sdlc.executor_recovery import ExecutorRecoveryChoice, recovery_choices
 from agora_ai_sdlc.guided import GuidedDecision
@@ -44,6 +45,7 @@ class WorkflowAdvice:
     change_risk_confidence: float | None = None
     validation_focus: str | None = None
     validation_focus_confidence: float | None = None
+    planner_tier: str | None = None
 
     def snapshot(self) -> dict:
         data = asdict(self)
@@ -299,6 +301,7 @@ def advise_workflow(
     change_risk_confidence = None
     validation_focus = None
     validation_focus_confidence = None
+    planner_tier = None
     pool_recommended: ExecutorRecoveryChoice | None = None
 
     try:
@@ -336,7 +339,8 @@ def advise_workflow(
         if not escalation and tier != "human":
             try:
                 requirements = project_requirements(bundle, evaluated)
-                pool_selection = select_from_runtime_pool(root, requirements)
+                planner_tier = execution_policy_for(requirements).planner_tier
+                pool_selection = select_from_runtime_pool(root, requirements, purpose="executor")
             except (AttributeError, RuntimePoolError):
                 pool_selection = None
             if pool_selection is not None:
@@ -384,6 +388,7 @@ def advise_workflow(
             change_risk_confidence=change_risk_confidence,
             validation_focus=validation_focus,
             validation_focus_confidence=validation_focus_confidence,
+            planner_tier=planner_tier,
         )
 
     if escalation:
@@ -415,4 +420,5 @@ def advise_workflow(
         change_risk_confidence=change_risk_confidence,
         validation_focus=validation_focus,
         validation_focus_confidence=validation_focus_confidence,
+        planner_tier=planner_tier,
     )

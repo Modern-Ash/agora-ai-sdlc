@@ -619,17 +619,18 @@ def prepare_start(
     elif launch_executor:
         notify("start.executor-launch")
         try:
-            execution = executor_launcher(
-                root,
-                runtime=runtime,
-                handoff_path=Path(handoff.path),
-                swarm_id=resolved_swarm,
-                work_id=work_record.id,
-                responsible_actor=actor,
-                model=model,
-                execution_tier=runtime_tier,
-                workspace_factory=workspace_factory,
-            )
+            executor_options = {
+                "runtime": runtime,
+                "handoff_path": Path(handoff.path),
+                "swarm_id": resolved_swarm,
+                "work_id": work_record.id,
+                "responsible_actor": actor,
+                "model": model,
+                "workspace_factory": workspace_factory,
+            }
+            if runtime_tier is not None:
+                executor_options["execution_tier"] = runtime_tier
+            execution = executor_launcher(root, **executor_options)
         except ExecutorLaunchError as error:
             raise StartExecutorError(
                 str(error),

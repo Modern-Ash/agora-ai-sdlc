@@ -11,9 +11,11 @@ from time import monotonic
 
 import yaml
 
+from agora_ai_sdlc.advisory_planner import AdvisoryPlannerError, run_advisory_planner
 from agora_ai_sdlc.decision_card import build_decision_card, render_decision_card
 from agora_ai_sdlc.economic_telemetry import record_economic_event
 from agora_ai_sdlc.escalation import (
+    EscalationPackage,
     build_escalation_package,
     persist_escalation_package,
     recommend_escalation,
@@ -28,6 +30,7 @@ from agora_ai_sdlc.iteration_status import inspect_iteration, render_terminal_su
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider
 from agora_ai_sdlc.opencode_runner import list_available_models, list_ollama_agent_models
 from agora_ai_sdlc.runtime_discovery import discover_runtimes
+from agora_ai_sdlc.runtime_domain import RuntimeBinding
 from agora_ai_sdlc.runtime_execution import binding_for
 from agora_ai_sdlc.runtime_pool import RuntimePoolError
 from agora_ai_sdlc.wizard import build_wizard_view, render_wizard, save_answer
@@ -130,7 +133,7 @@ def _select_runtime(
     output_fn: Callable[[str], None],
     current: ExecutorRecoveryChoice | None = None,
     lang: str = "en",
-) -> ExecutorRecoveryChoice | None:
+) -> _PendingPlannerEscalation | None:
     choice = select_executor_model(
         root,
         input_fn=input_fn,
@@ -268,6 +271,15 @@ def _choice_tier(choice: ExecutorRecoveryChoice) -> str | None:
     return None
 
 
+@dataclass(frozen=True)
+class _PendingPlannerEscalation:
+    package: EscalationPackage
+    planner: ExecutorRecoveryChoice
+    planner_binding: RuntimeBinding
+    planner_tier: str
+    executor: ExecutorRecoveryChoice
+
+
 def _bounded_escalation_choice(
     root: Path,
     decision: GuidedDecision,
@@ -325,10 +337,17 @@ def _bounded_escalation_choice(
     else:
         model_value = model.model
         model_label = model.model
-    return ExecutorRecoveryChoice(
+    planner = ExecutorRecoveryChoice(
         agent=selected.binding.agent.id,
         model=model_value,
-        label=f"{selected.binding.agent.id} · {model_label} [{selected.tier}]",
+        label=f"{selected.binding.agent.id} · {model_label} [planner:{selected.tier}]",
+    )
+    return _PendingPlannerEscalation(
+        package=package,
+        planner=planner,
+        planner_binding=selected.binding,
+        planner_tier=selected.tier,
+        executor=choice,
     )
 
 
@@ -395,6 +414,7 @@ def run_interactive(
     selected_runtime: ExecutorRecoveryChoice | None = initial_runtime
     failed_runtimes: set[tuple[str, str | None]] = set()
     failure_attempts: dict[tuple[str, str | None], int] = {}
+    pending_planner: _PendingPlannerEscalation | None = None
     previous_execution_fingerprint: tuple[object, ...] | None = None
     previous_execution_result_path: str | None = None
 
@@ -549,6 +569,95 @@ def run_interactive(
                     return GuidedSessionResult("execution-failed")
                 continue
 
+            if pending_planner is not None and selected_runtime == pending_planner.planner:
+                output_fn("")
+                output_fn(
+                    (
+                        f"Running read-only planner {selected_runtime.label}; repository writes are disabled."
+                        if lang == "en"
+                        else f"Ejecutando planner de solo lectura {selected_runtime.label}; las escrituras están deshabilitadas."
+                    )
+                )
+                try:
+                    record_economic_event(
+                        root,
+                        work=decision.work,
+                        kind="runtime-selected",
+                        tier=pending_planner.planner_tier,
+                        agent=pending_planner.planner_binding.agent.id,
+                        model=(
+                            pending_planner.planner_binding.model.model
+                            if pending_planner.planner_binding.model is not None
+                            else None
+                        ),
+                        fields={"purpose": "planner", "automatic": False},
+                    )
+                    planner_outcome = run_advisory_planner(
+                        root,
+                        package=pending_planner.package,
+                        binding=pending_planner.planner_binding,
+                        tier=pending_planner.planner_tier,
+                    )
+                    record_economic_event(
+                        root,
+                        work=decision.work,
+                        kind="planner-advice",
+                        tier=pending_planner.planner_tier,
+                        agent=pending_planner.planner_binding.agent.id,
+                        model=(
+                            pending_planner.planner_binding.model.model
+                            if pending_planner.planner_binding.model is not None
+                            else None
+                        ),
+                        fields={"advice": str(Path(planner_outcome.path).relative_to(root))},
+                    )
+                except (AdvisoryPlannerError, OSError, ValueError) as error:
+                    record_economic_event(
+                        root,
+                        work=decision.work,
+                        kind="planner-failed",
+                        tier=pending_planner.planner_tier,
+                        agent=pending_planner.planner_binding.agent.id,
+                        model=(
+                            pending_planner.planner_binding.model.model
+                            if pending_planner.planner_binding.model is not None
+                            else None
+                        ),
+                        fields={"error": str(error)[:1000]},
+                    )
+                    failed_runtimes.add((selected_runtime.agent, selected_runtime.model))
+                    pending_planner = None
+                    selected_runtime = None
+                    confirmation, selected_runtime = _confirm_current_decision(
+                        root,
+                        decision,
+                        selected_runtime=None,
+                        input_fn=input_fn,
+                        output_fn=output_fn,
+                        lang=lang,
+                        retry=True,
+                    )
+                    if confirmation == "exit":
+                        return GuidedSessionResult("execution-failed")
+                    continue
+
+                cheap_executor = pending_planner.executor
+                retry_limit = _cheap_retry_limit(root)
+                failure_attempts[(cheap_executor.agent, cheap_executor.model)] = max(0, retry_limit - 1)
+                output_fn(
+                    (
+                        f"Planner advice persisted; returning execution to {cheap_executor.label}."
+                        if lang == "en"
+                        else f"Advice del planner persistido; la ejecución vuelve a {cheap_executor.label}."
+                    )
+                )
+                selected_runtime = cheap_executor
+                pending_planner = None
+                continue
+            if pending_planner is not None:
+                # The user adjusted away from the recommended planner.
+                pending_planner = None
+
             output_fn("")
             output_fn(t("session.executing", lang=lang, runtime=selected_runtime.label))
             progress = _ProgressDisplay(output_fn=output_fn, lang=lang, runtime=selected_runtime.label)
@@ -598,7 +707,8 @@ def run_interactive(
                 attempts=attempts,
                 diagnostic=str(execution_error),
             )
-            selected_runtime = escalation
+            pending_planner = escalation
+            selected_runtime = escalation.planner if escalation is not None else None
             confirmation, selected_runtime = _confirm_current_decision(
                 root,
                 decision,

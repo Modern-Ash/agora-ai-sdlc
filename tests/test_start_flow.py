@@ -800,7 +800,6 @@ def test_prepare_start_uses_preflight_resolved_swarm_everywhere(tmp_path):
     assert "swarm.resolved:delivery->issue-15-delivery" in result.preflight_actions
 
 
-
 def test_start_prefers_local_pool_executor_over_available_paid_runtime(tmp_path):
     workspace = FakeWorkspace(tmp_path)
     config = tmp_path / "ai-sdlc" / "project.yaml"

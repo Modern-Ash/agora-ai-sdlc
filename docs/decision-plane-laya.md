@@ -94,6 +94,17 @@ The initial questions are intentionally small:
 
 These answers never mutate the execution bundle.
 
+## Skill planning versus execution
+
+A Laya reasoning-tier decision can justify a separate Skill Planner, but Laya still does not choose a
+provider. ExecutionPolicy maps the accepted tier to a planner ceiling. When configured, Agora asks the
+cheapest eligible paid Codex/Claude planner to interpret the bounded Skill in read-only mode, persists the
+plan by input digest, and gives that plan to the cheap executor. The executor remains responsible for the
+high-volume implementation/test loop.
+
+For ordinary local Construction work, no paid planner is invoked. Inception and genuinely frontier-level
+work may request a planner, starting at `paid-efficient` rather than at the strongest model.
+
 ## Cost-aware escalation boundary
 
 Laya remains a classifier, not the paid advisor and not the executor. A confident Laya result can

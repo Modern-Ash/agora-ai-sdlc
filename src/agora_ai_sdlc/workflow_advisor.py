@@ -343,13 +343,12 @@ def advise_workflow(
             model_label = model.model if model is not None else "configured model"
             pool_recommended = ExecutorRecoveryChoice(
                 agent=pool_selection.binding.agent.id,
-                model=None if model is None or model.model == "configured-default" else (
+                model=None
+                if model is None or model.model == "configured-default"
+                else (
                     f"{model.provider}/{model.model}" if pool_selection.binding.agent.id == "opencode" else model.model
                 ),
-                label=(
-                    f"{pool_selection.binding.agent.id} · {model_label} "
-                    f"[{pool_selection.tier}]"
-                ),
+                label=(f"{pool_selection.binding.agent.id} · {model_label} [{pool_selection.tier}]"),
             )
 
     except (LayaUnavailable, OSError, RuntimeError, ValueError):

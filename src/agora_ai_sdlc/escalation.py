@@ -221,6 +221,19 @@ def run_escalation_advisor(
         raise EscalationError("escalation.advisor_failed", str(error)) from error
 
     if outcome.exit_code != 0 or not outcome.output.strip():
+        record_event(
+            root,
+            EconomicsEvent(
+                "failure",
+                package.work,
+                selection.tier,
+                selection.binding.agent.id,
+                selection.binding.model.model if selection.binding.model else None,
+                purpose="diagnostic-advisor",
+                reason=f"advisor-exit-{outcome.exit_code}",
+                exit_code=int(outcome.exit_code),
+            ),
+        )
         raise EscalationError("escalation.advisor_failed", f"advisor exited with {outcome.exit_code}")
 
     advice = sanitize(outcome.output).strip()

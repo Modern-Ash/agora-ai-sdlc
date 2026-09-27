@@ -296,7 +296,12 @@ def _bounded_escalation_choice(
             objective=bundle.objective,
         )
         path = persist_escalation_package(root, package)
-        selected = recommend_escalation(root, requirements, failed_tier=tier)
+        selected = recommend_escalation(
+            root,
+            requirements,
+            failed_tier=tier,
+            work=decision.work,
+        )
         record_economic_event(
             root,
             work=decision.work,

@@ -20,6 +20,7 @@ from agora_ai_sdlc.executor_launch import ExecutorLaunchError, _session_failure_
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
 from agora_ai_sdlc.local_delivery import diff_project_file_snapshots, project_file_snapshot
+from agora_ai_sdlc.repair_advice import load_repair_advice, render_executor_handback
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
 from agora_ai_sdlc.runtime_execution import (
     RuntimeExecutionError,
@@ -192,6 +193,13 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
             "Never record human approval or perform a lifecycle transition. "
             "If no safe repair can be persisted, report failure instead of claiming completion."
         )
+
+    try:
+        repair_advice = load_repair_advice(root, decision.work)
+    except ValueError:
+        repair_advice = None
+    if repair_advice is not None:
+        parts.append(render_executor_handback(repair_advice))
 
     answers = load_answers(root, decision.work)
     if answers:

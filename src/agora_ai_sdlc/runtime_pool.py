@@ -51,6 +51,7 @@ class RuntimePool:
     allow_paid_auto: bool
     allow_frontier_auto: bool
     call_budgets: dict[str, int]
+    retry_limits: dict[str, int]
     candidates: tuple[PoolCandidate, ...]
 
 
@@ -178,13 +179,36 @@ def load_runtime_pool(root: Path) -> RuntimePool | None:
             "call_budgets must map known execution tiers to non-negative integer limits",
         )
 
+    raw_retry_limits = routing.get("retry_limits") or {"local": 2, "free": 2}
+    if not isinstance(raw_retry_limits, dict) or any(
+        tier not in EXECUTION_TIERS
+        or not isinstance(limit, int)
+        or isinstance(limit, bool)
+        or limit < 0
+        for tier, limit in raw_retry_limits.items()
+    ):
+        raise RuntimePoolError(
+            "routing.retry_limits",
+            "retry_limits must map known execution tiers to non-negative integer limits",
+        )
+
     return RuntimePool(
         profile="cheap-first",
         allow_paid_auto=bool(routing.get("allow_paid_auto", False)),
         allow_frontier_auto=bool(routing.get("allow_frontier_auto", False)),
         call_budgets=dict(raw_call_budgets),
+        retry_limits=dict(raw_retry_limits),
         candidates=tuple(candidates),
     )
+
+
+def retry_limit_for(root: Path, tier: str | None) -> int:
+    if tier is None:
+        return 0
+    pool = load_runtime_pool(root)
+    if pool is None:
+        return 0
+    return int(pool.retry_limits.get(tier, 0))
 
 
 def _candidate_id(binding: RuntimeBinding) -> str:

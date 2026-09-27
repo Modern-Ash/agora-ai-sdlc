@@ -174,4 +174,3 @@ def test_paid_advisor_is_read_only_and_hands_back_advice(tmp_path, monkeypatch):
     events = summarize_economics(tmp_path, "w")
     assert events["attempts"]["paid-efficient"] == 1
     assert events["escalations"] == 1
-

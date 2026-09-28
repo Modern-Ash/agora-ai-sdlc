@@ -19,7 +19,11 @@ from agora_ai_sdlc.execution_economics import (
 from agora_ai_sdlc.execution_requirements import requirements_for_activity
 from agora_ai_sdlc.repair_advice import build_repair_advice, persist_repair_advice
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
-from agora_ai_sdlc.runtime_pool import retry_limit_for, select_from_runtime_pool
+from agora_ai_sdlc.runtime_pool import (
+    configured_context_limit,
+    retry_limit_for,
+    select_from_runtime_pool,
+)
 
 
 def discovery(runtime_id, *, ok=True, models=()):
@@ -302,3 +306,62 @@ def test_render_economics_labels_estimates_and_refuses_counterfactual_claims(tmp
     assert "laya: 1" in rendered
     assert "basis=estimated_tokens; source=estimated" in rendered
     assert "No counterfactual token or monetary savings are claimed" in rendered
+
+
+
+def test_runtime_pool_exposes_only_explicit_context_limit(tmp_path):
+    path = tmp_path / "ai-sdlc" / "project.yaml"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        yaml.safe_dump(
+            {
+                "routing": {
+                    "profile": "cheap-first",
+                    "allow_paid_auto": True,
+                    "allow_frontier_auto": False,
+                    "candidates": [
+                        {
+                            "tier": "local",
+                            "agent": "opencode",
+                            "model": "ollama/qwen3-coder:latest",
+                            "context_limit_tokens": 32768,
+                        }
+                    ],
+                }
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    assert configured_context_limit(tmp_path, "opencode", "qwen3-coder:latest") == 32768
+    assert configured_context_limit(tmp_path, "codex", None) is None
+
+
+def test_runtime_pool_rejects_invalid_context_limit(tmp_path):
+    path = tmp_path / "ai-sdlc" / "project.yaml"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        yaml.safe_dump(
+            {
+                "routing": {
+                    "profile": "cheap-first",
+                    "candidates": [
+                        {
+                            "tier": "local",
+                            "agent": "opencode",
+                            "context_limit_tokens": 0,
+                        }
+                    ],
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    try:
+        configured_context_limit(tmp_path, "opencode")
+    except ValueError as error:
+        assert "context_limit_tokens" in str(error)
+    else:
+        raise AssertionError("invalid context limit must fail closed")

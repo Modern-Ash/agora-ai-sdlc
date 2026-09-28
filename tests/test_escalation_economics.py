@@ -85,7 +85,6 @@ def test_economics_ledger_counts_attempts_and_escalations(tmp_path):
     assert summary["escalations"] == 1
 
 
-
 def test_executor_event_uses_selected_binding_and_tier(tmp_path):
     plan = SimpleNamespace(
         execution_tier="local",

@@ -230,13 +230,13 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
                 "Be proactive: inspect only the bounded relevant context, create or update the non-authoritative "
                 "artifacts/evidence needed for the next gate, and run safe deterministic verification when useful."
             ),
-            "Use existing Agora/Core commands and repository conventions instead of inventing lifecycle state.",
+            "Use Agora Flow operations and repository conventions instead of inventing lifecycle state. "
+            "Core governance is an internal kernel; do not invoke its CLI directly.",
             (
-                "When AGORA_SESSION_ID and AGORA_EXECUTOR are available, report only concise observable milestones "
-                'after major outcomes with: agora session progress --session "$AGORA_SESSION_ID" '
-                '--by "$AGORA_EXECUTOR" --summary "<milestone>". '
+                "Report only concise observable milestones through the host-provided Agora Flow progress channel. "
                 "Good milestones describe facts such as context inspected, artifact persisted, or verification completed; "
-                "never report chain-of-thought, private reasoning, prompts, secrets, or raw provider output."
+                "never invoke the Core CLI for progress, and never report chain-of-thought, private reasoning, prompts, "
+                "secrets, or raw provider output."
             ),
             "Do not record human approval, do not change a human-owned decision, do not merge, deploy, or bypass a gate.",
             "Do not perform unrelated refactors. Minimize context and avoid reading files that the bounded bundle does not justify.",

@@ -75,7 +75,9 @@ PLANNER_QUESTION = DecisionQuestion(
     },
 )
 
-EXECUTION_QUESTIONS = (*BASE_EXECUTION_QUESTIONS, PLANNER_QUESTION)
+# Backward-compatible public question set. Planner need is an optional,
+# separately evaluated advisory dimension so existing DecisionProviders remain valid.
+EXECUTION_QUESTIONS = BASE_EXECUTION_QUESTIONS
 
 
 def execution_state(bundle: ExecutionBundle) -> dict[str, Any]:

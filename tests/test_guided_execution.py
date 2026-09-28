@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
+from agora_ai_sdlc.execution_economics import summarize_economics
 from agora_ai_sdlc.executor_launch import ExecutorLaunchError
 from agora_ai_sdlc.guided import GuidedDecision
 from agora_ai_sdlc.guided_execution import (
@@ -91,6 +92,7 @@ def test_runtime_switch_does_not_invent_executor_actor(monkeypatch, tmp_path):
         tmp_path,
         decision(),
         runtime_id="claude",
+        execution_tier="local",
         workspace_factory=Workspace,
         progress_fn=progress.append,
     )
@@ -101,6 +103,9 @@ def test_runtime_switch_does_not_invent_executor_actor(monkeypatch, tmp_path):
     assert "claude" in data.runner
     assert result.runtime == "Claude Code"
     assert progress == ["context", "executor"]
+    economics = summarize_economics(tmp_path, "issue-26")
+    assert economics["attempts"] == {"local": 1}
+    assert economics["successes"] == {"local": 1}
 
 
 def test_start_session_emits_latest_durable_milestone_while_waiting(tmp_path):
@@ -195,10 +200,14 @@ exit-code: 1
             tmp_path,
             decision(),
             runtime_id="claude",
+            execution_tier="local",
             workspace_factory=Workspace,
         )
 
     assert "Durable diagnostics:" in str(captured.value)
+    economics = summarize_economics(tmp_path, "issue-26")
+    assert economics["attempts"] == {"local": 1}
+    assert economics["failures"] == {"local": 1}
 
 
 def test_construction_prompt_requires_observable_governed_progress(monkeypatch, tmp_path):

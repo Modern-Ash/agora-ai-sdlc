@@ -12,6 +12,15 @@ from agora_ai_sdlc.execution_bundle import ExecutionBundle
 from agora_ai_sdlc.execution_context import ExecutionContextSelection
 
 SCHEMA = "agora-ai-sdlc/context-manifest/v1"
+_SENSITIVE_NAMES = {".env", ".env.local", ".env.production", "credentials.json", "secrets.json"}
+
+
+def _sensitive_path(path: str) -> bool:
+    candidate = Path(path)
+    lowered = path.casefold()
+    return candidate.name.casefold() in _SENSITIVE_NAMES or any(
+        marker in lowered for marker in ("/secrets/", "/credentials/", ".pem", ".key")
+    )
 
 
 class ContextOverflowError(ValueError):
@@ -112,10 +121,13 @@ def _mandatory(bundle: ExecutionBundle) -> tuple[ContextItem, ...]:
 
 def _path_item(root: Path, path: str, *, selected: bool) -> ContextItem:
     candidate = root / path
-    try:
-        content = candidate.read_text(encoding="utf-8", errors="replace")
-    except (OSError, UnicodeError):
-        content = ""
+    if _sensitive_path(path):
+        content = "[sensitive content omitted]"
+    else:
+        try:
+            content = candidate.read_text(encoding="utf-8", errors="replace")
+        except (OSError, UnicodeError):
+            content = ""
     return _item(
         path,
         "repository-file",

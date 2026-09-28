@@ -24,6 +24,7 @@ REQUIREMENTS_SCHEMA = "agora-ai-sdlc/execution-requirements/v1"
 TIERS = ("local", "standard", "frontier", "human")
 RISKS = ("low", "moderate", "high")
 FOCI = ("functional", "security", "performance", "architecture", "operations")
+PLANNER_NEEDS = ("none", "template", "local", "generative", "frontier")
 SECURITY = ("normal", "required")
 
 _READ = ("workspace.read",)
@@ -59,6 +60,7 @@ class ExecutionRequirements:
     validation_focus: tuple[str, ...]
     required_capabilities: tuple[str, ...]
     human_authority_required: bool
+    planner_needed: str
     advisory: Mapping[str, Any]
 
     @property
@@ -75,6 +77,7 @@ class ExecutionRequirements:
             "validation_focus": list(self.validation_focus),
             "required_capabilities": list(self.required_capabilities),
             "human_authority_required": self.human_authority_required,
+            "planner_needed": self.planner_needed,
             "executable_by_agent": self.executable_by_agent,
             "advisory": dict(self.advisory),
         }
@@ -125,6 +128,9 @@ def project_requirements(
         focus.add("security")
 
     human = activity == "human.authority" or tier == "human"
+    planner_needed = _accepted_value(evaluation, "planner_needed", PLANNER_NEEDS) or "none"
+    if human:
+        planner_needed = "none"
     capabilities = set() if human else set(_ACTIVITY_CAPABILITIES[activity])
     if not human and security == "required":
         capabilities.update(("workspace.read", "git.read"))
@@ -154,6 +160,7 @@ def project_requirements(
         validation_focus=tuple(sorted(focus)),
         required_capabilities=tuple(name for name in CAPABILITY_IDS if name in capabilities),
         human_authority_required=human,
+        planner_needed=planner_needed,
         advisory=advisory,
     )
 
@@ -197,5 +204,6 @@ def requirements_for_activity(activity: str, *, tier: str = "local") -> Executio
         validation_focus=("functional",),
         required_capabilities=tuple(name for name in CAPABILITY_IDS if name in capabilities),
         human_authority_required=human,
+        planner_needed="none",
         advisory={"provider": None, "model": None, "accepted": [], "escalated": [], "confidence": {}},
     )

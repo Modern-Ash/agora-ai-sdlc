@@ -165,6 +165,14 @@ def load_runtime_pool(root: Path) -> RuntimePool | None:
             )
         ):
             raise RuntimePoolError("routing.projected_usage", "projected usage must contain non-negative integers")
+        context_limit = value.get("context_limit_tokens")
+        if context_limit is not None and (
+            not isinstance(context_limit, int) or isinstance(context_limit, bool) or context_limit < 1
+        ):
+            raise RuntimePoolError(
+                "routing.context_limit_tokens",
+                "context_limit_tokens must be a positive integer when configured",
+            )
         candidates.append(
             PoolCandidate(
                 tier=tier,
@@ -173,6 +181,7 @@ def load_runtime_pool(root: Path) -> RuntimePool | None:
                 activities=tuple(activities_value),
                 purposes=tuple(purposes_value),
                 projected_usage=dict(usage or {}),
+                context_limit_tokens=context_limit,
             )
         )
 

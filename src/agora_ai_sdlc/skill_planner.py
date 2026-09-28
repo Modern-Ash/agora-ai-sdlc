@@ -231,12 +231,14 @@ def maybe_plan_skill(
     if cached is not None:
         return cached
 
-    planner_reasoning = "local" if policy.planner_mode == "local" else (
-        "frontier" if policy.planner_mode == "frontier" else "standard"
+    planner_reasoning = (
+        "local" if policy.planner_mode == "local" else ("frontier" if policy.planner_mode == "frontier" else "standard")
     )
     planner_requirements = requirements_for_activity("exploration.read_only", tier=planner_reasoning)
-    minimum_tier = "local" if policy.planner_mode == "local" else (
-        "frontier" if policy.planner_mode == "frontier" else "paid-efficient"
+    minimum_tier = (
+        "local"
+        if policy.planner_mode == "local"
+        else ("frontier" if policy.planner_mode == "frontier" else "paid-efficient")
     )
     allowed_agents = None if policy.planner_mode == "local" else ("codex", "claude")
     try:

@@ -65,6 +65,13 @@ def _execution(root: Path, **kwargs):
     )
 
 
+class UnavailableClarificationProvider:
+    name = "unavailable-test-provider"
+
+    def decide(self, state, questions):
+        raise RuntimeError("clarification triage unavailable in unrelated Start test")
+
+
 def _prepare_start(root: Path, **kwargs):
     kwargs.setdefault("isolation", lambda candidate, issue: (candidate.resolve(), None))
     kwargs.setdefault(
@@ -75,6 +82,7 @@ def _prepare_start(root: Path, **kwargs):
         ),
     )
     kwargs.setdefault("executor_launcher", _execution)
+    kwargs.setdefault("clarification_provider_factory", UnavailableClarificationProvider)
     kwargs.setdefault(
         "inception_materializer",
         lambda *args, **options: SimpleNamespace(actions=(), actor_id="project:ai-test"),

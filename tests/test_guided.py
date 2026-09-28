@@ -5,7 +5,6 @@ from agora_ai_sdlc import guided
 from agora_ai_sdlc.guided import render
 
 
-
 def _sample_decision():
     return guided.GuidedDecision(
         swarm="delivery",
@@ -21,6 +20,7 @@ def _sample_decision():
         messages=("Prepare plan.",),
         missing_artifacts=("plan",),
     )
+
 
 class FakeWorkspace:
     def __init__(self, cwd: Path):

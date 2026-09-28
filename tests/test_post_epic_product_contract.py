@@ -1,12 +1,20 @@
 from pathlib import Path
+from types import SimpleNamespace
 
 import tomllib
+import yaml
 
 from agora_ai_sdlc.context_manifest import build_context_manifest
 from agora_ai_sdlc.execution_bundle import ExecutionBundle
 from agora_ai_sdlc.execution_context import ExecutionContextSelection
 from agora_ai_sdlc.execution_economics import record_context_event, render_economics
+from agora_ai_sdlc.execution_requirements import requirements_for_activity
+from agora_ai_sdlc.executor_launch import ExecutorLaunchError
+from agora_ai_sdlc.guided import GuidedDecision
+from agora_ai_sdlc.guided_execution import execute_guided_preparation
 from agora_ai_sdlc.progress_events import ProgressEmitter, render_chat, render_jsonl, render_tty
+from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
+from agora_ai_sdlc.runtime_pool import select_from_runtime_pool
 
 
 def test_post_epic_product_contract_is_one_flow_surface_with_bounded_observable_execution(tmp_path: Path):
@@ -101,3 +109,121 @@ def test_post_epic_product_contract_is_one_flow_surface_with_bounded_observable_
 
     # Demo products are not architectural dependencies of this acceptance path.
     assert "agorix" not in public
+
+
+
+def _available_runtimes():
+    return {
+        "opencode": RuntimeDiscovery(
+            id="opencode",
+            name="OpenCode",
+            command="opencode",
+            installed=True,
+            executable="/bin/opencode",
+            responsive=True,
+            version="test",
+            configured=True,
+        ),
+        "codex": RuntimeDiscovery(
+            id="codex",
+            name="Codex",
+            command="codex",
+            installed=True,
+            executable="/bin/codex",
+            responsive=True,
+            version="test",
+            configured=True,
+        ),
+    }
+
+
+def test_post_epic_routing_rejects_cheaper_runtime_when_context_does_not_fit(tmp_path: Path):
+    config = tmp_path / "ai-sdlc" / "project.yaml"
+    config.parent.mkdir(parents=True)
+    config.write_text(
+        yaml.safe_dump(
+            {
+                "routing": {
+                    "profile": "cheap-first",
+                    "allow_paid_auto": True,
+                    "candidates": [
+                        {
+                            "tier": "local",
+                            "agent": "opencode",
+                            "model": "ollama/qwen3-coder:latest",
+                            "context_limit_tokens": 4096,
+                            "cost_class": "free",
+                            "locality": "local",
+                        },
+                        {
+                            "tier": "paid-efficient",
+                            "agent": "codex",
+                            "model": "openai/configured-default",
+                            "context_limit_tokens": 32768,
+                            "cost_class": "low",
+                            "locality": "remote",
+                        },
+                    ],
+                }
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    selected = select_from_runtime_pool(
+        tmp_path,
+        requirements_for_activity("construction.implementation", tier="standard"),
+        availability=_available_runtimes(),
+        context_tokens_estimate=12000,
+    )
+
+    assert selected is not None
+    assert selected.tier == "paid-efficient"
+    assert selected.decision["considered"][0]["blockers"] == ("runtime.context_limit_exceeded",)
+    assert "cheapest-admissible-tier" in selected.decision["selection_reasons"]
+
+
+def test_post_epic_human_boundary_stops_before_executor(monkeypatch, tmp_path: Path):
+    events = []
+    decision = GuidedDecision(
+        swarm="delivery",
+        work="issue-319",
+        title="Approve release",
+        method="ai-sdlc",
+        actor="project:product-owner",
+        role="product-owner",
+        state="inception",
+        target="construction",
+        gate="inception-approved",
+        blockers=("approval required",),
+        messages=("Human approval required.",),
+        missing_approvals=("product-owner",),
+        ready_for_human_approval=True,
+    )
+    runtime = SimpleNamespace(
+        id="codex",
+        name="Codex",
+        installed=True,
+        responsive=True,
+        executable="/bin/codex",
+        command="codex",
+        version="test",
+    )
+    monkeypatch.setattr("agora_ai_sdlc.guided_execution._runtime", lambda *args, **kwargs: runtime)
+
+    try:
+        execute_guided_preparation(
+            tmp_path,
+            decision,
+            runtime_id="codex",
+            progress_event=events.append,
+        )
+    except ExecutorLaunchError as error:
+        assert "human-boundary" in str(error)
+    else:
+        raise AssertionError("human approval boundary must stop AI execution")
+
+    assert len(events) == 1
+    assert events[0].kind == "human-boundary"
+    assert events[0].status == "blocked"

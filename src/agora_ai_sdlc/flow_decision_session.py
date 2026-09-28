@@ -10,10 +10,7 @@ from typing import Any
 from agora_ai_sdlc.execution_bundle import ExecutionBundle
 from agora_ai_sdlc.execution_decisions import DecisionEvaluation, advise_execution
 from agora_ai_sdlc.execution_policy import ExecutionPolicy, execution_policy_for
-from agora_ai_sdlc.execution_requirements import (
-    ExecutionRequirements,
-    project_requirements,
-)
+from agora_ai_sdlc.execution_requirements import ExecutionRequirements, project_requirements
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider
 
 

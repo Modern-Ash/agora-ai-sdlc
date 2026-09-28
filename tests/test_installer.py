@@ -409,3 +409,41 @@ def test_installer_rejects_unknown_routing_tier():
     with pytest.raises(InstallerError) as error:
         validate_config(config)
     assert error.value.code == "installer.routing"
+
+
+
+def test_interactive_install_rendering_is_flow_only():
+    data = {
+        "project": {"id": "demo", "name": "Demo"},
+        "profile": "starter",
+        "method": {"id": "ai-sdlc", "version": "0.2.0"},
+        "language": "java",
+        "pathway": "brownfield",
+        "depth": "standard",
+        "runtimes": [],
+        "core_validation": "ok",
+        "guided_skill": ".agora/skills/agora-ai-sdlc-guided/SKILL.md",
+        "work": "first-work",
+        "work_state": "inception",
+    }
+
+    preview = installer.render_install_preview(data)
+    result = installer.render_install_result(data)
+
+    assert "Agora Flow · Instalación" in preview
+    assert "Agora Flow · Instalación completada" in result
+    assert "aisdlc" in result
+    assert "agora validate" not in result
+    assert "agora status" not in result
+    assert not preview.lstrip().startswith("{")
+
+
+def test_apply_handoff_uses_only_aisdlc(tmp_path, monkeypatch):
+    # The installer result contract must never reintroduce Core CLI next steps.
+    monkeypatch.setattr(installer, "_core_preflight", lambda: {"version": "0.9.1", "executable": "/bin/agora"})
+    monkeypatch.setattr(installer, "_is_git_work_tree", lambda target: False)
+
+    source = Path(installer.__file__).read_text(encoding="utf-8")
+    assert '"next_commands": ["aisdlc"]' in source
+    assert '"agora validate"' not in source
+    assert '"agora status --board"' not in source

@@ -88,3 +88,27 @@ def test_optional_overflow_is_reported_not_silently_pruned(tmp_path: Path):
 
     assert manifest.overflow is True
     assert manifest.selected_optional
+
+
+
+def test_sensitive_optional_file_content_is_never_materialized(tmp_path: Path):
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "a.py").write_text("print('ok')\n", encoding="utf-8")
+    (tmp_path / ".env").write_text("API_KEY=super-secret-value\n", encoding="utf-8")
+    sensitive_selection = ExecutionContextSelection(
+        candidate_paths=("src/a.py", ".env"),
+        selected_paths=("src/a.py", ".env"),
+        protected_paths=("src/a.py",),
+        escalated_paths=(),
+        classifications={"src/a.py": "required", ".env": "useful"},
+        confidences={"src/a.py": 1.0, ".env": 0.99},
+        candidate_tokens=100,
+        selected_tokens=80,
+        latency_ms=1.0,
+    )
+
+    manifest = build_context_manifest(tmp_path, bundle(), sensitive_selection)
+    env_item = next(item for item in manifest.selected_optional if item.id == ".env")
+
+    assert env_item.provenance == "repository:.env"
+    assert "super-secret-value" not in env_item.digest

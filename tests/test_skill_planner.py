@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -5,6 +6,7 @@ import yaml
 
 from agora_ai_sdlc.execution_bundle import ExecutionBundle
 from agora_ai_sdlc.execution_economics import summarize_economics
+from agora_ai_sdlc.execution_requirements import requirements_for_activity
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 from agora_ai_sdlc.skill_planner import maybe_plan_skill
 
@@ -121,10 +123,37 @@ class FakeRegistry:
         return self.adapter
 
 
-def test_inception_uses_paid_efficient_planner_and_persists_plan(tmp_path, monkeypatch):
+def planner_requirements(mode: str):
+    return replace(
+        requirements_for_activity("inception.elaboration", tier="standard"),
+        planner_needed=mode,
+    )
+
+
+def test_inception_skips_planner_when_laya_says_none(tmp_path, monkeypatch):
     config(tmp_path)
     adapter = FakeAdapter()
     monkeypatch.setattr("agora_ai_sdlc.skill_planner.default_registry", lambda root: FakeRegistry(adapter))
+    monkeypatch.setattr(
+        "agora_ai_sdlc.skill_planner.requirements_for",
+        lambda *args, **kwargs: planner_requirements("none"),
+    )
+
+    result = maybe_plan_skill(tmp_path, bundle(), availability=availability())
+
+    assert result is None
+    assert adapter.launches == 0
+    assert summarize_economics(tmp_path, "issue-plan")["attempts"] == {}
+
+
+def test_inception_uses_paid_efficient_planner_only_when_requested(tmp_path, monkeypatch):
+    config(tmp_path)
+    adapter = FakeAdapter()
+    monkeypatch.setattr("agora_ai_sdlc.skill_planner.default_registry", lambda root: FakeRegistry(adapter))
+    monkeypatch.setattr(
+        "agora_ai_sdlc.skill_planner.requirements_for",
+        lambda *args, **kwargs: planner_requirements("generative"),
+    )
 
     result = maybe_plan_skill(tmp_path, bundle(), availability=availability())
 
@@ -146,6 +175,10 @@ def test_same_skill_and_bundle_reuses_paid_plan_without_second_call(tmp_path, mo
     config(tmp_path)
     adapter = FakeAdapter()
     monkeypatch.setattr("agora_ai_sdlc.skill_planner.default_registry", lambda root: FakeRegistry(adapter))
+    monkeypatch.setattr(
+        "agora_ai_sdlc.skill_planner.requirements_for",
+        lambda *args, **kwargs: planner_requirements("generative"),
+    )
 
     first = maybe_plan_skill(tmp_path, bundle(), availability=availability())
     second = maybe_plan_skill(tmp_path, bundle(), availability=availability())
@@ -160,6 +193,10 @@ def test_planner_skips_when_paid_auto_is_not_authorized(tmp_path, monkeypatch):
     config(tmp_path, paid=False)
     adapter = FakeAdapter()
     monkeypatch.setattr("agora_ai_sdlc.skill_planner.default_registry", lambda root: FakeRegistry(adapter))
+    monkeypatch.setattr(
+        "agora_ai_sdlc.skill_planner.requirements_for",
+        lambda *args, **kwargs: planner_requirements("generative"),
+    )
 
     result = maybe_plan_skill(tmp_path, bundle(), availability=availability())
 

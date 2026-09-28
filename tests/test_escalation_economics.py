@@ -5,7 +5,14 @@ import yaml
 
 from agora_ai_sdlc.advisory_planner import PlannerOutcome
 from agora_ai_sdlc.escalation import EscalationPackage, run_escalation_advisor
-from agora_ai_sdlc.execution_economics import EconomicsEvent, attempt_count, record_event, summarize_economics
+from agora_ai_sdlc.execution_economics import (
+    EconomicsEvent,
+    attempt_count,
+    load_events,
+    record_event,
+    record_executor_event,
+    summarize_economics,
+)
 from agora_ai_sdlc.execution_requirements import requirements_for_activity
 from agora_ai_sdlc.repair_advice import build_repair_advice, persist_repair_advice
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
@@ -76,6 +83,34 @@ def test_economics_ledger_counts_attempts_and_escalations(tmp_path):
     assert summary["failures"] == {"local": 1}
     assert summary["successes"] == {"paid-efficient": 1}
     assert summary["escalations"] == 1
+
+
+
+def test_executor_event_uses_selected_binding_and_tier(tmp_path):
+    plan = SimpleNamespace(
+        execution_tier="local",
+        binding=SimpleNamespace(
+            agent=SimpleNamespace(id="opencode"),
+            model=SimpleNamespace(model="qwen3-coder:latest"),
+        ),
+    )
+    runtime = SimpleNamespace(id="opencode")
+
+    record_executor_event(
+        tmp_path,
+        event="attempt",
+        work="w",
+        swarm="delivery",
+        runtime=runtime,
+        plan=plan,
+        reason="construction",
+    )
+
+    event = load_events(tmp_path, "w")[0]
+    assert event["tier"] == "local"
+    assert event["agent"] == "opencode"
+    assert event["model"] == "qwen3-coder:latest"
+    assert event["purpose"] == "executor"
 
 
 def test_tier_call_budget_forces_next_cheapest_candidate(tmp_path):

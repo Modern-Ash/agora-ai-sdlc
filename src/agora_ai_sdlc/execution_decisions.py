@@ -8,6 +8,7 @@ from agora_ai_sdlc.decision_plane import (
     ConfidencePolicy,
     DecisionAnswer,
     DecisionEvaluation,
+    DecisionPlaneError,
     DecisionProvider,
     DecisionQuestion,
     DecisionResult,
@@ -134,8 +135,6 @@ def advise_execution(
         result = provider.decide(state, questions)
         expected = {question.id for question in questions}
         if set(result.answers) != expected:
-            from agora_ai_sdlc.decision_plane import DecisionPlaneError
-
             raise DecisionPlaneError(
                 "decision.answer_set",
                 f"provider answer set mismatch; expected={sorted(expected)!r} actual={sorted(result.answers)!r}",

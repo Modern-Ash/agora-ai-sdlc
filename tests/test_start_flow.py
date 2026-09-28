@@ -510,6 +510,94 @@ def test_explicit_issue_uses_deterministic_inception_without_executor(tmp_path):
     assert "DETERMINISTIC_INCEPTION.md" in rendered
 
 
+
+def test_laya_can_remove_heuristic_gap_and_avoid_executor(tmp_path):
+    workspace = FakeWorkspace(tmp_path)
+    workspace._has_run = True
+
+    class NoGapProvider:
+        name = "laya"
+        model = "test"
+
+        def decide_many(self, batch):
+            return tuple(
+                SimpleNamespace(
+                    provider=self.name,
+                    model=self.model,
+                    answers={
+                        "material_gap": SimpleNamespace(
+                            value="none",
+                            confidence=0.99,
+                        )
+                    },
+                    latency_ms=1.0,
+                )
+                for _ in batch
+            )
+
+    def executor_must_not_run(*args, **kwargs):
+        raise AssertionError("high-confidence no-gap triage must avoid generative executor")
+
+    result = _prepare_start(
+        tmp_path,
+        issue=11,
+        project="Modern-Ash/agorix",
+        agent="codex",
+        workspace_factory=lambda cwd: workspace,
+        runtime_discovery=lambda root: (runtime("codex"),),
+        clarification_provider_factory=NoGapProvider,
+        executor_launcher=executor_must_not_run,
+    )
+
+    assert result.inception_mode == "deterministic"
+    assert result.executor_session_id is None
+    assert result.semantic_gaps == ()
+
+
+def test_low_confidence_no_gap_preserves_gap_and_launches_executor(tmp_path):
+    workspace = FakeWorkspace(tmp_path)
+    workspace._has_run = True
+    launched = {"count": 0}
+
+    class UncertainProvider:
+        name = "laya"
+        model = "test"
+
+        def decide_many(self, batch):
+            return tuple(
+                SimpleNamespace(
+                    provider=self.name,
+                    model=self.model,
+                    answers={
+                        "material_gap": SimpleNamespace(
+                            value="none",
+                            confidence=0.4,
+                        )
+                    },
+                    latency_ms=1.0,
+                )
+                for _ in batch
+            )
+
+    def executor(root, **kwargs):
+        launched["count"] += 1
+        return _execution(root, **kwargs)
+
+    result = _prepare_start(
+        tmp_path,
+        issue=11,
+        project="Modern-Ash/agorix",
+        agent="codex",
+        workspace_factory=lambda cwd: workspace,
+        runtime_discovery=lambda root: (runtime("codex"),),
+        clarification_provider_factory=UncertainProvider,
+        executor_launcher=executor,
+    )
+
+    assert launched["count"] == 1
+    assert result.inception_mode == "llm"
+    assert result.semantic_gaps
+
 def test_prepare_start_forwards_explicit_opencode_model(tmp_path):
     workspace = FakeWorkspace(tmp_path)
     observed = {}

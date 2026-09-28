@@ -110,6 +110,16 @@ def test_executor_event_uses_selected_binding_and_tier(tmp_path):
     assert event["agent"] == "opencode"
     assert event["model"] == "qwen3-coder:latest"
     assert event["purpose"] == "executor"
+    route = summarize_economics(tmp_path, "w")["routes"][0]
+    assert route == {
+        "tier": "local",
+        "purpose": "executor",
+        "agent": "opencode",
+        "model": "qwen3-coder:latest",
+        "attempts": 1,
+        "successes": 0,
+        "failures": 0,
+    }
 
 
 def test_tier_call_budget_forces_next_cheapest_candidate(tmp_path):

@@ -396,10 +396,13 @@ def select_runtime(
         entry = {
             "runtime": _runtime_id(candidate.runtime),
             "blockers": tuple(blocker["code"] for blocker in blockers),
-            "context_limit_tokens": candidate.context_limit_tokens,
-            "cost_class": candidate.cost_class,
-            "locality": candidate.locality,
         }
+        if candidate.context_limit_tokens is not None:
+            entry["context_limit_tokens"] = candidate.context_limit_tokens
+        if candidate.cost_class is not None:
+            entry["cost_class"] = candidate.cost_class
+        if candidate.locality is not None:
+            entry["locality"] = candidate.locality
         if requirements is not None:
             entry["missing_capabilities"] = tuple(missing)
         considered.append(entry)

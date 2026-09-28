@@ -355,11 +355,23 @@ def select_from_runtime_pool(
     selected = next((item for item in candidates if _candidate_id(item.binding) == selected_id), None)
     if selected is None:
         raise RuntimePoolError("routing.selection", "selected runtime is not present in the configured pool")
+    enriched = dict(decision)
+    enriched["routing_profile"] = pool.profile
+    enriched["selected_tier"] = selected.tier
+    enriched["selected_cost_class"] = selected.cost_class or selected.tier
+    enriched["selected_locality"] = selected.locality
+    enriched["selection_reasons"] = (
+        "required-capabilities-satisfied",
+        "policy-admissible",
+        "context-limit-sufficient" if selected.context_limit_tokens is not None else "context-limit-unknown",
+        "cheapest-admissible-tier",
+        "configured-order-tiebreak",
+    )
     return PoolSelection(
         binding=binding,
         tier=selected.tier,
         reason=str(decision.get("selection_reason") or "configured cheap-first preference"),
-        decision=decision,
+        decision=enriched,
         context_limit_tokens=selected.context_limit_tokens,
     )
 

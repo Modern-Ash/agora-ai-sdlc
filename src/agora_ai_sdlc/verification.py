@@ -314,6 +314,60 @@ def _compact_human_diagnostic(command: VerificationCommand, max_chars: int = 120
     return "… " + value[-(max_chars - 2) :]
 
 
+
+def load_persisted_verification(root: Path, work: str | None) -> VerificationReport | None:
+    """Load the latest bounded verification report without changing verification state."""
+
+    if not work:
+        return None
+    path = root.resolve() / ".agora" / "ai-sdlc" / "verification" / work / "VERIFICATION.json"
+    if not path.is_file():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict) or payload.get("schema") != SCHEMA:
+        return None
+    commands = tuple(
+        VerificationCommand(
+            command=str(item.get("command") or ""),
+            argv=tuple(str(value) for value in item.get("argv", ())),
+            allowed=bool(item.get("allowed")),
+            status=str(item.get("status") or ""),
+            exit_code=item.get("exit_code") if isinstance(item.get("exit_code"), int) else None,
+            stdout=str(item.get("stdout") or ""),
+            stderr=str(item.get("stderr") or ""),
+            elapsed_seconds=(
+                float(item["elapsed_seconds"])
+                if isinstance(item.get("elapsed_seconds"), (int, float))
+                else None
+            ),
+        )
+        for item in payload.get("commands", ())
+        if isinstance(item, dict)
+    )
+    coverage = tuple(
+        AcceptanceCoverage(
+            criterion=str(item.get("criterion") or ""),
+            candidate_test_paths=tuple(str(value) for value in item.get("candidate_test_paths", ())),
+            mechanically_satisfied=bool(item.get("mechanically_satisfied")),
+        )
+        for item in payload.get("acceptance_coverage", ())
+        if isinstance(item, dict)
+    )
+    passed = payload.get("all_executed_commands_passed")
+    return VerificationReport(
+        schema=SCHEMA,
+        work=str(payload.get("work")) if payload.get("work") is not None else None,
+        head=str(payload.get("head")) if payload.get("head") is not None else None,
+        executed=payload.get("executed") is True,
+        commands=commands,
+        acceptance_coverage=coverage,
+        all_executed_commands_passed=passed if isinstance(passed, bool) else None,
+        report_path=str(path),
+    )
+
 def persisted_verification_diagnostic(root: Path, work: str | None) -> str | None:
     """Return a compact host-readable diagnosis from the latest executed verification."""
 

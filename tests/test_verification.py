@@ -6,6 +6,7 @@ from agora_ai_sdlc import verification
 from agora_ai_sdlc.execution_bundle import ExecutionBundle
 from agora_ai_sdlc.verification import (
     build_verification_report,
+    load_persisted_verification,
     persisted_verification_diagnostic,
     persisted_verification_failed,
 )
@@ -270,3 +271,59 @@ def test_persisted_verification_diagnostic_compacts_failed_command(tmp_path: Pat
     diagnostic = persisted_verification_diagnostic(tmp_path, "issue-14")
 
     assert diagnostic == "npm test: failed exit=1 diagnostic=AssertionError: expected 90 but got 100"
+
+
+
+def test_load_persisted_verification_rehydrates_bounded_typed_report(tmp_path: Path):
+    target = tmp_path / ".agora" / "ai-sdlc" / "verification" / "issue-14" / "VERIFICATION.json"
+    target.parent.mkdir(parents=True)
+    target.write_text(
+        json.dumps(
+            {
+                "schema": "agora-ai-sdlc/verification-report/v1",
+                "work": "issue-14",
+                "head": "abc",
+                "executed": True,
+                "commands": [
+                    {
+                        "command": "pytest",
+                        "argv": ["pytest"],
+                        "allowed": True,
+                        "status": "failed",
+                        "exit_code": 1,
+                        "stdout": "",
+                        "stderr": "AssertionError",
+                        "elapsed_seconds": 1.25,
+                    }
+                ],
+                "acceptance_coverage": [
+                    {
+                        "criterion": "works",
+                        "candidate_test_paths": ["tests/test_feature.py"],
+                        "mechanically_satisfied": False,
+                    }
+                ],
+                "all_executed_commands_passed": False,
+                "report_path": str(target),
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    report = load_persisted_verification(tmp_path, "issue-14")
+
+    assert report is not None
+    assert report.work == "issue-14"
+    assert report.commands[0].status == "failed"
+    assert report.commands[0].argv == ("pytest",)
+    assert report.acceptance_coverage[0].candidate_test_paths == ("tests/test_feature.py",)
+    assert report.all_executed_commands_passed is False
+
+
+def test_load_persisted_verification_rejects_unversioned_payload(tmp_path: Path):
+    target = tmp_path / ".agora" / "ai-sdlc" / "verification" / "issue-14" / "VERIFICATION.json"
+    target.parent.mkdir(parents=True)
+    target.write_text('{"executed": true, "commands": []}\n', encoding="utf-8")
+
+    assert load_persisted_verification(tmp_path, "issue-14") is None

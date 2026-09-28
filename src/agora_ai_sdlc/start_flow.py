@@ -37,6 +37,7 @@ from agora_ai_sdlc.i18n import t
 from agora_ai_sdlc.inception_handoff import write_inception_handoff
 from agora_ai_sdlc.inception_materialization import materialize_deterministic_inception
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
+from agora_ai_sdlc.progress_events import ProgressEmitter, ProgressEvent
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
 from agora_ai_sdlc.runtime_pool import RuntimePoolError, select_from_runtime_pool
 from agora_ai_sdlc.start_preflight import (
@@ -440,10 +441,25 @@ def prepare_start(
     clarification_provider_factory: Callable[[], object] = LayaDecisionProvider,
     launch_executor: bool = True,
     progress: Callable[[str], None] | None = None,
+    progress_event: Callable[[ProgressEvent], None] | None = None,
 ) -> StartFlowResult:
     """Read one issue through Core, persist a draft Intent, and stop for human review."""
 
+    emitter = ProgressEmitter(swarm=swarm, work=f"issue-{issue}")
+
     def notify(code: str) -> None:
+        event = emitter.event(
+            "execution",
+            "completed",
+            code,
+            code,
+            facts={"summary": code},
+        )
+        if progress_event is not None:
+            try:
+                progress_event(event)
+            except OSError:
+                pass
         if progress is not None:
             try:
                 progress(code)

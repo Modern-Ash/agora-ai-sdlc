@@ -131,6 +131,24 @@ def check_package() -> None:
             "the built wheel fails to load its manifest; inspect pyproject.toml packaging",
             cwd=Path(tmp),
         )
+        flow_cli = (
+            venv
+            / ("Scripts" if sys.platform == "win32" else "bin")
+            / ("aisdlc.exe" if sys.platform == "win32" else "aisdlc")
+        )
+        run([str(flow_cli), "--version"], "the wheel must expose the Agora Flow CLI", cwd=Path(tmp))
+        doctor = run(
+            [str(flow_cli), "doctor", "--root", str(tmp), "--json"],
+            "the single installed Flow environment must run doctor",
+            cwd=Path(tmp),
+        )
+        doctor_payload = json.loads(doctor)
+        ids = {item["id"] for item in doctor_payload["checks"]}
+        if not {"agora-flow", "core-kernel", "decision-plane"}.issubset(ids):
+            raise PhaseError(
+                "wheel-installed doctor does not expose Flow/Core/Laya component state",
+                "inspect the single-install dependency and doctor contract",
+            )
         # The bundled sample must also pass from the installed wheel.
         out = run([str(venv / ("Scripts" if sys.platform == "win32" else "bin") / "agora-ai-sdlc"), "run-sample", "new-product"],
                   "the built wheel fails to run the bundled sample", cwd=Path(tmp))  # fmt: skip

@@ -13,7 +13,7 @@ from agora_ai_sdlc.decision_plane import (
 )
 from agora_ai_sdlc.execution_bundle import ExecutionBundle
 
-EXECUTION_QUESTIONS = (
+BASE_EXECUTION_QUESTIONS = (
     DecisionQuestion(
         id="reasoning_tier",
         type="choice",
@@ -45,21 +45,6 @@ EXECUTION_QUESTIONS = (
         },
     ),
     DecisionQuestion(
-        id="planner_needed",
-        type="choice",
-        instructions=(
-            "Choose the minimum planning assistance needed before the next bounded execution. "
-            "Prefer none or template when acceptance criteria and verification make the work mechanically actionable."
-        ),
-        criteria={
-            "none": "the next action is already explicit and needs no separate planning pass",
-            "template": "a deterministic phase template is sufficient to guide execution",
-            "local": "a local or free planner may help structure bounded implementation work",
-            "generative": "moderate ambiguity or cross-file coordination justifies a paid-efficient planner",
-            "frontier": "architectural ambiguity, high risk or material design trade-offs require frontier planning",
-        },
-    ),
-    DecisionQuestion(
         id="validation_focus",
         type="choice",
         instructions="Choose the primary validation focus that should be highlighted to the developer.",
@@ -72,6 +57,24 @@ EXECUTION_QUESTIONS = (
         },
     ),
 )
+
+PLANNER_QUESTION = DecisionQuestion(
+    id="planner_needed",
+    type="choice",
+    instructions=(
+        "Choose the minimum planning assistance needed before the next bounded execution. "
+        "Prefer none or template when acceptance criteria and verification make the work mechanically actionable."
+    ),
+    criteria={
+        "none": "the next action is already explicit and needs no separate planning pass",
+        "template": "a deterministic phase template is sufficient to guide execution",
+        "local": "a local or free planner may help structure bounded implementation work",
+        "generative": "moderate ambiguity or cross-file coordination justifies a paid-efficient planner",
+        "frontier": "architectural ambiguity, high risk or material design trade-offs require frontier planning",
+    },
+)
+
+EXECUTION_QUESTIONS = (*BASE_EXECUTION_QUESTIONS, PLANNER_QUESTION)
 
 
 def execution_state(bundle: ExecutionBundle) -> dict[str, Any]:
@@ -107,9 +110,36 @@ def advise_execution(
 ) -> DecisionEvaluation:
     """Return advisory Laya signals. Never mutate or authorize the bundle."""
 
-    return evaluate_with_confidence(
+    state = execution_state(bundle)
+    base = evaluate_with_confidence(
         provider,
-        execution_state(bundle),
-        EXECUTION_QUESTIONS,
+        state,
+        BASE_EXECUTION_QUESTIONS,
         policy=ConfidencePolicy(confidence_threshold),
+    )
+    # Planner need is a new optional advisory dimension. Legacy/custom
+    # DecisionProviders that implement the established execution questions
+    # must continue to work; failure here means "no separate planner".
+    try:
+        planner = evaluate_with_confidence(
+            provider,
+            state,
+            (PLANNER_QUESTION,),
+            policy=ConfidencePolicy(confidence_threshold),
+        )
+    except Exception:  # noqa: BLE001 - optional advisory compatibility boundary
+        return base
+
+    answers = dict(base.result.answers)
+    answers.update(planner.result.answers)
+    result = type(base.result)(
+        provider=base.result.provider,
+        model=base.result.model,
+        answers=answers,
+        latency_ms=(base.result.latency_ms or 0.0) + (planner.result.latency_ms or 0.0),
+    )
+    return DecisionEvaluation(
+        result=result,
+        accepted=tuple(dict.fromkeys((*base.accepted, *planner.accepted))),
+        escalated=tuple(dict.fromkeys((*base.escalated, *planner.escalated))),
     )

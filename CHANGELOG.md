@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.3.1 - 2026-09-28
+
+- Record executor `attempt`, `success` and `failure` economics for Construction, guided execution and Inception/start, including local/free runs.
+- Preserve cheap-first tier, agent, model, exit status and Core usage snapshot when available, while keeping telemetry non-authoritative.
+- Add route-level economics output so `aisdlc economics` shows the effective `tier · purpose · agent · model` path instead of only aggregate counters.
+- Count successful process exits that fail reconciliation/no-op validation as economic failures, matching the governed outcome.
+- Keep explicit/legacy executions visible as `unknown` tier rather than silently omitting them.
+
 ## 0.3.0 - 2026-09-27
 
 - Add provider-neutral cost-aware routing with ordered economic tiers: `local -> free -> paid-efficient -> paid-standard -> frontier`.

@@ -29,7 +29,8 @@ from agora_ai_sdlc.runtime_execution import (
     supports_governed_runtime_plan,
 )
 from agora_ai_sdlc.skill_planner import maybe_plan_skill
-from agora_ai_sdlc.verification import persisted_verification_diagnostic
+from agora_ai_sdlc.verification import load_persisted_verification, persisted_verification_diagnostic
+from agora_ai_sdlc.verification_triage import triage_verification_failure
 from agora_ai_sdlc.wizard import load_answers
 
 _CONSTRUCTION_SOURCE_SUFFIXES = {
@@ -372,6 +373,25 @@ def execute_guided_preparation(
     repair_diagnostic = (
         persisted_verification_diagnostic(root, decision.work) if decision.state == "construction" else None
     )
+    if decision.state == "construction":
+        verification_report = load_persisted_verification(root, decision.work)
+        if verification_report is not None:
+            try:
+                failure_triage = triage_verification_failure(
+                    verification_report,
+                    provider=decision_session.provider,
+                )
+            except (LayaUnavailable, OSError, RuntimeError, ValueError):
+                failure_triage = None
+            if failure_triage is not None:
+                triage_note = (
+                    f"Verification failure class={failure_triage.failure_class}; "
+                    f"repair-route={failure_triage.route}; "
+                    f"confidence={failure_triage.confidence:.3f}."
+                )
+                repair_diagnostic = (
+                    f"{triage_note} {repair_diagnostic}" if repair_diagnostic else triage_note
+                )
     before_snapshot = project_file_snapshot(root) if decision.state == "construction" else {}
     plan = None
     if supports_governed_runtime_plan(workspace):

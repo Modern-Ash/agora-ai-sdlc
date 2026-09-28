@@ -41,6 +41,7 @@ class PoolCandidate:
     activities: tuple[str, ...] = ()
     purposes: tuple[str, ...] = ("executor", "planner", "reviewer")
     projected_usage: dict[str, int | None] | None = None
+    context_limit_tokens: int | None = None
 
     def applies_to(self, activity: str, purpose: str) -> bool:
         return (not self.activities or activity in self.activities) and purpose in self.purposes

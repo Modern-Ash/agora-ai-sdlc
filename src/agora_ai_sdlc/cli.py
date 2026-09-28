@@ -541,6 +541,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "start":
         from agora_ai_sdlc.executor_recovery import RecoveryFailureContext, run_with_recovery
         from agora_ai_sdlc.observation_ui import HumanChannel, safe_text
+        from agora_ai_sdlc.progress_events import render_tty
         from agora_ai_sdlc.start_flow import (
             StartExecutorError,
             StartFlowError,
@@ -611,6 +612,8 @@ def main(argv: list[str] | None = None) -> int:
                 lang=language,
             ) as channel:
                 options = {"progress": channel.event} if channel.active else {}
+                if channel.active:
+                    options["progress_event"] = lambda event: channel.write(render_tty(event))
                 attempt = 0
 
                 def operation(agent: str | None, model: str | None):

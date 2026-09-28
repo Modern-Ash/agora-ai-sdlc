@@ -341,3 +341,23 @@ def select_from_runtime_pool(
         decision=decision,
         context_limit_tokens=selected.context_limit_tokens,
     )
+
+
+
+def configured_context_limit(root: Path, agent_id: str, model: str | None = None) -> int | None:
+    """Return an explicit configured limit only; never guess provider/model context windows."""
+
+    pool = load_runtime_pool(root)
+    if pool is None:
+        return None
+    matches = [item for item in pool.candidates if item.binding.agent.id == agent_id]
+    if model is not None:
+        exact = [
+            item
+            for item in matches
+            if item.binding.model is not None and item.binding.model.model == model
+        ]
+        if exact:
+            matches = exact
+    limits = {item.context_limit_tokens for item in matches if item.context_limit_tokens is not None}
+    return next(iter(limits)) if len(limits) == 1 else None

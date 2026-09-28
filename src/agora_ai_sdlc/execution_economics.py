@@ -298,3 +298,49 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
         "unaccounted_paid_usage": unaccounted_paid_usage,
         "events": len(events),
     }
+
+
+
+def render_economics(root: Path, work: str) -> str:
+    """Render a compact economics summary without inventing unknown cost/token data."""
+
+    summary = summarize_economics(root, work)
+    lines = [
+        "Agora Flow | Economics",
+        "",
+        f"Work: {work}",
+        f"Observed generative calls: {summary['generative_calls_observed']}",
+    ]
+    decisions = summary["decisions"]
+    if decisions:
+        lines.append("Decision routes:")
+        for route, count in decisions.items():
+            lines.append(f"  - {route}: {count}")
+
+    attempts = summary["attempts"]
+    if attempts:
+        lines.append("Execution attempts:")
+        for tier, count in attempts.items():
+            lines.append(f"  - {tier}: {count}")
+
+    measurements = summary["context_measurements"]
+    if measurements:
+        lines.append("Context measurements:")
+        for measurement in measurements:
+            basis = measurement.get("basis", "unknown")
+            source = measurement.get("source", "unknown")
+            before = measurement.get("before")
+            after = measurement.get("after")
+            reduction = measurement.get("reduction")
+            lines.append(
+                f"  - {before} -> {after}; reduction={reduction}; basis={basis}; source={source}"
+            )
+
+    if summary["unaccounted_paid_usage"]:
+        lines.append(
+            f"Unaccounted paid usage events: {summary['unaccounted_paid_usage']} "
+            "(cost remains unknown)"
+        )
+    lines.append("")
+    lines.append("No counterfactual token or monetary savings are claimed without a measured baseline.")
+    return "\n".join(lines)

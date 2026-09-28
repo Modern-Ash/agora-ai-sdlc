@@ -458,6 +458,45 @@ def _install_guided_skill(target: Path) -> Path:
         raise InstallerError("installer.skill-invalid", str(error)) from error
 
 
+
+_AGENT_BLOCK_START = "<!-- agora-flow:agent-discovery:start -->"
+_AGENT_BLOCK_END = "<!-- agora-flow:agent-discovery:end -->"
+_AGENT_DISCOVERY = """<!-- agora-flow:agent-discovery:start -->
+## Agora Flow
+
+This repository is governed by Agora Flow.
+
+Before performing SDLC work, read `.agora/skills/agora-ai-sdlc-guided/SKILL.md` and follow the applicable phase references.
+
+Use `aisdlc` as the orchestration surface. Agora Core is an internal deterministic governance kernel; do not invoke its CLI directly. Do not invent lifecycle state, gates, approvals, evidence, or authority. Read those facts from Agora Flow/Core-backed project state.
+
+When working directly from this chat, preserve the same human approval boundaries and bounded-context rules defined by the canonical skill.
+<!-- agora-flow:agent-discovery:end -->"""
+
+
+def _install_agent_adapter(target: Path, filename: str) -> Path:
+    path = target / filename
+    existing = path.read_text(encoding="utf-8") if path.exists() else ""
+    if _AGENT_BLOCK_START in existing and _AGENT_BLOCK_END in existing:
+        prefix, remainder = existing.split(_AGENT_BLOCK_START, 1)
+        _, suffix = remainder.split(_AGENT_BLOCK_END, 1)
+        content = prefix.rstrip() + "\n\n" + _AGENT_DISCOVERY + suffix
+    else:
+        content = existing.rstrip()
+        if content:
+            content += "\n\n"
+        content += _AGENT_DISCOVERY + "\n"
+    path.write_text(content, encoding="utf-8")
+    return path
+
+
+def _install_chat_adapters(target: Path) -> tuple[Path, Path]:
+    return (
+        _install_agent_adapter(target, "AGENTS.md"),
+        _install_agent_adapter(target, "CLAUDE.md"),
+    )
+
+
 def apply(config: dict, target: Path, home: Path) -> dict:
     normalized = validate_config(config)
     core = core_preflight()
@@ -578,6 +617,7 @@ def apply(config: dict, target: Path, home: Path) -> dict:
     )
     _write_project_metadata(target, normalized)
     installed_skill = _install_guided_skill(target)
+    chat_adapters = _install_chat_adapters(target)
     validation = workspace.validate()
     work = workspace.show_work(normalized["swarm"], normalized["work"]["id"])
     return {
@@ -589,6 +629,7 @@ def apply(config: dict, target: Path, home: Path) -> dict:
         "swarm": normalized["swarm"],
         "work": normalized["work"]["id"],
         "guided_skill": str(installed_skill.relative_to(target)),
+        "chat_adapters": [str(path.relative_to(target)) for path in chat_adapters],
         "next_commands": ["aisdlc"],
     }
 

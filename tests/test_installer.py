@@ -12,6 +12,8 @@ from agora_ai_sdlc.installer import (
     load_config,
     preview,
     render_config,
+    render_install_preview,
+    render_install_result,
     validate_config,
     wizard,
 )
@@ -229,11 +231,7 @@ def test_apply_reports_core_handoff_commands(tmp_path, monkeypatch):
     result = apply(base_config(), tmp_path / "project", tmp_path / "home")
 
     assert result["core_validation"] == "ok"
-    assert result["next_commands"] == [
-        "agora validate",
-        "agora status --board",
-        "agora-ai-sdlc continue",
-    ]
+    assert result["next_commands"] == ["aisdlc"]
 
 
 def test_wizard_displays_detected_runtimes_without_enabling_them(tmp_path, monkeypatch):
@@ -427,8 +425,8 @@ def test_interactive_install_rendering_is_flow_only():
         "work_state": "inception",
     }
 
-    preview = installer.render_install_preview(data)
-    result = installer.render_install_result(data)
+    preview = render_install_preview(data)
+    result = render_install_result(data)
 
     assert "Agora Flow · Instalación" in preview
     assert "Agora Flow · Instalación completada" in result
@@ -438,12 +436,3 @@ def test_interactive_install_rendering_is_flow_only():
     assert not preview.lstrip().startswith("{")
 
 
-def test_apply_handoff_uses_only_aisdlc(tmp_path, monkeypatch):
-    # The installer result contract must never reintroduce Core CLI next steps.
-    monkeypatch.setattr(installer, "_core_preflight", lambda: {"version": "0.9.1", "executable": "/bin/agora"})
-    monkeypatch.setattr(installer, "_is_git_work_tree", lambda target: False)
-
-    source = Path(installer.__file__).read_text(encoding="utf-8")
-    assert '"next_commands": ["aisdlc"]' in source
-    assert '"agora validate"' not in source
-    assert '"agora status --board"' not in source

@@ -10,6 +10,7 @@ from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.construction_reconciliation import reconcile_construction_execution
 from agora_ai_sdlc.execution_bundle import build_execution_bundle, resolve_work_workspace
+from agora_ai_sdlc.execution_economics import record_executor_event
 from agora_ai_sdlc.executor_launch import (
     ExecutorLaunchError,
     _bounded_output,
@@ -235,14 +236,48 @@ def launch_construction_executor(
         kwargs["runtime_version"] = runtime.version
 
     before_snapshot = project_file_snapshot(root) if decision is not None else {}
+    record_executor_event(
+        root,
+        event="attempt",
+        work=work_id,
+        swarm=swarm_id,
+        runtime=runtime,
+        plan=plan,
+        model=model,
+        workspace=workspace,
+        reason="construction",
+    )
     try:
         with guard_governed_state(root):
             completed = workspace.start_session(StartSessionInput(**kwargs))
     except GovernanceRegression as error:
+        record_executor_event(
+            root,
+            event="failure",
+            work=work_id,
+            swarm=swarm_id,
+            runtime=runtime,
+            plan=plan,
+            model=model,
+            workspace=workspace,
+            reason=f"construction governance regression: {error}",
+        )
         raise ExecutorLaunchError(str(error)) from error
     except (OSError, RuntimeError, ValueError) as error:
         after = _matching_sessions(workspace, root, base_id)
         durable = after[-1] if after else None
+        record_executor_event(
+            root,
+            event="failure",
+            work=work_id,
+            swarm=swarm_id,
+            runtime=runtime,
+            plan=plan,
+            model=model,
+            workspace=workspace,
+            reason=f"construction executor failure: {error}",
+            exit_code=getattr(durable, "exit_code", None),
+        )
         suffix = ""
         if durable is not None:
             diagnostic = _session_failure_diagnostic(Path(durable.path))
@@ -255,6 +290,18 @@ def launch_construction_executor(
         ) from error
 
     if completed.status != "completed":
+        record_executor_event(
+            root,
+            event="failure",
+            work=work_id,
+            swarm=swarm_id,
+            runtime=runtime,
+            plan=plan,
+            model=model,
+            workspace=workspace,
+            reason=f"construction unexpected status: {completed.status!r}",
+            exit_code=getattr(completed, "exit_code", None),
+        )
         raise ExecutorLaunchError(
             f"Construction executor {runtime.name} ended with unexpected session status {completed.status!r}"
         )
@@ -262,6 +309,18 @@ def launch_construction_executor(
         try:
             reconciliation = reconcile_construction_execution(root, decision, workspace_factory=workspace_factory)
         except (OSError, RuntimeError, ValueError) as error:
+            record_executor_event(
+                root,
+                event="failure",
+                work=work_id,
+                swarm=swarm_id,
+                runtime=runtime,
+                plan=plan,
+                model=model,
+                workspace=workspace,
+                reason=f"construction reconciliation failure: {error}",
+                exit_code=getattr(completed, "exit_code", None),
+            )
             raise ExecutorLaunchError(
                 f"Construction executor {runtime.name} completed, but reconciliation failed: {error}"
             ) from error
@@ -270,8 +329,32 @@ def launch_construction_executor(
             reconciliation.registered_artifacts or reconciliation.criterion_stages or reconciliation.verification_passed
         )
         if not _construction_relevant_changes(changes) and not governed:
+            record_executor_event(
+                root,
+                event="failure",
+                work=work_id,
+                swarm=swarm_id,
+                runtime=runtime,
+                plan=plan,
+                model=model,
+                workspace=workspace,
+                reason="construction completed without observable governed progress",
+                exit_code=getattr(completed, "exit_code", None),
+            )
             raise ExecutorLaunchError(
                 f"Construction executor {runtime.name} exited successfully but produced no observable "
                 "source/test/build-config change and no governed Construction progress."
             )
+    record_executor_event(
+        root,
+        event="success",
+        work=work_id,
+        swarm=swarm_id,
+        runtime=runtime,
+        plan=plan,
+        model=model,
+        workspace=workspace,
+        reason="construction",
+        exit_code=getattr(completed, "exit_code", None),
+    )
     return _result(completed, reused=False)

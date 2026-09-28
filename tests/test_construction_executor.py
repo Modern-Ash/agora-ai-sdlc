@@ -2,6 +2,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from agora_ai_sdlc import construction_executor
+from agora_ai_sdlc.execution_economics import summarize_economics
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery
 
 
@@ -87,6 +88,10 @@ def test_launch_construction_executor_uses_deterministic_bundle_and_assigned_act
     assert data.swarm_id == "issue-26-demo"
     assert data.work_id == "issue-26"
     assert data.runner == "claude --print construction"
+    economics = summarize_economics(tmp_path, "issue-26")
+    assert economics["attempts"] == {"unknown": 1}
+    assert economics["successes"] == {"unknown": 1}
+    assert economics["failures"] == {}
 
 
 def _patch_common(monkeypatch, tmp_path, sessions):
@@ -127,3 +132,7 @@ def test_completed_session_is_not_reused_and_noop_run_fails_closed(monkeypatch, 
     else:
         raise AssertionError("no-op run must fail closed")
     assert workspace.started[0].id.endswith("-rerun-2")
+    economics = summarize_economics(tmp_path, "issue-26")
+    assert economics["attempts"] == {"unknown": 1}
+    assert economics["successes"] == {}
+    assert economics["failures"] == {"unknown": 1}

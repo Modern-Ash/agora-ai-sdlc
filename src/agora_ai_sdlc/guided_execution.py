@@ -438,6 +438,12 @@ def execute_guided_preparation(
             except (LayaUnavailable, OSError, RuntimeError, ValueError):
                 failure_triage = None
             if failure_triage is not None:
+                emit(
+                    "decision",
+                    "completed",
+                    "verification-triage",
+                    f"Laya classified verification as {failure_triage.failure_class}; route={failure_triage.route}",
+                )
                 record_decision_event(
                     root,
                     work=decision.work,
@@ -542,6 +548,13 @@ def execute_guided_preparation(
     if "timeout_seconds" in fields:
         kwargs["timeout_seconds"] = 600
 
+    emit(
+        "routing",
+        "completed",
+        "runtime-selection",
+        f"{runtime.name} selected" + (f" · tier={execution_tier}" if execution_tier else ""),
+    )
+    emit("execution", "started", "executor", f"Starting {runtime.name}")
     if progress_fn is not None:
         progress_fn("executor")
     record_executor_event(
@@ -584,6 +597,7 @@ def execute_guided_preparation(
         suffix = f" Executor diagnostic: {diagnostic}." if diagnostic else ""
         if "Durable diagnostics:" not in str(error):
             suffix += f" Durable diagnostics: {session_path / 'SUMMARY.md'}."
+        emit("execution", "failed", "executor", f"{runtime.name} failed")
         raise ExecutorLaunchError(f"Guided executor {runtime.name} failed: {error}.{suffix}") from error
 
     if getattr(result, "status", None) != "completed":
@@ -655,6 +669,7 @@ def execute_guided_preparation(
                 f"source/test/build-config repair and no governed Construction progress.{detail}"
             )
 
+    emit("execution", "completed", "executor", f"{runtime.name} completed")
     record_executor_event(
         root,
         event="success",

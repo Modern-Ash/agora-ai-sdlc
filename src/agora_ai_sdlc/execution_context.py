@@ -11,7 +11,11 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from agora_ai_sdlc.context_graph import estimate_tokens
-from agora_ai_sdlc.context_relevance import RelevanceCache, RelevanceInput, classify_relevance
+from agora_ai_sdlc.context_relevance import (
+    RelevanceCache,
+    RelevanceInput,
+    classify_relevance,
+)
 from agora_ai_sdlc.decision_plane import DecisionProvider, DecisionQuestion
 from agora_ai_sdlc.execution_bundle import ExecutionBundle
 

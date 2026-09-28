@@ -8,18 +8,18 @@ Agora AI-SDLC 0.2.0 is the recommended single-tool install. It includes Agora Co
 and installs the internal Core kernel in the same isolated `uv tool` environment. Normal users use `aisdlc`:
 
 ```bash
-uv tool install 'agora-ai-sdlc[full] @ git+https://github.com/Modern-Ash/agora-ai-sdlc.git@v0.2.0'
+uv tool install 'agora-ai-sdlc @ git+https://github.com/Modern-Ash/agora-ai-sdlc.git@v0.2.0'
 
 aisdlc --version
 aisdlc doctor
 ```
 
-The `full` extra adds Laya for the local System-1 decision plane. Agora Core is resolved automatically
+The standard installation includes Laya for the local System-1 decision plane. Agora Core is resolved automatically
 from the compatible `agora-framework>=0.8.2,<0.10` range; release validation currently exercises Core
 0.9.1. To replace an older tool installation with this release:
 
 ```bash
-uv tool install --force 'agora-ai-sdlc[full] @ git+https://github.com/Modern-Ash/agora-ai-sdlc.git@v0.2.0'
+uv tool install --force 'agora-ai-sdlc @ git+https://github.com/Modern-Ash/agora-ai-sdlc.git@v0.2.0'
 ```
 
 ## Install a project
@@ -118,8 +118,8 @@ runtime as its only System-1 decision engine before escalating work to a generat
 Agora Core remains authoritative for lifecycle state, evidence, approvals and transitions.
 
 ```bash
-# Full installation (Core + Flow + Laya) from the 0.2.0 release
-uv tool install 'agora-ai-sdlc[full] @ git+https://github.com/Modern-Ash/agora-ai-sdlc.git@v0.2.0'
+# Single installation: Flow + internal Core kernel + local Laya decision plane
+uv tool install 'agora-ai-sdlc @ git+https://github.com/Modern-Ash/agora-ai-sdlc.git@v0.2.0'
 ```
 
 The normal Automagic workflow is `aisdlc start ...` once and `aisdlc` to resume; users do not invoke Laya directly. If Laya is unavailable, the wizard fails open to deterministic/generative behavior rather than blocking delivery.

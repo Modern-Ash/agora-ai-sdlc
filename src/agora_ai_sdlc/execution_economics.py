@@ -30,6 +30,7 @@ class EconomicsEvent:
     reason: str | None = None
     exit_code: int | None = None
     core_usage: dict[str, Any] | None = None
+    measurement: dict[str, Any] | None = None
     at: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -153,12 +154,91 @@ def record_executor_event(
         return None
 
 
+
+def record_decision_event(
+    root: Path,
+    *,
+    work: str,
+    route: str,
+    reason: str,
+    generative_call: bool,
+    tier: str | None = None,
+    measurement: dict[str, Any] | None = None,
+) -> str | None:
+    """Record an observed routing decision without inventing a counterfactual cost."""
+
+    try:
+        return record_event(
+            root,
+            EconomicsEvent(
+                "decision",
+                work,
+                tier,
+                None,
+                None,
+                purpose="decision",
+                reason=reason,
+                measurement={
+                    "source": "observed",
+                    "route": route,
+                    "generative_call": generative_call,
+                    **(measurement or {}),
+                },
+            ),
+        )
+    except OSError:
+        return None
+
+
+def record_context_event(
+    root: Path,
+    *,
+    work: str,
+    before: int,
+    after: int,
+    basis: str,
+    reason: str = "bounded-context-selection",
+) -> str | None:
+    """Record context reduction with an explicit measurement basis."""
+
+    if before < 0 or after < 0:
+        raise ValueError("context measurements must be non-negative")
+    if basis not in {"estimated_tokens", "characters", "bytes", "provider_reported_tokens"}:
+        raise ValueError(f"unsupported context measurement basis: {basis}")
+    try:
+        return record_event(
+            root,
+            EconomicsEvent(
+                "context",
+                work,
+                None,
+                None,
+                None,
+                purpose="context",
+                reason=reason,
+                measurement={
+                    "source": "observed"
+                    if basis in {"characters", "bytes", "provider_reported_tokens"}
+                    else "estimated",
+                    "basis": basis,
+                    "before": before,
+                    "after": after,
+                    "reduction": max(0, before - after),
+                },
+            ),
+        )
+    except OSError:
+        return None
+
 def summarize_economics(root: Path, work: str) -> dict[str, Any]:
     events = load_events(root, work)
     attempts: dict[str, int] = {}
     successes: dict[str, int] = {}
     failures: dict[str, int] = {}
     routes: dict[tuple[str, str, str, str], dict[str, int]] = {}
+    decisions: dict[str, int] = {}
+    generative_calls = 0
+    context_measurements: list[dict[str, Any]] = []
     escalations = 0
     unaccounted_paid_usage = 0
     for item in events:
@@ -179,6 +259,17 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
             successes[tier] = successes.get(tier, 0) + 1
         elif event == "failure":
             failures[tier] = failures.get(tier, 0) + 1
+        elif event == "decision":
+            measurement = item.get("measurement")
+            if isinstance(measurement, dict):
+                route_name = str(measurement.get("route") or "unknown")
+                decisions[route_name] = decisions.get(route_name, 0) + 1
+                if measurement.get("generative_call") is True:
+                    generative_calls += 1
+        elif event == "context":
+            measurement = item.get("measurement")
+            if isinstance(measurement, dict):
+                context_measurements.append(dict(measurement))
         elif event == "escalation":
             escalations += 1
         elif event == "planner-usage-unaccounted":
@@ -200,6 +291,9 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
         "successes": dict(sorted(successes.items())),
         "failures": dict(sorted(failures.items())),
         "routes": route_summary,
+        "decisions": dict(sorted(decisions.items())),
+        "generative_calls_observed": generative_calls,
+        "context_measurements": context_measurements,
         "escalations": escalations,
         "unaccounted_paid_usage": unaccounted_paid_usage,
         "events": len(events),

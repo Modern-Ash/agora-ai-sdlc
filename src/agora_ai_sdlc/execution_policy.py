@@ -25,10 +25,10 @@ class ExecutionPolicy:
     preferred_tier: str
     max_automatic_tier: str
     planner_tier: str | None
-    planner_mode: str
     reasoning_tier: str
     paid_execution_allowed: bool
     frontier_allowed: bool
+    planner_mode: str = "none"
 
     def allows(self, tier: str) -> bool:
         if tier not in _TIER_INDEX:

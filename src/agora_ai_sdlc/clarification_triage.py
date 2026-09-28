@@ -4,7 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from agora_ai_sdlc.decision_plane import ConfidencePolicy, DecisionProvider, DecisionQuestion, evaluate_with_confidence
+from agora_ai_sdlc.decision_plane import (
+    ConfidencePolicy,
+    DecisionProvider,
+    DecisionQuestion,
+    evaluate_with_confidence,
+)
 from agora_ai_sdlc.deterministic_inception import IssueFacts
 
 GAP_QUESTION = DecisionQuestion(

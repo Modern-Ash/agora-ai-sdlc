@@ -6,7 +6,12 @@ import hashlib
 import json
 from dataclasses import dataclass
 
-from agora_ai_sdlc.decision_plane import ConfidencePolicy, DecisionProvider, DecisionQuestion, evaluate_with_confidence
+from agora_ai_sdlc.decision_plane import (
+    ConfidencePolicy,
+    DecisionProvider,
+    DecisionQuestion,
+    evaluate_with_confidence,
+)
 from agora_ai_sdlc.verification import VerificationReport
 
 FAILURE_QUESTION = DecisionQuestion(

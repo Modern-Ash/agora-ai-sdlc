@@ -10,6 +10,11 @@ from threading import Event, Thread
 from agora.model import StartSessionInput
 from agora.workspace import AgoraWorkspace
 
+from agora_ai_sdlc.context_manifest import (
+    ContextOverflowError,
+    build_context_manifest,
+    persist_context_manifest,
+)
 from agora_ai_sdlc.construction_reconciliation import (
     prepare_construction_scaffold,
     reconcile_construction_execution,
@@ -27,6 +32,7 @@ from agora_ai_sdlc.guided import GuidedDecision, inspect_next
 from agora_ai_sdlc.laya_provider import LayaUnavailable
 from agora_ai_sdlc.local_delivery import diff_project_file_snapshots, project_file_snapshot
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
+from agora_ai_sdlc.runtime_pool import configured_context_limit
 from agora_ai_sdlc.runtime_execution import (
     RuntimeExecutionError,
     build_governed_runtime_plan,
@@ -350,6 +356,21 @@ def execute_guided_preparation(
             provider=decision_session.provider,
         )
         lean_path = persist_execution_context(root, decision.work, lean)
+        context_limit = configured_context_limit(root, runtime.id, model)
+        manifest = build_context_manifest(
+            root,
+            bundle,
+            lean,
+            runtime_limit_tokens=context_limit,
+        )
+        persist_context_manifest(root, decision.work, manifest)
+        if manifest.overflow:
+            raise ExecutorLaunchError(
+                "context.selected_overflow: bounded selected context "
+                f"(~{manifest.estimated_tokens} estimated tokens) exceeds explicitly configured "
+                f"runtime limit {manifest.runtime_limit_tokens}; reselect a larger-context runtime "
+                "or reduce optional context without dropping mandatory governance."
+            )
         record_context_event(
             root,
             work=decision.work,
@@ -358,6 +379,8 @@ def execute_guided_preparation(
             basis="estimated_tokens",
             reason="laya-execution-context-pruning",
         )
+    except ContextOverflowError as error:
+        raise ExecutorLaunchError(str(error)) from error
     except (LayaUnavailable, OSError, RuntimeError, ValueError):
         lean = None
     skill_plan = None

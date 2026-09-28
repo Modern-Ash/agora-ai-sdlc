@@ -41,6 +41,7 @@ class PoolCandidate:
     activities: tuple[str, ...] = ()
     purposes: tuple[str, ...] = ("executor", "planner", "reviewer")
     projected_usage: dict[str, int | None] | None = None
+    context_limit_tokens: int | None = None
 
     def applies_to(self, activity: str, purpose: str) -> bool:
         return (not self.activities or activity in self.activities) and purpose in self.purposes
@@ -62,6 +63,7 @@ class PoolSelection:
     tier: str
     reason: str
     decision: dict
+    context_limit_tokens: int | None = None
 
 
 def _project_payload(root: Path) -> dict[str, Any]:
@@ -165,6 +167,14 @@ def load_runtime_pool(root: Path) -> RuntimePool | None:
             )
         ):
             raise RuntimePoolError("routing.projected_usage", "projected usage must contain non-negative integers")
+        context_limit = value.get("context_limit_tokens")
+        if context_limit is not None and (
+            not isinstance(context_limit, int) or isinstance(context_limit, bool) or context_limit < 1
+        ):
+            raise RuntimePoolError(
+                "routing.context_limit_tokens",
+                "context_limit_tokens must be a positive integer when configured",
+            )
         candidates.append(
             PoolCandidate(
                 tier=tier,
@@ -173,6 +183,7 @@ def load_runtime_pool(root: Path) -> RuntimePool | None:
                 activities=tuple(activities_value),
                 purposes=tuple(purposes_value),
                 projected_usage=dict(usage or {}),
+                context_limit_tokens=context_limit,
             )
         )
 
@@ -329,4 +340,25 @@ def select_from_runtime_pool(
         tier=selected.tier,
         reason=str(decision.get("selection_reason") or "configured cheap-first preference"),
         decision=decision,
+        context_limit_tokens=selected.context_limit_tokens,
     )
+
+
+
+def configured_context_limit(root: Path, agent_id: str, model: str | None = None) -> int | None:
+    """Return an explicit configured limit only; never guess provider/model context windows."""
+
+    pool = load_runtime_pool(root)
+    if pool is None:
+        return None
+    matches = [item for item in pool.candidates if item.binding.agent.id == agent_id]
+    if model is not None:
+        exact = [
+            item
+            for item in matches
+            if item.binding.model is not None and item.binding.model.model == model
+        ]
+        if exact:
+            matches = exact
+    limits = {item.context_limit_tokens for item in matches if item.context_limit_tokens is not None}
+    return next(iter(limits)) if len(limits) == 1 else None

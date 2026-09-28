@@ -29,7 +29,10 @@ from agora_ai_sdlc.runtime_execution import (
     supports_governed_runtime_plan,
 )
 from agora_ai_sdlc.skill_planner import maybe_plan_skill
-from agora_ai_sdlc.verification import load_persisted_verification, persisted_verification_diagnostic
+from agora_ai_sdlc.verification import (
+    load_persisted_verification,
+    persisted_verification_diagnostic,
+)
 from agora_ai_sdlc.verification_triage import triage_verification_failure
 from agora_ai_sdlc.wizard import load_answers
 

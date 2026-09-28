@@ -13,6 +13,7 @@ from agora_ai_sdlc.execution_economics import (
     record_decision_event,
     record_event,
     record_executor_event,
+    render_economics,
     summarize_economics,
 )
 from agora_ai_sdlc.execution_requirements import requirements_for_activity
@@ -275,3 +276,29 @@ def test_context_measurement_rejects_unknown_basis(tmp_path):
         assert "unsupported context measurement basis" in str(error)
     else:
         raise AssertionError("unknown measurement basis must not be persisted")
+
+
+
+def test_render_economics_labels_estimates_and_refuses_counterfactual_claims(tmp_path):
+    record_decision_event(
+        tmp_path,
+        work="w",
+        route="laya",
+        reason="clarification-no-material-gap",
+        generative_call=False,
+        tier="system1",
+    )
+    record_context_event(
+        tmp_path,
+        work="w",
+        before=1000,
+        after=400,
+        basis="estimated_tokens",
+    )
+
+    rendered = render_economics(tmp_path, "w")
+
+    assert "Observed generative calls: 0" in rendered
+    assert "laya: 1" in rendered
+    assert "basis=estimated_tokens; source=estimated" in rendered
+    assert "No counterfactual token or monetary savings are claimed" in rendered

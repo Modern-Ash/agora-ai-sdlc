@@ -256,6 +256,13 @@ def _admission_blockers(
         )
     if requirements.reasoning_tier == "local" and binding.model is None:
         blockers.append(_blocker("runtime.model_binding_missing", "local reasoning requires an explicit model binding"))
+    if requirements.security_review == "required" and candidate.locality == "remote":
+        blockers.append(
+            _blocker(
+                "runtime.security_locality",
+                "security-sensitive execution cannot use a candidate explicitly declared remote",
+            )
+        )
     if (
         context_tokens_estimate is not None
         and candidate.context_limit_tokens is not None

@@ -91,20 +91,20 @@ def run_doctor(root: Path) -> tuple[tuple[DoctorCheck, ...], tuple[RuntimeDiscov
 
     try:
         core_version = installed_core_version()
-        checks.append(DoctorCheck("agora-core", True, core_version))
+        checks.append(DoctorCheck("core-kernel", True, f"{core_version} · internal governance kernel"))
     except metadata.PackageNotFoundError:
-        checks.append(DoctorCheck("agora-core", False, "not installed"))
+        checks.append(DoctorCheck("core-kernel", False, "internal dependency unavailable"))
 
-    checks.append(DoctorCheck("agora-ai-sdlc", True, __version__))
+    checks.append(DoctorCheck("agora-flow", True, __version__))
     try:
         laya_version = metadata.version("laya")
-        checks.append(DoctorCheck("laya-system1", True, f"{laya_version} · local Decision Plane available"))
+        checks.append(DoctorCheck("decision-plane", True, f"Laya {laya_version} · local System-1 available"))
     except metadata.PackageNotFoundError:
         checks.append(
             DoctorCheck(
-                "laya-system1",
+                "decision-plane",
                 False,
-                'optional · install "agora-ai-sdlc[full]" for local routing and Context Economy',
+                "Laya unavailable · Flow remains correct but escalates advisory decisions safely",
             )
         )
     checks.append(_tool_check("git"))
@@ -173,6 +173,6 @@ def render_doctor(
             state += f" · {t('doctor.service', lang=lang)} {runtime.service}"
         lines.append(f"{marker} {runtime.name:<15} {state}")
 
-    overall = all(check.ok for check in checks if check.id not in {"gh", "laya-system1"})
+    overall = all(check.ok for check in checks if check.id not in {"gh", "decision-plane"})
     lines.extend(["", t("doctor.ready" if overall else "doctor.attention", lang=lang)])
     return "\n".join(lines)

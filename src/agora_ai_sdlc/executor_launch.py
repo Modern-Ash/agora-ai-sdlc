@@ -13,6 +13,7 @@ from agora.model import LaunchSessionInput, StartSessionInput
 from agora.workspace import AgoraWorkspace
 
 from agora_ai_sdlc.execution_bundle import build_execution_bundle
+from agora_ai_sdlc.execution_economics import record_executor_event
 from agora_ai_sdlc.governance_guard import GovernanceRegression, guard_governed_state
 from agora_ai_sdlc.guided import inspect_next
 from agora_ai_sdlc.inception_validation import validate_inception_output
@@ -415,16 +416,82 @@ def launch_inception_executor(
             f"Inception executor session {latest.id} is already running; inspect its durable session state instead of launching a duplicate."
         )
     if latest is not None and latest.status == "prepared":
+        record_executor_event(
+            root,
+            event="attempt",
+            work=work_id,
+            swarm=swarm_id,
+            runtime=runtime,
+            plan=plan,
+            tier=execution_tier,
+            model=model,
+            workspace=workspace,
+            reason="inception-prepared",
+        )
         try:
             with guard_governed_state(root):
                 completed = workspace.launch_session(LaunchSessionInput(session_id=latest.id))
         except GovernanceRegression as error:
+            record_executor_event(
+                root,
+                event="failure",
+                work=work_id,
+                swarm=swarm_id,
+                runtime=runtime,
+                plan=plan,
+                tier=execution_tier,
+                model=model,
+                workspace=workspace,
+                reason=f"inception prepared governance regression: {error}",
+            )
             raise ExecutorLaunchError(str(error)) from error
         except (OSError, RuntimeError, ValueError) as error:
+            record_executor_event(
+                root,
+                event="failure",
+                work=work_id,
+                swarm=swarm_id,
+                runtime=runtime,
+                plan=plan,
+                tier=execution_tier,
+                model=model,
+                workspace=workspace,
+                reason=f"inception prepared executor failure: {error}",
+            )
             raise ExecutorLaunchError(
                 f"Inception executor failed while launching prepared session {latest.id}: {error}"
             ) from error
-        return _result(completed, reused=False, handoff_path=handoff_path)
+        try:
+            result = _result(completed, reused=False, handoff_path=handoff_path)
+        except ExecutorLaunchError as error:
+            record_executor_event(
+                root,
+                event="failure",
+                work=work_id,
+                swarm=swarm_id,
+                runtime=runtime,
+                plan=plan,
+                tier=execution_tier,
+                model=model,
+                workspace=workspace,
+                reason=f"inception prepared result invalid: {error}",
+                exit_code=getattr(completed, "exit_code", None),
+            )
+            raise
+        record_executor_event(
+            root,
+            event="success" if result.status == "completed" else "failure",
+            work=work_id,
+            swarm=swarm_id,
+            runtime=runtime,
+            plan=plan,
+            tier=execution_tier,
+            model=model,
+            workspace=workspace,
+            reason="inception-prepared",
+            exit_code=result.exit_code,
+        )
+        return result
 
     session_id = base_id
     retry_of = None
@@ -457,14 +524,51 @@ def launch_inception_executor(
     if "runtime_version" in fields and runtime.version:
         kwargs["runtime_version"] = runtime.version
 
+    record_executor_event(
+        root,
+        event="attempt",
+        work=work_id,
+        swarm=swarm_id,
+        runtime=runtime,
+        plan=plan,
+        tier=execution_tier,
+        model=model,
+        workspace=workspace,
+        reason="inception",
+    )
     try:
         with guard_governed_state(root):
             completed = workspace.start_session(StartSessionInput(**kwargs))
     except GovernanceRegression as error:
+        record_executor_event(
+            root,
+            event="failure",
+            work=work_id,
+            swarm=swarm_id,
+            runtime=runtime,
+            plan=plan,
+            tier=execution_tier,
+            model=model,
+            workspace=workspace,
+            reason=f"inception governance regression: {error}",
+        )
         raise ExecutorLaunchError(str(error)) from error
     except (OSError, RuntimeError, ValueError) as error:
         latest_after = _matching_sessions(workspace, root, base_id)
         durable = latest_after[-1] if latest_after else None
+        record_executor_event(
+            root,
+            event="failure",
+            work=work_id,
+            swarm=swarm_id,
+            runtime=runtime,
+            plan=plan,
+            tier=execution_tier,
+            model=model,
+            workspace=workspace,
+            reason=f"inception executor failure: {error}",
+            exit_code=getattr(durable, "exit_code", None),
+        )
         error_text = str(error)
         suffix = ""
         timed_out = durable is not None and getattr(durable, "exit_code", None) == 124
@@ -494,7 +598,50 @@ def launch_inception_executor(
         ) from error
 
     if completed.status != "completed":
+        record_executor_event(
+            root,
+            event="failure",
+            work=work_id,
+            swarm=swarm_id,
+            runtime=runtime,
+            plan=plan,
+            tier=execution_tier,
+            model=model,
+            workspace=workspace,
+            reason=f"inception unexpected status: {completed.status!r}",
+            exit_code=getattr(completed, "exit_code", None),
+        )
         raise ExecutorLaunchError(
             f"Inception executor {runtime.name} ended with unexpected session status {completed.status!r}"
         )
-    return _result(completed, reused=False, handoff_path=handoff_path)
+    try:
+        result = _result(completed, reused=False, handoff_path=handoff_path)
+    except ExecutorLaunchError as error:
+        record_executor_event(
+            root,
+            event="failure",
+            work=work_id,
+            swarm=swarm_id,
+            runtime=runtime,
+            plan=plan,
+            tier=execution_tier,
+            model=model,
+            workspace=workspace,
+            reason=f"inception result invalid: {error}",
+            exit_code=getattr(completed, "exit_code", None),
+        )
+        raise
+    record_executor_event(
+        root,
+        event="success",
+        work=work_id,
+        swarm=swarm_id,
+        runtime=runtime,
+        plan=plan,
+        tier=execution_tier,
+        model=model,
+        workspace=workspace,
+        reason="inception",
+        exit_code=result.exit_code,
+    )
+    return result

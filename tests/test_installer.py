@@ -5,6 +5,7 @@ import pytest
 import yaml
 from agora.workspace import AgoraWorkspace
 
+from agora_ai_sdlc import installer
 from agora_ai_sdlc.installer import (
     InstallerError,
     apply,

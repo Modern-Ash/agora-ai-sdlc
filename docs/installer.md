@@ -1,13 +1,13 @@
 # Project installer
 
-`agora-ai-sdlc install` bootstraps a real Agora AI-SDLC project using an interactive wizard or a reproducible configuration file.
+`aisdlc install` bootstraps a real Agora AI-SDLC project using an interactive wizard or a reproducible configuration file.
 
 The installer is credential-free. It declares runtimes, providers and models but never asks for API keys, writes secrets, installs provider CLIs or changes provider credentials.
 
 ## Interactive
 
 ```bash
-agora-ai-sdlc install /path/to/project
+aisdlc install /path/to/project
 ```
 
 The wizard detects whether the target already contains a Git repository. Before runtime selection it
@@ -42,13 +42,13 @@ For Ollama, OpenCode or another runtime without a dedicated Core adapter, use `i
 Generate a config without applying:
 
 ```bash
-agora-ai-sdlc install /path/to/project --write-config ai-sdlc-install.yaml
+aisdlc install /path/to/project --write-config ai-sdlc-install.yaml
 ```
 
 Apply later:
 
 ```bash
-agora-ai-sdlc install /path/to/project \
+aisdlc install /path/to/project \
   --config ai-sdlc-install.yaml \
   --home ~/.agora \
   --yes
@@ -72,17 +72,13 @@ The installer supports `starter`, `enterprise`, `modernization` and `regulated`.
 
 Installing `agora-ai-sdlc` installs `agora-framework` as a Python dependency. Users should not normally install Core separately.
 
-Before writing project state, `agora-ai-sdlc install` now verifies:
-- the installed Agora Core package version;
-- compatibility with the flavor's supported Core range;
-- availability of the `agora` CLI in the active environment.
+Before writing project state, `aisdlc install` verifies the internal Core kernel version and compatibility with the Flow release. The user does not install or invoke Core separately.
 
-A successful installation reports the Core version/executable and the next operational commands:
+A successful installation continues entirely through Agora Flow:
 
 ```bash
-agora validate
-agora status --board
-agora-ai-sdlc continue
+aisdlc doctor
+aisdlc
 ```
 
 The installer also copies the portable guided-agent skill to:
@@ -116,10 +112,10 @@ grant lifecycle authority.
 Additional disclosure/non-interactive modes:
 
 ```bash
-agora-ai-sdlc continue --commands
-agora-ai-sdlc continue --expert
-agora-ai-sdlc continue --json
-agora-ai-sdlc continue --non-interactive
+aisdlc continue --commands
+aisdlc continue --expert
+aisdlc continue --json
+aisdlc continue --non-interactive
 ```
 
 `--commands` shows the grouped underlying Core sequence together with a reason for every step. For
@@ -139,9 +135,9 @@ AI-SDLC owns the bootstrap and guided experience; Agora Core remains the lifecyc
 Use runtime discovery independently from installation:
 
 ```bash
-agora-ai-sdlc runtimes
-agora-ai-sdlc runtimes --root /path/to/project
-agora-ai-sdlc runtimes --json
+aisdlc runtimes
+aisdlc runtimes --root /path/to/project
+aisdlc runtimes --json
 ```
 
 The result distinguishes:
@@ -156,9 +152,8 @@ No provider credential files are read, and authentication is never inferred from
 For broader environment diagnostics:
 
 ```bash
-agora-ai-sdlc doctor
-agora-ai-sdlc doctor --json
+aisdlc doctor
+aisdlc doctor --json
 ```
 
-Doctor reports Agora Core, AI-SDLC, Git, GitHub CLI, project validation, guided-skill installation and
-the same runtime discovery snapshot.
+Doctor reports the Agora Flow version, internal Core kernel compatibility, local Laya decision-plane state, Git/GitHub tooling, project validation, guided skill and runtime discovery. A missing Laya decision plane degrades routing economics only; deterministic governance remains available.

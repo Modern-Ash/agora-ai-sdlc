@@ -12,6 +12,8 @@ from agora_ai_sdlc.installer import (
     load_config,
     preview,
     render_config,
+    render_install_preview,
+    render_install_result,
     validate_config,
     wizard,
 )
@@ -229,11 +231,7 @@ def test_apply_reports_core_handoff_commands(tmp_path, monkeypatch):
     result = apply(base_config(), tmp_path / "project", tmp_path / "home")
 
     assert result["core_validation"] == "ok"
-    assert result["next_commands"] == [
-        "agora validate",
-        "agora status --board",
-        "agora-ai-sdlc continue",
-    ]
+    assert result["next_commands"] == ["aisdlc"]
 
 
 def test_wizard_displays_detected_runtimes_without_enabling_them(tmp_path, monkeypatch):
@@ -409,3 +407,32 @@ def test_installer_rejects_unknown_routing_tier():
     with pytest.raises(InstallerError) as error:
         validate_config(config)
     assert error.value.code == "installer.routing"
+
+
+
+def test_interactive_install_rendering_is_flow_only():
+    data = {
+        "project": {"id": "demo", "name": "Demo"},
+        "profile": "starter",
+        "method": {"id": "ai-sdlc", "version": "0.2.0"},
+        "language": "java",
+        "pathway": "brownfield",
+        "depth": "standard",
+        "runtimes": [],
+        "core_validation": "ok",
+        "guided_skill": ".agora/skills/agora-ai-sdlc-guided/SKILL.md",
+        "work": "first-work",
+        "work_state": "inception",
+    }
+
+    preview = render_install_preview(data)
+    result = render_install_result(data)
+
+    assert "Agora Flow · Instalación" in preview
+    assert "Agora Flow · Instalación completada" in result
+    assert "aisdlc" in result
+    assert "agora validate" not in result
+    assert "agora status" not in result
+    assert not preview.lstrip().startswith("{")
+
+

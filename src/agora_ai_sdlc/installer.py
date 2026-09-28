@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 import re
 import shutil
@@ -590,12 +589,46 @@ def apply(config: dict, target: Path, home: Path) -> dict:
         "swarm": normalized["swarm"],
         "work": normalized["work"]["id"],
         "guided_skill": str(installed_skill.relative_to(target)),
-        "next_commands": [
-            "agora validate",
-            "agora status --board",
-            "agora-ai-sdlc continue",
-        ],
+        "next_commands": ["aisdlc"],
     }
+
+
+def render_install_preview(data: dict) -> str:
+    """Human Flow rendering for interactive installation; JSON remains machine-only."""
+
+    project = data.get("project") or {}
+    method = data.get("method") or {}
+    lines = [
+        "Agora Flow · Instalación",
+        "",
+        f"Proyecto: {project.get('name') or project.get('id') or '-'}",
+        f"Perfil: {data.get('profile') or '-'}",
+        f"Método: {method.get('id') or '-'} {method.get('version') or ''}".rstrip(),
+        f"Lenguaje: {data.get('language') or '-'}",
+        f"Pathway: {data.get('pathway') or '-'}",
+        f"Profundidad: {data.get('depth') or '-'}",
+    ]
+    runtimes = data.get("runtimes") or []
+    lines.append(f"Runtimes configurados: {len(runtimes)}")
+    lines.append("")
+    lines.append("Se instalarán el estado gobernado del proyecto y el skill de Agora Flow.")
+    return "\n".join(lines)
+
+
+def render_install_result(data: dict) -> str:
+    project = data.get("project") or {}
+    lines = [
+        "Agora Flow · Instalación completada",
+        "",
+        f"✓ Proyecto: {project.get('name') or project.get('id') or '-'}",
+        f"✓ Core kernel: {data.get('core_validation') or 'unknown'}",
+        f"✓ Guided skill: {data.get('guided_skill') or '-'}",
+        f"✓ Work inicial: {data.get('work') or '-'} · {data.get('work_state') or '-'}",
+        "",
+        "Siguiente paso:",
+        "  aisdlc",
+    ]
+    return "\n".join(lines)
 
 
 def _ask(input_fn, prompt: str, default: str | None = None) -> str:
@@ -705,5 +738,5 @@ def wizard(
         },
     }
     normalized = validate_config(config)
-    output_fn(json.dumps(preview(normalized, target), sort_keys=True))
+    output_fn(render_install_preview(preview(normalized, target)))
     return normalized

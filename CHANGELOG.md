@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.4.1 - 2026-09-28
+
+- Keep interactive installation entirely on the Agora Flow surface: human-readable preview/result and `aisdlc` as the only next command.
+- Remove remaining `agora validate`, `agora status --board` and Core-init guidance from normal installer/doctor UX.
+- Preserve JSON installation output for explicit reproducible/non-interactive `--config` or `--yes` automation.
+
 ## 0.4.0 - 2026-09-28
 
 - Make `aisdlc` the single normal-user Agora Flow surface while retaining Agora Core as the internal deterministic governance kernel.

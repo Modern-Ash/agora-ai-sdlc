@@ -137,6 +137,26 @@ def run_doctor(root: Path) -> tuple[tuple[DoctorCheck, ...], tuple[RuntimeDiscov
         )
     )
 
+    for filename in ("AGENTS.md", "CLAUDE.md"):
+        adapter = root / filename
+        installed = False
+        if adapter.is_file():
+            try:
+                content = adapter.read_text(encoding="utf-8")
+                installed = (
+                    "<!-- agora-flow:agent-discovery:start -->" in content
+                    and "<!-- agora-flow:agent-discovery:end -->" in content
+                )
+            except OSError:
+                installed = False
+        checks.append(
+            DoctorCheck(
+                f"chat-adapter:{filename}",
+                installed,
+                filename if installed else "not installed",
+            )
+        )
+
     formatter = _formatter_check(root)
     if formatter is not None:
         checks.append(formatter)

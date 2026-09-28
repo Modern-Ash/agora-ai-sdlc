@@ -186,8 +186,8 @@ def advise_execution(
             model = planner.result.model
             latency += planner.result.latency_ms or 0.0
             metadata.update(planner.result.metadata)
-        except Exception:  # noqa: BLE001 - optional advisory compatibility boundary
-            pass
+        except Exception as error:  # noqa: BLE001 - optional advisory compatibility boundary
+            metadata["planner_advisory_error"] = type(error).__name__
 
     result = DecisionResult(
         provider=provider_name,

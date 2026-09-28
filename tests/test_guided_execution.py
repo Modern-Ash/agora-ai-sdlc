@@ -43,6 +43,48 @@ def test_guided_prompt_requests_safe_durable_progress_milestones(monkeypatch, tm
     assert "--swarm delivery --work issue-26" in prompt
 
 
+
+def test_human_boundary_emits_blocked_event_before_runtime_work(monkeypatch, tmp_path):
+    events = []
+    human = GuidedDecision(
+        swarm="delivery",
+        work="issue-26",
+        title="Deliver issue",
+        method="ai-sdlc",
+        actor="project:product-owner",
+        role="product-owner",
+        state="inception",
+        target="construction",
+        gate="inception-approved",
+        blockers=("approval required",),
+        messages=("Human approval required.",),
+        missing_approvals=("product-owner",),
+        ready_for_human_approval=True,
+    )
+    runtime = SimpleNamespace(
+        id="codex",
+        name="Codex",
+        installed=True,
+        responsive=True,
+        executable="/usr/bin/codex",
+        command="codex",
+        version="1.0",
+    )
+    monkeypatch.setattr("agora_ai_sdlc.guided_execution._runtime", lambda *args, **kwargs: runtime)
+
+    with pytest.raises(ExecutorLaunchError, match="human-boundary"):
+        execute_guided_preparation(
+            tmp_path,
+            human,
+            runtime_id="codex",
+            progress_event=events.append,
+        )
+
+    assert len(events) == 1
+    assert events[0].kind == "human-boundary"
+    assert events[0].status == "blocked"
+    assert events[0].facts["missing_approvals"] == ["product-owner"]
+
 def test_runtime_switch_does_not_invent_executor_actor(monkeypatch, tmp_path):
     captured = {}
     progress = []

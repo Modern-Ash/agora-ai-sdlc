@@ -158,26 +158,48 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
     attempts: dict[str, int] = {}
     successes: dict[str, int] = {}
     failures: dict[str, int] = {}
+    routes: dict[tuple[str, str, str, str], dict[str, int]] = {}
     escalations = 0
     unaccounted_paid_usage = 0
     for item in events:
         tier = str(item.get("tier") or "unknown")
-        if item.get("event") == "attempt":
+        event = item.get("event")
+        if event in {"attempt", "success", "failure"}:
+            key = (
+                tier,
+                str(item.get("purpose") or "unknown"),
+                str(item.get("agent") or "unknown"),
+                str(item.get("model") or "unknown"),
+            )
+            route = routes.setdefault(key, {"attempts": 0, "successes": 0, "failures": 0})
+            route[{"attempt": "attempts", "success": "successes", "failure": "failures"}[event]] += 1
+        if event == "attempt":
             attempts[tier] = attempts.get(tier, 0) + 1
-        elif item.get("event") == "success":
+        elif event == "success":
             successes[tier] = successes.get(tier, 0) + 1
-        elif item.get("event") == "failure":
+        elif event == "failure":
             failures[tier] = failures.get(tier, 0) + 1
-        elif item.get("event") == "escalation":
+        elif event == "escalation":
             escalations += 1
-        elif item.get("event") == "planner-usage-unaccounted":
+        elif event == "planner-usage-unaccounted":
             unaccounted_paid_usage += 1
+    route_summary = [
+        {
+            "tier": tier,
+            "purpose": purpose,
+            "agent": agent,
+            "model": model,
+            **counts,
+        }
+        for (tier, purpose, agent, model), counts in sorted(routes.items())
+    ]
     return {
         "schema": SCHEMA,
         "work": work,
         "attempts": dict(sorted(attempts.items())),
         "successes": dict(sorted(successes.items())),
         "failures": dict(sorted(failures.items())),
+        "routes": route_summary,
         "escalations": escalations,
         "unaccounted_paid_usage": unaccounted_paid_usage,
         "events": len(events),

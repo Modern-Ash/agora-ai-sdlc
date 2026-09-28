@@ -120,22 +120,6 @@ def advise_execution(
     system0 = resolve_system0(bundle)
     questions = tuple(question for question in BASE_EXECUTION_QUESTIONS if question.id not in system0)
 
-    evaluations = []
-    for question in questions:
-        threshold = (
-            confidence_threshold
-            if confidence_thresholds is None
-            else threshold_for(question.id, confidence_thresholds)
-        )
-        evaluations.append(
-            evaluate_with_confidence(
-                provider,
-                state,
-                (question,),
-                policy=ConfidencePolicy(threshold),
-            )
-        )
-
     answers = {}
     accepted = []
     escalated = []
@@ -144,18 +128,32 @@ def advise_execution(
     latency = 0.0
     metadata = {"system0": {name: answer.reason for name, answer in sorted(system0.items())}}
 
-    for evaluation in evaluations:
-        answers.update(evaluation.result.answers)
-        accepted.extend(evaluation.accepted)
-        escalated.extend(evaluation.escalated)
-        provider_name = evaluation.result.provider
-        model = evaluation.result.model
-        latency += evaluation.result.latency_ms or 0.0
-        metadata.update(evaluation.result.metadata)
+    if questions:
+        # Keep one provider call for the unresolved base questions. Confidence
+        # remains risk-calibrated per answer after the shared inference pass.
+        result = provider.decide(state, questions)
+        expected = {question.id for question in questions}
+        if set(result.answers) != expected:
+            from agora_ai_sdlc.decision_plane import DecisionPlaneError
 
-    # System-0 answers are projected as trusted deterministic floors, not Laya
-    # confidence claims. A synthetic confidence of 1.0 identifies certainty of
-    # the deterministic rule, while provenance remains explicit in metadata.
+            raise DecisionPlaneError(
+                "decision.answer_set",
+                f"provider answer set mismatch; expected={sorted(expected)!r} actual={sorted(result.answers)!r}",
+            )
+        provider_name = result.provider
+        model = result.model
+        latency += result.latency_ms or 0.0
+        metadata.update(result.metadata)
+        for question in questions:
+            answer = result.answers[question.id]
+            answers[question.id] = answer
+            threshold = (
+                confidence_threshold
+                if confidence_thresholds is None
+                else threshold_for(question.id, confidence_thresholds)
+            )
+            (accepted if answer.confidence >= threshold else escalated).append(question.id)
+
     for name, resolved in system0.items():
         question = next(
             (item for item in (*BASE_EXECUTION_QUESTIONS, PLANNER_QUESTION) if item.id == name),

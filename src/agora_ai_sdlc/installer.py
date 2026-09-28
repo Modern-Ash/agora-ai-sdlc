@@ -458,7 +458,6 @@ def _install_guided_skill(target: Path) -> Path:
         raise InstallerError("installer.skill-invalid", str(error)) from error
 
 
-
 _AGENT_BLOCK_START = "<!-- agora-flow:agent-discovery:start -->"
 _AGENT_BLOCK_END = "<!-- agora-flow:agent-discovery:end -->"
 _AGENT_DISCOVERY = """<!-- agora-flow:agent-discovery:start -->

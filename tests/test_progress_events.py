@@ -94,3 +94,21 @@ def test_legacy_callback_maps_existing_progress_without_changing_execution_api()
     assert events[0].kind == "context"
     assert events[1].status == "progress"
     assert events[1].facts["summary"] == "tests running"
+
+
+
+def test_progress_event_snapshot_does_not_expose_private_reasoning_fields():
+    event = ProgressEvent(
+        1,
+        "decision",
+        "completed",
+        "system1",
+        "decision.resolved",
+        facts={"summary": "Decision resolved", "confidence": 0.97},
+    )
+
+    serialized = render_jsonl(event)
+
+    assert "chain_of_thought" not in serialized
+    assert "prompt" not in serialized
+    assert "stderr" not in serialized

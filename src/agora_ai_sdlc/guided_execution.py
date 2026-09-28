@@ -18,8 +18,9 @@ from agora_ai_sdlc.execution_bundle import build_execution_bundle
 from agora_ai_sdlc.execution_context import persist_execution_context, select_execution_context
 from agora_ai_sdlc.execution_economics import record_executor_event
 from agora_ai_sdlc.executor_launch import ExecutorLaunchError, _session_failure_diagnostic, build_runtime_runner
+from agora_ai_sdlc.flow_decision_session import FlowDecisionSession
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next
-from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
+from agora_ai_sdlc.laya_provider import LayaUnavailable
 from agora_ai_sdlc.local_delivery import diff_project_file_snapshots, project_file_snapshot
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
 from agora_ai_sdlc.runtime_execution import (
@@ -330,6 +331,7 @@ def execute_guided_preparation(
             "Re-read Agora Core instead of executing stale context."
         )
     workspace = workspace_factory(cwd=root)
+    decision_session = FlowDecisionSession()
     lean_path = None
     if progress_fn is not None:
         progress_fn("context")
@@ -337,7 +339,7 @@ def execute_guided_preparation(
         lean = select_execution_context(
             root,
             bundle,
-            provider=LayaDecisionProvider(),
+            provider=decision_session.provider,
         )
         lean_path = persist_execution_context(root, decision.work, lean)
     except (LayaUnavailable, OSError, RuntimeError, ValueError):
@@ -345,7 +347,12 @@ def execute_guided_preparation(
     skill_plan = None
     if repair_advice is None:
         try:
-            skill_plan = maybe_plan_skill(root, bundle, workspace=workspace)
+            skill_plan = maybe_plan_skill(
+                root,
+                bundle,
+                workspace=workspace,
+                decision_session=decision_session,
+            )
         except (OSError, RuntimeError, ValueError):
             skill_plan = None
 

@@ -9,6 +9,8 @@ from agora_ai_sdlc.execution_economics import (
     EconomicsEvent,
     attempt_count,
     load_events,
+    record_context_event,
+    record_decision_event,
     record_event,
     record_executor_event,
     summarize_economics,
@@ -218,3 +220,58 @@ def test_paid_advisor_is_read_only_and_hands_back_advice(tmp_path, monkeypatch):
     events = summarize_economics(tmp_path, "w")
     assert events["attempts"]["paid-efficient"] == 1
     assert events["escalations"] == 1
+
+
+
+def test_decision_metrics_count_observed_routes_without_claiming_savings(tmp_path):
+    record_decision_event(
+        tmp_path,
+        work="w",
+        route="system0",
+        reason="explicit-human-boundary",
+        generative_call=False,
+        tier="deterministic",
+    )
+    record_decision_event(
+        tmp_path,
+        work="w",
+        route="premium",
+        reason="frontier-required",
+        generative_call=True,
+        tier="premium",
+    )
+
+    summary = summarize_economics(tmp_path, "w")
+
+    assert summary["decisions"] == {"premium": 1, "system0": 1}
+    assert summary["generative_calls_observed"] == 1
+    assert "tokens_saved" not in summary
+
+
+def test_context_measurement_preserves_estimate_basis(tmp_path):
+    record_context_event(
+        tmp_path,
+        work="w",
+        before=48000,
+        after=13000,
+        basis="estimated_tokens",
+    )
+
+    measurement = summarize_economics(tmp_path, "w")["context_measurements"][0]
+
+    assert measurement == {
+        "source": "estimated",
+        "basis": "estimated_tokens",
+        "before": 48000,
+        "after": 13000,
+        "reduction": 35000,
+    }
+
+
+def test_context_measurement_rejects_unknown_basis(tmp_path):
+    try:
+        record_context_event(tmp_path, work="w", before=10, after=5, basis="magic-tokens")
+    except ValueError as error:
+        assert "unsupported context measurement basis" in str(error)
+    else:
+        raise AssertionError("unknown measurement basis must not be persisted")

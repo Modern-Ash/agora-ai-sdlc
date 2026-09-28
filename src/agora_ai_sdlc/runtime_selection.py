@@ -217,6 +217,7 @@ def _admission_blockers(
     candidate: Candidate,
     requirements: ExecutionRequirements,
     availability: Mapping[str, Any] | None,
+    context_tokens_estimate: int | None = None,
 ) -> tuple[list[dict], list[str]]:
     """Availability, capability and model-binding blockers; static manifests never read observations."""
     binding = _binding_of(candidate.runtime)

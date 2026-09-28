@@ -10,14 +10,14 @@ from threading import Event, Thread
 from agora.model import StartSessionInput
 from agora.workspace import AgoraWorkspace
 
+from agora_ai_sdlc.construction_reconciliation import (
+    prepare_construction_scaffold,
+    reconcile_construction_execution,
+)
 from agora_ai_sdlc.context_manifest import (
     ContextOverflowError,
     build_context_manifest,
     persist_context_manifest,
-)
-from agora_ai_sdlc.construction_reconciliation import (
-    prepare_construction_scaffold,
-    reconcile_construction_execution,
 )
 from agora_ai_sdlc.execution_bundle import build_execution_bundle
 from agora_ai_sdlc.execution_context import persist_execution_context, select_execution_context
@@ -33,12 +33,12 @@ from agora_ai_sdlc.laya_provider import LayaUnavailable
 from agora_ai_sdlc.local_delivery import diff_project_file_snapshots, project_file_snapshot
 from agora_ai_sdlc.progress_events import ProgressEmitter, ProgressEvent
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
-from agora_ai_sdlc.runtime_pool import configured_context_limit
 from agora_ai_sdlc.runtime_execution import (
     RuntimeExecutionError,
     build_governed_runtime_plan,
     supports_governed_runtime_plan,
 )
+from agora_ai_sdlc.runtime_pool import configured_context_limit
 from agora_ai_sdlc.skill_planner import maybe_plan_skill
 from agora_ai_sdlc.verification import (
     load_persisted_verification,
@@ -230,8 +230,10 @@ def _prompt(root: Path, decision: GuidedDecision, bundle_path: str | None) -> st
                 "Be proactive: inspect only the bounded relevant context, create or update the non-authoritative "
                 "artifacts/evidence needed for the next gate, and run safe deterministic verification when useful."
             ),
-            "Use Agora Flow operations and repository conventions instead of inventing lifecycle state. "
-            "Core governance is an internal kernel; do not invoke its CLI directly.",
+            (
+                "Use Agora Flow operations and repository conventions instead of inventing lifecycle state. "
+                "Core governance is an internal kernel; do not invoke its CLI directly."
+            ),
             (
                 "Report only concise observable milestones through the host-provided Agora Flow progress channel. "
                 "Good milestones describe facts such as context inspected, artifact persisted, or verification completed; "

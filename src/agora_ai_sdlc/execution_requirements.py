@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from agora_ai_sdlc.agent_capabilities import CAPABILITY_IDS
@@ -60,8 +60,8 @@ class ExecutionRequirements:
     validation_focus: tuple[str, ...]
     required_capabilities: tuple[str, ...]
     human_authority_required: bool
-    planner_needed: str
-    advisory: Mapping[str, Any]
+    advisory: Mapping[str, Any] = field(default_factory=dict)
+    planner_needed: str = "none"
 
     @property
     def executable_by_agent(self) -> bool:

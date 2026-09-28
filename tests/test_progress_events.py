@@ -2,7 +2,14 @@ import json
 
 import pytest
 
-from agora_ai_sdlc.progress_events import ProgressEmitter, ProgressEvent, render_chat, render_jsonl, render_tty
+from agora_ai_sdlc.progress_events import (
+    ProgressEmitter,
+    ProgressEvent,
+    legacy_callback,
+    render_chat,
+    render_jsonl,
+    render_tty,
+)
 
 
 def test_event_contract_is_versioned_and_monotonic():
@@ -70,3 +77,20 @@ def test_progress_facts_do_not_require_provider_output_or_prompt():
     assert payload["facts"] == {"summary": "Human approval required", "completed": 3, "total": 7}
     assert "prompt" not in payload["facts"]
     assert "stdout" not in payload["facts"]
+
+
+
+def test_legacy_callback_maps_existing_progress_without_changing_execution_api():
+    events = []
+    callback = legacy_callback(
+        ProgressEmitter(swarm="delivery", work="w"),
+        events.append,
+    )
+
+    callback("context")
+    callback("executor_wait:tests running")
+
+    assert [event.sequence for event in events] == [1, 2]
+    assert events[0].kind == "context"
+    assert events[1].status == "progress"
+    assert events[1].facts["summary"] == "tests running"

@@ -21,6 +21,7 @@ from agora_ai_sdlc.execution_economics import EconomicsEvent, core_budgets, core
 from agora_ai_sdlc.execution_envelope import ExecutionEnvelope
 from agora_ai_sdlc.execution_policy import execution_policy_for
 from agora_ai_sdlc.execution_requirements import requirements_for, requirements_for_activity
+from agora_ai_sdlc.flow_decision_session import FlowDecisionSession
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider
 from agora_ai_sdlc.runtime_adapter import AdapterError, sanitize
 from agora_ai_sdlc.runtime_domain import AgentRuntimeRef, ModelRuntimeRef, RuntimeBinding
@@ -204,6 +205,7 @@ def maybe_plan_skill(
     *,
     availability=None,
     workspace=None,
+    decision_session: FlowDecisionSession | None = None,
 ) -> SkillPlan | None:
     """Run the cheapest permitted paid planner when policy asks for one.
 
@@ -211,8 +213,12 @@ def maybe_plan_skill(
     """
 
     try:
-        requirements = requirements_for(bundle, provider=LayaDecisionProvider())
-        policy = execution_policy_for(requirements)
+        if decision_session is not None:
+            requirements = decision_session.requirements(bundle)
+            policy = decision_session.policy(bundle)
+        else:
+            requirements = requirements_for(bundle, provider=LayaDecisionProvider())
+            policy = execution_policy_for(requirements)
     except (AttributeError, OSError, RuntimeError, ValueError):
         # Skill planning is an optional advisory optimization. Legacy/minimal
         # execution-bundle seams used by supported executors may not expose the

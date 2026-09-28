@@ -365,3 +365,125 @@ def test_runtime_pool_rejects_invalid_context_limit(tmp_path):
         assert "context_limit_tokens" in str(error)
     else:
         raise AssertionError("invalid context limit must fail closed")
+
+
+
+def test_context_limit_rejects_cheaper_candidate_before_selection(tmp_path):
+    path = tmp_path / "ai-sdlc" / "project.yaml"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        yaml.safe_dump(
+            {
+                "routing": {
+                    "profile": "cheap-first",
+                    "allow_paid_auto": True,
+                    "candidates": [
+                        {
+                            "tier": "local",
+                            "agent": "opencode",
+                            "model": "ollama/qwen3-coder:latest",
+                            "context_limit_tokens": 4096,
+                            "cost_class": "free",
+                            "locality": "local",
+                        },
+                        {
+                            "tier": "paid-efficient",
+                            "agent": "codex",
+                            "model": "openai/configured-default",
+                            "context_limit_tokens": 32768,
+                            "cost_class": "low",
+                            "locality": "remote",
+                        },
+                    ],
+                }
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    requirements = requirements_for_activity("construction.implementation", tier="standard")
+
+    selected = select_from_runtime_pool(
+        tmp_path,
+        requirements,
+        availability=availability(),
+        context_tokens_estimate=12000,
+    )
+
+    assert selected is not None
+    assert selected.tier == "paid-efficient"
+    considered = selected.decision["considered"]
+    assert considered[0]["blockers"] == ("runtime.context_limit_exceeded",)
+    assert considered[0]["context_limit_tokens"] == 4096
+    assert considered[0]["cost_class"] == "free"
+    assert selected.decision["selected_cost_class"] == "low"
+    assert "cheapest-admissible-tier" in selected.decision["selection_reasons"]
+
+
+def test_unknown_context_limit_is_not_fabricated_as_a_blocker(tmp_path):
+    write_config(tmp_path)
+    requirements = requirements_for_activity("construction.implementation", tier="standard")
+
+    selected = select_from_runtime_pool(
+        tmp_path,
+        requirements,
+        availability=availability(),
+        context_tokens_estimate=12000,
+    )
+
+    assert selected is not None
+    assert "runtime.context_limit_exceeded" not in selected.decision["considered"][0]["blockers"]
+
+
+
+def test_security_required_rejects_explicit_remote_candidate(tmp_path):
+    path = tmp_path / "ai-sdlc" / "project.yaml"
+    path.parent.mkdir(parents=True)
+    path.write_text(
+        yaml.safe_dump(
+            {
+                "routing": {
+                    "profile": "cheap-first",
+                    "allow_paid_auto": True,
+                    "candidates": [
+                        {
+                            "tier": "local",
+                            "agent": "opencode",
+                            "model": "ollama/qwen3-coder:latest",
+                            "locality": "remote",
+                        },
+                        {
+                            "tier": "paid-efficient",
+                            "agent": "codex",
+                            "model": "openai/configured-default",
+                            "locality": "local",
+                        },
+                    ],
+                }
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    base = requirements_for_activity("construction.implementation", tier="standard")
+    requirements = type(base)(
+        activity_class=base.activity_class,
+        reasoning_tier=base.reasoning_tier,
+        risk="high",
+        security_review="required",
+        validation_focus=("functional", "security"),
+        required_capabilities=base.required_capabilities,
+        human_authority_required=False,
+        planner_needed=base.planner_needed,
+        advisory=base.advisory,
+    )
+
+    selected = select_from_runtime_pool(
+        tmp_path,
+        requirements,
+        availability=availability(),
+    )
+
+    assert selected is not None
+    assert selected.binding.agent.id == "codex"
+    assert selected.decision["considered"][0]["blockers"] == ("runtime.security_locality",)

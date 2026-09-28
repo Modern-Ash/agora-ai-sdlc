@@ -56,6 +56,9 @@ class Candidate:
     projected_usage: dict[str, int | None]
     data_policy: dict
     review_policy: dict
+    context_limit_tokens: int | None = None
+    cost_class: str | None = None
+    locality: str | None = None
 
 
 @dataclass(frozen=True)
@@ -253,6 +256,26 @@ def _admission_blockers(
         )
     if requirements.reasoning_tier == "local" and binding.model is None:
         blockers.append(_blocker("runtime.model_binding_missing", "local reasoning requires an explicit model binding"))
+    if requirements.security_review == "required" and candidate.locality == "remote":
+        blockers.append(
+            _blocker(
+                "runtime.security_locality",
+                "security-sensitive execution cannot use a candidate explicitly declared remote",
+            )
+        )
+    if (
+        context_tokens_estimate is not None
+        and candidate.context_limit_tokens is not None
+        and context_tokens_estimate > candidate.context_limit_tokens
+    ):
+        blockers.append(
+            _blocker(
+                "runtime.context_limit_exceeded",
+                "bounded context does not fit the configured runtime context limit",
+                required=context_tokens_estimate,
+                limit=candidate.context_limit_tokens,
+            )
+        )
     return blockers, missing
 
 
@@ -291,6 +314,7 @@ def select_runtime(
     current_runtime: str | None = None,
     requirements: ExecutionRequirements | None = None,
     availability: Mapping[str, Any] | None = None,
+    context_tokens_estimate: int | None = None,
 ) -> dict:
     """Select from explicit order using Core facts, never provider output or opaque scoring.
 
@@ -361,11 +385,19 @@ def select_runtime(
         admission_blockers: list[dict] = []
         missing: list[str] = []
         if requirements is not None:
-            admission_blockers, missing = _admission_blockers(candidate, requirements, availability)
+            admission_blockers, missing = _admission_blockers(
+                candidate,
+                requirements,
+                availability,
+                context_tokens_estimate,
+            )
         blockers = [*policy_blockers, *budget_blockers, *admission_blockers]
         entry = {
             "runtime": _runtime_id(candidate.runtime),
             "blockers": tuple(blocker["code"] for blocker in blockers),
+            "context_limit_tokens": candidate.context_limit_tokens,
+            "cost_class": candidate.cost_class,
+            "locality": candidate.locality,
         }
         if requirements is not None:
             entry["missing_capabilities"] = tuple(missing)

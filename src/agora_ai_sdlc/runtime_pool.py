@@ -42,6 +42,8 @@ class PoolCandidate:
     purposes: tuple[str, ...] = ("executor", "planner", "reviewer")
     projected_usage: dict[str, int | None] | None = None
     context_limit_tokens: int | None = None
+    cost_class: str | None = None
+    locality: str | None = None
 
     def applies_to(self, activity: str, purpose: str) -> bool:
         return (not self.activities or activity in self.activities) and purpose in self.purposes
@@ -175,6 +177,12 @@ def load_runtime_pool(root: Path) -> RuntimePool | None:
                 "routing.context_limit_tokens",
                 "context_limit_tokens must be a positive integer when configured",
             )
+        cost_class = value.get("cost_class")
+        if cost_class is not None and (not isinstance(cost_class, str) or not cost_class.strip()):
+            raise RuntimePoolError("routing.cost_class", "cost_class must be non-empty text when configured")
+        locality = value.get("locality")
+        if locality is not None and locality not in {"local", "remote"}:
+            raise RuntimePoolError("routing.locality", "locality must be local or remote when configured")
         candidates.append(
             PoolCandidate(
                 tier=tier,
@@ -184,6 +192,8 @@ def load_runtime_pool(root: Path) -> RuntimePool | None:
                 purposes=tuple(purposes_value),
                 projected_usage=dict(usage or {}),
                 context_limit_tokens=context_limit,
+                cost_class=cost_class,
+                locality=locality,
             )
         )
 
@@ -283,6 +293,7 @@ def select_from_runtime_pool(
     maximum_tier: str | None = None,
     allowed_agents: tuple[str, ...] | None = None,
     purpose: str = "executor",
+    context_tokens_estimate: int | None = None,
 ) -> PoolSelection | None:
     """Return the cheapest admissible configured binding, or None when routing is not configured."""
 
@@ -320,12 +331,21 @@ def select_from_runtime_pool(
                 projected_usage=dict(item.projected_usage or {}),
                 data_policy=ALLOW,
                 review_policy=ALLOW,
+                context_limit_tokens=item.context_limit_tokens,
+                cost_class=item.cost_class or item.tier,
+                locality=item.locality,
             )
             for item in candidates
         ),
         allowed_fallback_signals=_FALLBACKS,
     )
-    decision = select_runtime(route, requirements=requirements, availability=observed, budgets=budgets)
+    decision = select_runtime(
+        route,
+        requirements=requirements,
+        availability=observed,
+        budgets=budgets,
+        context_tokens_estimate=context_tokens_estimate,
+    )
     if not decision["allowed"] or decision["selected"] is None:
         codes = ",".join(blocker["code"] for blocker in decision.get("blockers", ())) or "no-eligible-candidate"
         raise RuntimePoolError("routing.blocked", f"cost-aware runtime selection is blocked: {codes}")
@@ -335,11 +355,23 @@ def select_from_runtime_pool(
     selected = next((item for item in candidates if _candidate_id(item.binding) == selected_id), None)
     if selected is None:
         raise RuntimePoolError("routing.selection", "selected runtime is not present in the configured pool")
+    enriched = dict(decision)
+    enriched["routing_profile"] = pool.profile
+    enriched["selected_tier"] = selected.tier
+    enriched["selected_cost_class"] = selected.cost_class or selected.tier
+    enriched["selected_locality"] = selected.locality
+    enriched["selection_reasons"] = (
+        "required-capabilities-satisfied",
+        "policy-admissible",
+        "context-limit-sufficient" if selected.context_limit_tokens is not None else "context-limit-unknown",
+        "cheapest-admissible-tier",
+        "configured-order-tiebreak",
+    )
     return PoolSelection(
         binding=binding,
         tier=selected.tier,
         reason=str(decision.get("selection_reason") or "configured cheap-first preference"),
-        decision=decision,
+        decision=enriched,
         context_limit_tokens=selected.context_limit_tokens,
     )
 

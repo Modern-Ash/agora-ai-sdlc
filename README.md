@@ -5,12 +5,11 @@ Vendor-neutral AI-first software-delivery distribution built on [Agora Core](htt
 ## Install
 
 Agora AI-SDLC 0.2.0 is the recommended single-tool install. It includes Agora Core as a dependency
-and exposes all three CLIs from the same isolated `uv tool` environment:
+and installs the internal Core kernel in the same isolated `uv tool` environment. Normal users use `aisdlc`:
 
 ```bash
 uv tool install 'agora-ai-sdlc[full] @ git+https://github.com/Modern-Ash/agora-ai-sdlc.git@v0.2.0'
 
-agora --version
 aisdlc --version
 aisdlc doctor
 ```
@@ -93,9 +92,9 @@ the current state and proposes the next action; Enter confirms it. Verification,
 Core-authorized transitions can be executed from that same session. The UI does not instruct the user
 to exit and run another `aisdlc ...` command.
 
-### 2. Expert CLI
+### 2. Expert / diagnostic surface
 
-Experienced users keep the complete command surface and may compose operations directly:
+Experienced users keep Flow's diagnostic and one-shot surfaces:
 
 ```bash
 aisdlc continue --expert
@@ -103,11 +102,9 @@ aisdlc context ...
 aisdlc execution-bundle ...
 aisdlc verify ...
 aisdlc decision ...
-agora work transition ...
-agora approval add ...
 ```
 
-Flow is therefore an adoption layer, not a restriction or replacement for Agora Core/AI-SDLC commands.
+Agora Core remains an internal deterministic governance kernel. Its low-level CLI may exist for compatibility/debugging, but it is not part of the normal product workflow.
 
 ### 3. Automation / machine surface
 

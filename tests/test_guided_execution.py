@@ -31,14 +31,15 @@ def decision() -> GuidedDecision:
     )
 
 
-def test_guided_prompt_requests_safe_durable_progress_milestones(monkeypatch, tmp_path):
+def test_guided_prompt_uses_flow_progress_without_core_cli_plumbing(monkeypatch, tmp_path):
     monkeypatch.setattr("agora_ai_sdlc.guided_execution.load_answers", lambda *args, **kwargs: {})
 
     prompt = _prompt(tmp_path, decision(), "repo://EXECUTION_BUNDLE.md")
 
-    assert "agora session progress" in prompt
-    assert "$AGORA_SESSION_ID" in prompt
-    assert "$AGORA_EXECUTOR" in prompt
+    assert "host-provided Agora Flow progress channel" in prompt
+    assert "agora session progress" not in prompt
+    assert "agora work " not in prompt
+    assert "agora approval " not in prompt
     assert "never report chain-of-thought" in prompt
     assert "--swarm delivery --work issue-26" in prompt
 

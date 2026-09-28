@@ -30,8 +30,8 @@ Inception contract and writes `CONSTRUCTION-TASK.md`.
 The executor has one responsibility: implement the actual product and executable
 automated tests outside `.agora/`, including the minimal idiomatic build/test
 configuration required for a new product. Do not return with explanation-only
-output: persist source and test files. Do not call `agora artifact add`,
-`agora evidence add`, criterion, approval or transition commands. Agora Flow
+output: persist source and test files. Do not invoke the internal Core CLI for
+artifact, evidence, criterion, approval or transition mutations. Agora Flow
 host reconciles observable product files, deterministic verification evidence
 and criterion stages after the process returns.
 

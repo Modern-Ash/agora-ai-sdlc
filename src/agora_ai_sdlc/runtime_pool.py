@@ -62,6 +62,7 @@ class PoolSelection:
     tier: str
     reason: str
     decision: dict
+    context_limit_tokens: int | None = None
 
 
 def _project_payload(root: Path) -> dict[str, Any]:
@@ -338,4 +339,5 @@ def select_from_runtime_pool(
         tier=selected.tier,
         reason=str(decision.get("selection_reason") or "configured cheap-first preference"),
         decision=decision,
+        context_limit_tokens=selected.context_limit_tokens,
     )

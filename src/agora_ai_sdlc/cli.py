@@ -474,6 +474,12 @@ def main(argv: list[str] | None = None) -> int:
             print("Failures:")
             for tier, count in summary["failures"].items():
                 print(f"  {tier}: {count}")
+            print("Routes:")
+            for route in summary["routes"]:
+                print(
+                    f"  {route['tier']} · {route['purpose']} · {route['agent']} · {route['model']}: "
+                    f"attempts={route['attempts']} successes={route['successes']} failures={route['failures']}"
+                )
             print(f"Escalations: {summary['escalations']}")
         return 0
 

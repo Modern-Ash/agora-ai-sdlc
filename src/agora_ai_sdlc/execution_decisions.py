@@ -9,6 +9,7 @@ from agora_ai_sdlc.decision_plane import (
     DecisionEvaluation,
     DecisionProvider,
     DecisionQuestion,
+    DecisionResult,
     evaluate_with_confidence,
 )
 from agora_ai_sdlc.execution_bundle import ExecutionBundle
@@ -132,11 +133,12 @@ def advise_execution(
 
     answers = dict(base.result.answers)
     answers.update(planner.result.answers)
-    result = type(base.result)(
+    result = DecisionResult(
         provider=base.result.provider,
         model=base.result.model,
         answers=answers,
         latency_ms=(base.result.latency_ms or 0.0) + (planner.result.latency_ms or 0.0),
+        metadata=base.result.metadata,
     )
     return DecisionEvaluation(
         result=result,

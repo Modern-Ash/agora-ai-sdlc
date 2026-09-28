@@ -10,6 +10,11 @@ from threading import Event, Thread
 from agora.model import StartSessionInput
 from agora.workspace import AgoraWorkspace
 
+from agora_ai_sdlc.context_manifest import (
+    ContextOverflowError,
+    build_context_manifest,
+    persist_context_manifest,
+)
 from agora_ai_sdlc.construction_reconciliation import (
     prepare_construction_scaffold,
     reconcile_construction_execution,
@@ -350,6 +355,8 @@ def execute_guided_preparation(
             provider=decision_session.provider,
         )
         lean_path = persist_execution_context(root, decision.work, lean)
+        manifest = build_context_manifest(root, bundle, lean)
+        persist_context_manifest(root, decision.work, manifest)
         record_context_event(
             root,
             work=decision.work,
@@ -358,6 +365,8 @@ def execute_guided_preparation(
             basis="estimated_tokens",
             reason="laya-execution-context-pruning",
         )
+    except ContextOverflowError as error:
+        raise ExecutorLaunchError(str(error)) from error
     except (LayaUnavailable, OSError, RuntimeError, ValueError):
         lean = None
     skill_plan = None

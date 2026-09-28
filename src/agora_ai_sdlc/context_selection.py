@@ -10,7 +10,11 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 from agora_ai_sdlc.context_graph import ContextBundle, Graph, context_bundle
-from agora_ai_sdlc.context_relevance import RelevanceCache, RelevanceInput, classify_relevance
+from agora_ai_sdlc.context_relevance import (
+    RelevanceCache,
+    RelevanceInput,
+    classify_relevance,
+)
 from agora_ai_sdlc.decision_metrics import DecisionMetrics
 from agora_ai_sdlc.decision_plane import DecisionProvider, DecisionQuestion
 

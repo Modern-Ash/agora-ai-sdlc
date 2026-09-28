@@ -346,3 +346,19 @@ def test_bare_guided_projection_anchors_to_work_id_from_current_branch(monkeypat
     assert decision.swarm == "issue-15-delivery"
     assert decision.work == "issue-15"
     assert decision.state == "construction"
+
+
+
+def test_normal_guided_render_never_exposes_core_cli():
+    rendered = render(decision(), show_commands=False)
+
+    assert "agora work " not in rendered
+    assert "agora approval " not in rendered
+    assert "agora artifact " not in rendered
+    assert "agora evidence " not in rendered
+
+
+def test_core_cli_is_expert_debug_disclosure_only():
+    rendered = render(decision(), show_commands=True)
+
+    assert "agora " in rendered

@@ -2,7 +2,25 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from agora_ai_sdlc import guided
+from agora_ai_sdlc.guided import render
 
+
+
+def _sample_decision():
+    return guided.GuidedDecision(
+        swarm="delivery",
+        work="issue-294",
+        title="Deliver issue",
+        method="ai-sdlc",
+        actor="project:product-owner",
+        role="product-owner",
+        state="inception",
+        target="construction",
+        gate="inception-approved",
+        blockers=("missing plan",),
+        messages=("Prepare plan.",),
+        missing_artifacts=("plan",),
+    )
 
 class FakeWorkspace:
     def __init__(self, cwd: Path):
@@ -350,7 +368,7 @@ def test_bare_guided_projection_anchors_to_work_id_from_current_branch(monkeypat
 
 
 def test_normal_guided_render_never_exposes_core_cli():
-    rendered = render(decision(), show_commands=False)
+    rendered = render(_sample_decision(), show_commands=False)
 
     assert "agora work " not in rendered
     assert "agora approval " not in rendered
@@ -359,6 +377,6 @@ def test_normal_guided_render_never_exposes_core_cli():
 
 
 def test_core_cli_is_expert_debug_disclosure_only():
-    rendered = render(decision(), show_commands=True)
+    rendered = render(_sample_decision(), show_commands=True)
 
     assert "agora " in rendered

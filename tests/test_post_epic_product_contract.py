@@ -173,7 +173,7 @@ def test_post_epic_routing_rejects_cheaper_runtime_when_context_does_not_fit(tmp
 
     selected = select_from_runtime_pool(
         tmp_path,
-        requirements_for_activity("construction.implementation", tier="standard"),
+        requirements_for_activity("exploration.read_only", tier="standard"),
         availability=_available_runtimes(),
         context_tokens_estimate=12000,
     )

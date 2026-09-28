@@ -314,6 +314,21 @@ def execute_guided_preparation(
     root = root.resolve()
     runtime = _runtime(root, runtime_id)
     emitter = ProgressEmitter(swarm=decision.swarm, work=decision.work)
+    if decision.ready_for_human_approval or decision.missing_approvals:
+        if progress_event is not None:
+            progress_event(
+                emitter.event(
+                    "human-boundary",
+                    "blocked",
+                    "human-approval",
+                    "gate.human_required",
+                    facts={
+                        "summary": "Human approval required",
+                        "missing_approvals": list(decision.missing_approvals),
+                    },
+                )
+            )
+        raise ExecutorLaunchError("human-boundary: explicit human approval is required before AI execution")
 
     def emit(kind: str, status: str, stage: str, summary: str) -> None:
         if progress_event is None:

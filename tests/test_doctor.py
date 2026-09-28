@@ -48,7 +48,6 @@ def test_formatter_check_flags_prettier_without_agora_ignore(tmp_path):
     assert not _formatter_check(tmp_path).ok
 
 
-
 def test_doctor_uses_single_product_component_ids(tmp_path, monkeypatch):
     monkeypatch.setattr("agora_ai_sdlc.doctor.installed_core_version", lambda: "0.9.1")
     monkeypatch.setattr("agora_ai_sdlc.doctor.discover_runtimes", lambda root: ())

@@ -220,6 +220,8 @@ def maybe_plan_skill(
         # than breaking the underlying governed execution path.
         return None
     if policy.planner_tier is None:
+        # none/template planning is already represented by the deterministic
+        # execution bundle + phase guidance; no generative planner is needed.
         return None
 
     skill, phase = _skill_context(root, bundle.stage)
@@ -229,7 +231,16 @@ def maybe_plan_skill(
     if cached is not None:
         return cached
 
-    planner_requirements = requirements_for_activity("exploration.read_only", tier="standard")
+    planner_reasoning = (
+        "local" if policy.planner_mode == "local" else ("frontier" if policy.planner_mode == "frontier" else "standard")
+    )
+    planner_requirements = requirements_for_activity("exploration.read_only", tier=planner_reasoning)
+    minimum_tier = (
+        "local"
+        if policy.planner_mode == "local"
+        else ("frontier" if policy.planner_mode == "frontier" else "paid-efficient")
+    )
+    allowed_agents = None if policy.planner_mode == "local" else ("codex", "claude")
     try:
         selection = select_from_runtime_pool(
             root,
@@ -237,9 +248,9 @@ def maybe_plan_skill(
             availability=availability,
             budgets=core_budgets(workspace, str(bundle.swarm), str(bundle.work)) if workspace is not None else (),
             work_id=str(bundle.work or "unknown"),
-            minimum_tier="paid-efficient",
+            minimum_tier=minimum_tier,
             maximum_tier=policy.planner_tier,
-            allowed_agents=("codex", "claude"),
+            allowed_agents=allowed_agents,
             purpose="planner",
         )
     except RuntimePoolError:

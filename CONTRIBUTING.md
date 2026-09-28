@@ -6,6 +6,7 @@
 uv sync
 uv run python scripts/install_git_hooks.py
 uv run python scripts/verify_all.py
+uv run python scripts/pr_preflight.py  # mandatory before opening/updating a PR
 ```
 
 The hook installer is repository-owned and adds two local Git guards without extra dependencies:
@@ -15,6 +16,8 @@ The hook installer is repository-owned and adds two local Git guards without ext
 
 Existing unmanaged Git hooks are never overwritten. The fast commit check can also be run directly with
 `uv run python scripts/verify_commit.py`.
+
+The PR preflight runs the full verification and then tests the branch against the newest supported Agora Core in an isolated environment. This applies equally to humans and agents using GitHub APIs/connectors that bypass local hooks. A PR must not be opened until this passes.
 
 The verification script runs, in order: lint, format check, tests, local Markdown links, flavor manifest validation, pack validation, samples and a wheel-install smoke test. It stops at the failing phase and prints a recovery command. It needs no network after dependencies are installed. The packs phase installs each Method Pack into a throwaway Agora project and runs `agora validate`; the samples phase runs every scenario under `samples/` and re-runs the bundled sample from the built wheel.
 

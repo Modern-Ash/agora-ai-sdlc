@@ -28,6 +28,7 @@ class ExecutionPolicy:
     reasoning_tier: str
     paid_execution_allowed: bool
     frontier_allowed: bool
+    planner_mode: str = "none"
 
     def allows(self, tier: str) -> bool:
         if tier not in _TIER_INDEX:
@@ -58,17 +59,21 @@ def execution_policy_for(requirements: ExecutionRequirements) -> ExecutionPolicy
     else:
         raise ExecutionPolicyError(f"unsupported reasoning tier {reasoning!r}")
 
+    planner_mode = requirements.planner_needed
     planner = None
-    if requirements.activity_class == "inception.elaboration":
-        planner = "paid-standard" if reasoning == "frontier" else "paid-efficient"
-    elif reasoning == "frontier":
-        planner = "paid-standard"
+    if planner_mode == "local":
+        planner = "free"
+    elif planner_mode == "generative":
+        planner = "paid-efficient"
+    elif planner_mode == "frontier":
+        planner = "frontier"
 
     return ExecutionPolicy(
         profile="cheap-first",
         preferred_tier="local",
         max_automatic_tier=maximum,
         planner_tier=planner,
+        planner_mode=planner_mode,
         reasoning_tier=reasoning,
         paid_execution_allowed=tier_rank(maximum) >= tier_rank("paid-efficient"),
         frontier_allowed=maximum == "frontier",

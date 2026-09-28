@@ -25,6 +25,7 @@ from agora_ai_sdlc.clarification_triage import ClarificationTriage, triage_clari
 from agora_ai_sdlc.depth_profiles import asset_root
 from agora_ai_sdlc.deterministic_clarification import record_zero_question_clarification
 from agora_ai_sdlc.deterministic_inception import build_deterministic_inception
+from agora_ai_sdlc.execution_economics import record_decision_event
 from agora_ai_sdlc.execution_requirements import requirements_for_activity
 from agora_ai_sdlc.executor_launch import (
     ExecutorLaunchError,
@@ -590,6 +591,23 @@ def prepare_start(
                 gap.source
                 for gap in clarification_triage.gaps
                 if gap.escalated or gap.category != "none"
+            )
+            record_decision_event(
+                root,
+                work=work_record.id,
+                route="laya",
+                reason=(
+                    "clarification-no-material-gap"
+                    if not effective_gaps
+                    else "clarification-material-gap"
+                ),
+                generative_call=bool(effective_gaps),
+                tier="system1",
+                measurement={
+                    "candidate_gaps": len(deterministic.semantic_gaps),
+                    "material_gaps": len(effective_gaps),
+                    "laya_latency_ms": clarification_triage.latency_ms,
+                },
             )
         except (LayaUnavailable, OSError, RuntimeError, ValueError):
             clarification_triage = None

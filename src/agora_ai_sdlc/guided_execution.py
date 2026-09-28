@@ -16,7 +16,11 @@ from agora_ai_sdlc.construction_reconciliation import (
 )
 from agora_ai_sdlc.execution_bundle import build_execution_bundle
 from agora_ai_sdlc.execution_context import persist_execution_context, select_execution_context
-from agora_ai_sdlc.execution_economics import record_executor_event
+from agora_ai_sdlc.execution_economics import (
+    record_context_event,
+    record_decision_event,
+    record_executor_event,
+)
 from agora_ai_sdlc.executor_launch import ExecutorLaunchError, _session_failure_diagnostic, build_runtime_runner
 from agora_ai_sdlc.flow_decision_session import FlowDecisionSession
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next
@@ -346,6 +350,14 @@ def execute_guided_preparation(
             provider=decision_session.provider,
         )
         lean_path = persist_execution_context(root, decision.work, lean)
+        record_context_event(
+            root,
+            work=decision.work,
+            before=lean.candidate_tokens,
+            after=lean.selected_tokens,
+            basis="estimated_tokens",
+            reason="laya-execution-context-pruning",
+        )
     except (LayaUnavailable, OSError, RuntimeError, ValueError):
         lean = None
     skill_plan = None
@@ -387,6 +399,19 @@ def execute_guided_preparation(
             except (LayaUnavailable, OSError, RuntimeError, ValueError):
                 failure_triage = None
             if failure_triage is not None:
+                record_decision_event(
+                    root,
+                    work=decision.work,
+                    route="laya",
+                    reason=f"verification-triage:{failure_triage.failure_class}:{failure_triage.route}",
+                    generative_call=False,
+                    tier="system1",
+                    measurement={
+                        "confidence": failure_triage.confidence,
+                        "escalated": failure_triage.escalated,
+                        "diagnostic_digest": failure_triage.diagnostic_digest,
+                    },
+                )
                 triage_note = (
                     f"Verification failure class={failure_triage.failure_class}; "
                     f"repair-route={failure_triage.route}; "

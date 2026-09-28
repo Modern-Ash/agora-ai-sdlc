@@ -105,6 +105,54 @@ def core_usage_snapshot(workspace: Any, swarm: str, work: str) -> dict[str, Any]
     }
 
 
+def record_executor_event(
+    root: Path,
+    *,
+    event: str,
+    work: str,
+    swarm: str,
+    runtime: Any,
+    plan: Any | None = None,
+    tier: str | None = None,
+    model: str | None = None,
+    workspace: Any | None = None,
+    reason: str | None = None,
+    exit_code: int | None = None,
+) -> str | None:
+    """Record one effective executor event without making telemetry authoritative.
+
+    The runtime plan is preferred because it contains the provider-neutral binding
+    and the economic tier chosen by cheap-first routing. Explicit/legacy launches
+    that have no tier are retained as unknown by the summary instead of being
+    silently omitted. Telemetry failures never block governed execution.
+    """
+
+    binding = getattr(plan, "binding", None)
+    agent_ref = getattr(binding, "agent", None)
+    model_ref = getattr(binding, "model", None)
+    agent = getattr(agent_ref, "id", None) or getattr(runtime, "id", None)
+    resolved_model = getattr(model_ref, "model", None) or model
+    resolved_tier = tier or getattr(plan, "execution_tier", None)
+    usage = core_usage_snapshot(workspace, swarm, work) if workspace is not None else None
+    try:
+        return record_event(
+            root,
+            EconomicsEvent(
+                event,
+                work,
+                resolved_tier,
+                agent,
+                resolved_model,
+                purpose="executor",
+                reason=reason,
+                exit_code=exit_code,
+                core_usage=usage,
+            ),
+        )
+    except OSError:
+        return None
+
+
 def summarize_economics(root: Path, work: str) -> dict[str, Any]:
     events = load_events(root, work)
     attempts: dict[str, int] = {}

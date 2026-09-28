@@ -69,7 +69,6 @@ def test_doctor_uses_single_product_component_ids(tmp_path, monkeypatch):
     assert "laya-system1" not in ids
 
 
-
 def test_doctor_reports_chat_first_adapters(tmp_path, monkeypatch):
     (tmp_path / "AGENTS.md").write_text(
         "<!-- agora-flow:agent-discovery:start -->\nCodex\n<!-- agora-flow:agent-discovery:end -->\n",

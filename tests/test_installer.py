@@ -436,3 +436,54 @@ def test_interactive_install_rendering_is_flow_only():
     assert not preview.lstrip().startswith("{")
 
 
+
+
+
+def test_chat_adapters_are_created_as_thin_canonical_skill_pointers(tmp_path):
+    agents, claude = installer._install_chat_adapters(tmp_path)
+
+    for path in (agents, claude):
+        content = path.read_text(encoding="utf-8")
+        assert ".agora/skills/agora-ai-sdlc-guided/SKILL.md" in content
+        assert "Use `aisdlc` as the orchestration surface" in content
+        assert "do not invoke its CLI directly" in content
+        assert content.count("agora-flow:agent-discovery:start") == 1
+        assert content.count("agora-flow:agent-discovery:end") == 1
+
+
+def test_chat_adapter_preserves_existing_user_instructions_and_is_idempotent(tmp_path):
+    agents = tmp_path / "AGENTS.md"
+    agents.write_text(
+        "# Team instructions\n\nNever change generated sources manually.\n",
+        encoding="utf-8",
+    )
+
+    installer._install_chat_adapters(tmp_path)
+    first = agents.read_text(encoding="utf-8")
+    installer._install_chat_adapters(tmp_path)
+    second = agents.read_text(encoding="utf-8")
+
+    assert "# Team instructions" in second
+    assert "Never change generated sources manually." in second
+    assert first == second
+    assert second.count("agora-flow:agent-discovery:start") == 1
+
+
+def test_chat_adapter_replaces_only_managed_block(tmp_path):
+    claude = tmp_path / "CLAUDE.md"
+    claude.write_text(
+        "# Existing Claude rules\n\n"
+        "<!-- agora-flow:agent-discovery:start -->\n"
+        "obsolete Agora instructions\n"
+        "<!-- agora-flow:agent-discovery:end -->\n\n"
+        "Keep this footer.\n",
+        encoding="utf-8",
+    )
+
+    installer._install_chat_adapters(tmp_path)
+    content = claude.read_text(encoding="utf-8")
+
+    assert "# Existing Claude rules" in content
+    assert "Keep this footer." in content
+    assert "obsolete Agora instructions" not in content
+    assert ".agora/skills/agora-ai-sdlc-guided/SKILL.md" in content

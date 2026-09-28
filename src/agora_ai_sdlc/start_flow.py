@@ -21,6 +21,7 @@ from agora.model import (
 from agora.sdlc import SdlcService
 from agora.workspace import AgoraWorkspace
 
+from agora_ai_sdlc.clarification_triage import ClarificationTriage, triage_clarifications
 from agora_ai_sdlc.depth_profiles import asset_root
 from agora_ai_sdlc.deterministic_clarification import record_zero_question_clarification
 from agora_ai_sdlc.deterministic_inception import build_deterministic_inception
@@ -34,6 +35,7 @@ from agora_ai_sdlc.executor_launch import (
 from agora_ai_sdlc.i18n import t
 from agora_ai_sdlc.inception_handoff import write_inception_handoff
 from agora_ai_sdlc.inception_materialization import materialize_deterministic_inception
+from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
 from agora_ai_sdlc.runtime_pool import RuntimePoolError, select_from_runtime_pool
 from agora_ai_sdlc.start_preflight import (
@@ -434,6 +436,7 @@ def prepare_start(
     executor_launcher: Callable[..., InceptionExecutionResult] = launch_inception_executor,
     inception_materializer: Callable[..., object] = materialize_deterministic_inception,
     deterministic_clarifier: Callable[..., object] = record_zero_question_clarification,
+    clarification_provider_factory: Callable[[], object] = LayaDecisionProvider,
     launch_executor: bool = True,
     progress: Callable[[str], None] | None = None,
 ) -> StartFlowResult:
@@ -572,6 +575,26 @@ def prepare_start(
         pathway=pathway,
     )
     deterministic_relative = Path(deterministic.path).relative_to(root.resolve()).as_posix()
+
+    clarification_triage: ClarificationTriage | None = None
+    effective_gaps = deterministic.semantic_gaps
+    if deterministic.semantic_gaps:
+        try:
+            clarification_triage = triage_clarifications(
+                deterministic.issue,
+                deterministic.semantic_gaps,
+                provider=clarification_provider_factory(),
+            )
+            # Low-confidence answers fail open and preserve the original gap.
+            effective_gaps = tuple(
+                gap.source
+                for gap in clarification_triage.gaps
+                if gap.escalated or gap.category != "none"
+            )
+        except (LayaUnavailable, OSError, RuntimeError, ValueError):
+            clarification_triage = None
+            effective_gaps = deterministic.semantic_gaps
+
     notify("start.handoff")
     handoff = write_inception_handoff(
         root,
@@ -586,12 +609,14 @@ def prepare_start(
         base_branch=getattr(work_record, "base_branch", None),
         pathway=pathway,
         deterministic_draft=deterministic_relative,
-        semantic_gaps=deterministic.semantic_gaps,
+        semantic_gaps=effective_gaps,
     )
 
     materialization_actions: tuple[str, ...] = ()
     clarification_actions: tuple[str, ...] = ()
-    if launch_executor and not deterministic.requires_llm:
+    requires_generative_clarification = bool(effective_gaps)
+
+    if launch_executor and not requires_generative_clarification:
         materialized = inception_materializer(
             root,
             workspace=workspace,
@@ -602,7 +627,7 @@ def prepare_start(
             pathway=pathway,
         )
         materialization_actions = tuple(getattr(materialized, "actions", ()) or ())
-        if not deterministic.semantic_gaps:
+        if not effective_gaps:
             clarification = deterministic_clarifier(
                 workspace=workspace,
                 swarm_id=resolved_swarm,
@@ -615,7 +640,7 @@ def prepare_start(
     inception_output: str | None = None
     inception_mode = "prepared"
     status = "inception-prepared"
-    if launch_executor and not deterministic.requires_llm:
+    if launch_executor and not requires_generative_clarification:
         notify("start.deterministic-inception")
         inception_output = deterministic.output
         inception_mode = "deterministic"
@@ -687,7 +712,7 @@ def prepare_start(
         inception_mode=inception_mode,
         inception_output=inception_output,
         deterministic_inception_path=deterministic.path,
-        semantic_gaps=deterministic.semantic_gaps,
+        semantic_gaps=effective_gaps,
         runtime_tier=runtime_tier,
         status=status,
     )

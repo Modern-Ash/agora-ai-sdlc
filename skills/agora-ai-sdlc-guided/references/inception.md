@@ -41,7 +41,7 @@ Do not jump directly from Intent to implementation or directly to a final produc
 
 When several material choices are open, prefer one compact decision card with options, recommendations and trade-offs instead of making the human answer one prompt per low-level primitive. A constraint already fixed by the issue or a referenced authoritative document is a source fact, not a clarification question.
 
-Human decisions made in conversation are not equivalent to durable Agora approval evidence. Until a first-class decision record exists, artifacts must not label conversational choices as auditable approvals.
+Human decisions made in conversation are not equivalent to durable governed approval evidence. Until a first-class decision record exists, artifacts must not label conversational choices as auditable approvals.
 
 ## Before presentation to the human
 

@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+## 0.4.0 - 2026-09-28
+
+- Make `aisdlc` the single normal-user Agora Flow surface while retaining Agora Core as the internal deterministic governance kernel.
+- Ship Laya in the standard installation as the local advisory System-1 decision plane; deterministic governance remains correct when advisory routing degrades.
+- Add versioned semantic Flow progress events with TTY, chat and JSONL projections, including context selection, Laya triage, runtime routing, executor lifecycle and hard human-boundary events.
+- Add System-0 pre-resolution and one cached `FlowDecisionSession` per governed snapshot to avoid repeated advisory inference.
+- Route planning, clarification and verification repair through deterministic/template/Laya/local-first paths before paid generative escalation.
+- Cache context relevance by digest, batch Laya classification and build a provenance-aware bounded `ContextManifest` that never prunes mandatory governance context.
+- Add hard runtime admission for capabilities, human authority, independent review, availability, declared security locality and declared context limits before cheap-first ranking.
+- Make runtime selection explainable with per-candidate blockers plus selected tier, cost class, locality and deterministic selection reasons.
+- Extend economics telemetry with observed routing/generative-call facts and explicitly based context measurements; do not claim counterfactual token or monetary savings without a measured baseline.
+- Add post-epic regression acceptance covering the single install/surface, semantic observability, bounded context, cheap-first context admission, truthful economics and human hard stops.
+- Keep Agorix outside the Agora Flow architecture as a demo/consumer rather than a required layer.
+
 ## 0.3.1 - 2026-09-28
 
 - Record executor `attempt`, `success` and `failure` economics for Construction, guided execution and Inception/start, including local/free runs.

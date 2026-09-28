@@ -31,6 +31,7 @@ from agora_ai_sdlc.flow_decision_session import FlowDecisionSession
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next
 from agora_ai_sdlc.laya_provider import LayaUnavailable
 from agora_ai_sdlc.local_delivery import diff_project_file_snapshots, project_file_snapshot
+from agora_ai_sdlc.progress_events import ProgressEmitter, ProgressEvent
 from agora_ai_sdlc.runtime_discovery import RuntimeDiscovery, discover_runtimes
 from agora_ai_sdlc.runtime_pool import configured_context_limit
 from agora_ai_sdlc.runtime_execution import (
@@ -306,11 +307,24 @@ def execute_guided_preparation(
     repair_advice: str | None = None,
     workspace_factory=AgoraWorkspace,
     progress_fn: Callable[[str], None] | None = None,
+    progress_event: Callable[[ProgressEvent], None] | None = None,
 ) -> GuidedExecutionResult:
     """Run one bounded executor iteration and return to Core for re-inspection."""
 
     root = root.resolve()
     runtime = _runtime(root, runtime_id)
+    emitter = ProgressEmitter(swarm=decision.swarm, work=decision.work)
+
+    def emit(kind: str, status: str, stage: str, summary: str) -> None:
+        if progress_event is None:
+            return
+        try:
+            progress_event(
+                emitter.event(kind, status, stage, stage, facts={"summary": summary})
+            )
+        except OSError:
+            pass
+
 
     if decision.state == "construction":
         prepare_construction_scaffold(
@@ -347,6 +361,7 @@ def execute_guided_preparation(
     workspace = workspace_factory(cwd=root)
     decision_session = FlowDecisionSession()
     lean_path = None
+    emit("context", "started", "context-selection", "Selecting bounded execution context")
     if progress_fn is not None:
         progress_fn("context")
     try:
@@ -371,6 +386,7 @@ def execute_guided_preparation(
                 f"runtime limit {manifest.runtime_limit_tokens}; reselect a larger-context runtime "
                 "or reduce optional context without dropping mandatory governance."
             )
+        emit("context", "completed", "context-selection", "Bounded execution context ready")
         record_context_event(
             root,
             work=decision.work,

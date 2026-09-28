@@ -45,6 +45,21 @@ EXECUTION_QUESTIONS = (
         },
     ),
     DecisionQuestion(
+        id="planner_needed",
+        type="choice",
+        instructions=(
+            "Choose the minimum planning assistance needed before the next bounded execution. "
+            "Prefer none or template when acceptance criteria and verification make the work mechanically actionable."
+        ),
+        criteria={
+            "none": "the next action is already explicit and needs no separate planning pass",
+            "template": "a deterministic phase template is sufficient to guide execution",
+            "local": "a local or free planner may help structure bounded implementation work",
+            "generative": "moderate ambiguity or cross-file coordination justifies a paid-efficient planner",
+            "frontier": "architectural ambiguity, high risk or material design trade-offs require frontier planning",
+        },
+    ),
+    DecisionQuestion(
         id="validation_focus",
         type="choice",
         instructions="Choose the primary validation focus that should be highlighted to the developer.",

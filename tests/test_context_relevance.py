@@ -1,4 +1,8 @@
-from agora_ai_sdlc.context_relevance import RelevanceCache, RelevanceInput, classify_relevance
+from agora_ai_sdlc.context_relevance import (
+    RelevanceCache,
+    RelevanceInput,
+    classify_relevance,
+)
 from agora_ai_sdlc.decision_plane import DecisionAnswer, DecisionQuestion, DecisionResult
 
 QUESTION = DecisionQuestion(

@@ -1,7 +1,7 @@
 from agora_ai_sdlc.decision_plane import DecisionAnswer, DecisionResult
 from agora_ai_sdlc.execution_bundle import ExecutionBundle
 from agora_ai_sdlc.execution_decisions import advise_execution
-from agora_ai_sdlc.system0_decisions import resolve_system0, threshold_for
+from agora_ai_sdlc.system0_decisions import threshold_for
 
 
 def bundle(*, stage="construction", next_action="inspect-next", risks=(), governance=None):

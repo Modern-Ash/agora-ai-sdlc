@@ -11,7 +11,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 from agora_ai_sdlc.context_graph import estimate_tokens
-from agora_ai_sdlc.decision_plane import ConfidencePolicy, DecisionProvider, DecisionQuestion, evaluate_with_confidence
+from agora_ai_sdlc.context_relevance import RelevanceCache, RelevanceInput, classify_relevance
+from agora_ai_sdlc.decision_plane import DecisionProvider, DecisionQuestion
 from agora_ai_sdlc.execution_bundle import ExecutionBundle
 
 FILE_RELEVANCE = DecisionQuestion(
@@ -79,6 +80,7 @@ def select_execution_context(
     provider: DecisionProvider,
     confidence_threshold: float = 0.90,
     max_chars_per_file: int = 3200,
+    relevance_cache: RelevanceCache | None = None,
 ) -> ExecutionContextSelection:
     """Prune only deterministic related-path candidates; never add new paths."""
 
@@ -117,37 +119,30 @@ def select_execution_context(
         }
         pending.append((relative, state))
 
-    batch = getattr(provider, "decide_many", None)
-    if pending and callable(batch):
-        raw_results = batch(tuple((state, (FILE_RELEVANCE,)) for _, state in pending))
-        if len(raw_results) != len(pending):
-            raise ValueError("decision provider returned an unexpected context batch size")
-        evaluations = []
-        for result in raw_results:
-            answer = result.answers.get("relevance")
-            if answer is None:
-                raise ValueError("decision provider batch omitted relevance answer")
-            evaluations.append((result, answer, answer.confidence < confidence_threshold))
-    else:
-        evaluations = []
-        for _, state in pending:
-            evaluation = evaluate_with_confidence(
-                provider,
-                state,
-                (FILE_RELEVANCE,),
-                policy=ConfidencePolicy(confidence_threshold),
+    relevance = classify_relevance(
+        tuple(
+            RelevanceInput(
+                id=relative,
+                state=state,
+                content=str(state["candidate"]["content"]),
             )
-            answer = evaluation.result.answers["relevance"]
-            evaluations.append((evaluation.result, answer, bool(evaluation.escalated)))
+            for relative, state in pending
+        ),
+        provider=provider,
+        question=FILE_RELEVANCE,
+        confidence_threshold=confidence_threshold,
+        cache=relevance_cache,
+    )
 
-    for (relative, _), (result, answer, was_escalated) in zip(pending, evaluations):
-        classifications[relative] = str(answer.value)
-        confidences[relative] = answer.confidence
-        latency_ms += result.latency_ms or 0.0
-        if was_escalated:
+    for relative, _ in pending:
+        result = relevance[relative]
+        classifications[relative] = result.label
+        confidences[relative] = result.confidence
+        latency_ms += result.latency_ms
+        if result.escalated:
             selected.add(relative)
             escalated.append(relative)
-        elif answer.value in {"required", "useful"}:
+        elif result.label in {"required", "useful"}:
             selected.add(relative)
 
     ordered_selected = tuple(path for path in candidates if path in selected)

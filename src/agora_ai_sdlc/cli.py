@@ -902,7 +902,11 @@ def main(argv: list[str] | None = None) -> int:
                 }:
                     print(json.dumps({"status": "cancelled"}, sort_keys=True))
                     return 0
-            print(json.dumps(project_installer.apply(config, target, home), sort_keys=True))
+            result = project_installer.apply(config, target, home)
+            if args.yes or args.config:
+                print(json.dumps(result, sort_keys=True))
+            else:
+                print(project_installer.render_install_result(result))
             return 0
         except (project_installer.InstallerError, OSError, subprocess.CalledProcessError) as error:
             print(error, file=sys.stderr)

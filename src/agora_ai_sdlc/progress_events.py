@@ -112,3 +112,36 @@ class ProgressEmitter:
             revision=self.revision,
             visibility=visibility,
         )
+
+
+
+def legacy_callback(
+    emitter: ProgressEmitter,
+    sink,
+    *,
+    default_kind: str = "execution",
+    default_stage: str = "flow",
+):
+    """Adapt legacy string callbacks to semantic events without changing callers."""
+
+    def emit(code: str) -> None:
+        raw = str(code)
+        stage, _, detail = raw.partition(":")
+        status = "progress" if stage.endswith("_wait") else "completed"
+        kind = default_kind
+        if stage in {"context", "context-selection"}:
+            kind = "context"
+        elif stage in {"routing", "runtime-selection"}:
+            kind = "routing"
+        elif "gate" in stage or "approval" in stage:
+            kind = "gate"
+        event = emitter.event(
+            kind,
+            status,
+            stage or default_stage,
+            raw,
+            facts={"summary": detail or raw},
+        )
+        sink(event)
+
+    return emit

@@ -1,6 +1,5 @@
-from pathlib import Path
-
 import tomllib
+from pathlib import Path
 
 from agora_ai_sdlc.doctor import DoctorCheck, render_doctor
 

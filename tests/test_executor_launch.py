@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import pytest
 from agora.markdown import MarkdownDocument, render_markdown
 
+from agora_ai_sdlc.execution_economics import summarize_economics
 from agora_ai_sdlc.executor_launch import (
     ExecutorLaunchError,
     build_executor_runner,
@@ -184,6 +185,7 @@ def test_launch_uses_governed_core_session_in_exact_workspace(tmp_path):
         handoff_path=handoff(tmp_path),
         swarm_id="delivery",
         work_id="issue-14",
+        execution_tier="local",
         workspace_factory=lambda cwd: workspace,
     )
 
@@ -200,6 +202,9 @@ def test_launch_uses_governed_core_session_in_exact_workspace(tmp_path):
     assert result.status == "completed"
     assert result.reused is False
     assert "Plan ready." in result.output
+    economics = summarize_economics(tmp_path, "issue-14")
+    assert economics["attempts"] == {"local": 1}
+    assert economics["successes"] == {"local": 1}
 
 
 def test_unrelated_broken_session_does_not_block_inception_lookup(tmp_path):

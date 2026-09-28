@@ -16,6 +16,7 @@ from agora_ai_sdlc.construction_reconciliation import (
 )
 from agora_ai_sdlc.execution_bundle import build_execution_bundle
 from agora_ai_sdlc.execution_context import persist_execution_context, select_execution_context
+from agora_ai_sdlc.execution_economics import record_executor_event
 from agora_ai_sdlc.executor_launch import ExecutorLaunchError, _session_failure_diagnostic, build_runtime_runner
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider, LayaUnavailable
@@ -449,6 +450,18 @@ def execute_guided_preparation(
 
     if progress_fn is not None:
         progress_fn("executor")
+    record_executor_event(
+        root,
+        event="attempt",
+        work=decision.work,
+        swarm=decision.swarm,
+        runtime=runtime,
+        plan=plan,
+        tier=execution_tier,
+        model=model,
+        workspace=workspace,
+        reason=f"guided-{decision.state or 'unknown'}",
+    )
     try:
         result = _start_session_with_heartbeat(
             workspace,
@@ -457,6 +470,18 @@ def execute_guided_preparation(
         )
     except (OSError, RuntimeError, ValueError) as error:
         session_path = root / ".agora" / "sessions" / session_id
+        record_executor_event(
+            root,
+            event="failure",
+            work=decision.work,
+            swarm=decision.swarm,
+            runtime=runtime,
+            plan=plan,
+            tier=execution_tier,
+            model=model,
+            workspace=workspace,
+            reason=f"guided executor failure: {error}",
+        )
         diagnostic = ""
         try:
             diagnostic = _session_failure_diagnostic(session_path)
@@ -468,6 +493,19 @@ def execute_guided_preparation(
         raise ExecutorLaunchError(f"Guided executor {runtime.name} failed: {error}.{suffix}") from error
 
     if getattr(result, "status", None) != "completed":
+        record_executor_event(
+            root,
+            event="failure",
+            work=decision.work,
+            swarm=decision.swarm,
+            runtime=runtime,
+            plan=plan,
+            tier=execution_tier,
+            model=model,
+            workspace=workspace,
+            reason=f"guided unexpected status: {getattr(result, 'status', None)!r}",
+            exit_code=getattr(result, "exit_code", None),
+        )
         raise ExecutorLaunchError(
             f"Guided executor {runtime.name} ended with unexpected status {getattr(result, 'status', None)!r}"
         )
@@ -479,6 +517,19 @@ def execute_guided_preparation(
                 workspace_factory=workspace_factory,
             )
         except (OSError, RuntimeError, ValueError) as error:
+            record_executor_event(
+                root,
+                event="failure",
+                work=decision.work,
+                swarm=decision.swarm,
+                runtime=runtime,
+                plan=plan,
+                tier=execution_tier,
+                model=model,
+                workspace=workspace,
+                reason=f"guided Construction reconciliation failure: {error}",
+                exit_code=getattr(result, "exit_code", None),
+            )
             raise ExecutorLaunchError(
                 f"Guided executor {runtime.name} completed, but Construction reconciliation failed: {error}"
             ) from error
@@ -492,11 +543,37 @@ def execute_guided_preparation(
         if not relevant_changes and not governed_progress:
             diagnostic = repair_diagnostic or persisted_verification_diagnostic(root, decision.work)
             detail = f" Deterministic verification diagnosis: {diagnostic}" if diagnostic else ""
+            record_executor_event(
+                root,
+                event="failure",
+                work=decision.work,
+                swarm=decision.swarm,
+                runtime=runtime,
+                plan=plan,
+                tier=execution_tier,
+                model=model,
+                workspace=workspace,
+                reason="guided Construction completed without observable governed progress",
+                exit_code=getattr(result, "exit_code", None),
+            )
             raise ExecutorLaunchError(
                 f"Guided executor {runtime.name} exited successfully but produced no observable "
                 f"source/test/build-config repair and no governed Construction progress.{detail}"
             )
 
+    record_executor_event(
+        root,
+        event="success",
+        work=decision.work,
+        swarm=decision.swarm,
+        runtime=runtime,
+        plan=plan,
+        tier=execution_tier,
+        model=model,
+        workspace=workspace,
+        reason=f"guided-{decision.state or 'unknown'}",
+        exit_code=getattr(result, "exit_code", None),
+    )
     path = Path(result.path)
     return GuidedExecutionResult(
         session_id=result.id,

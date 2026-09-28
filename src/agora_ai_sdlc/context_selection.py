@@ -10,13 +10,13 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 from agora_ai_sdlc.context_graph import ContextBundle, Graph, context_bundle
-from agora_ai_sdlc.decision_metrics import DecisionMetrics
-from agora_ai_sdlc.decision_plane import (
-    ConfidencePolicy,
-    DecisionProvider,
-    DecisionQuestion,
-    evaluate_with_confidence,
+from agora_ai_sdlc.context_relevance import (
+    RelevanceCache,
+    RelevanceInput,
+    classify_relevance,
 )
+from agora_ai_sdlc.decision_metrics import DecisionMetrics
+from agora_ai_sdlc.decision_plane import DecisionProvider, DecisionQuestion
 
 RELEVANCE_QUESTION = DecisionQuestion(
     id="relevance",
@@ -89,6 +89,7 @@ def select_context_with_laya(
     confidence_threshold: float = 0.90,
     keep_useful: bool = True,
     artifact_max_chars: int = 2800,
+    relevance_cache: RelevanceCache | None = None,
 ) -> ContextSelection:
     """Prune a deterministic candidate bundle with local Laya relevance decisions.
 
@@ -109,9 +110,11 @@ def select_context_with_laya(
     escalated: list[str] = []
     metrics = DecisionMetrics(candidate_context_tokens=candidate.total_tokens)
 
+    pending = []
     for item in candidate.items:
         if item.id == root:
             continue
+        content = _bounded_text(candidate.text[item.id], artifact_max_chars)
         state = {
             "objective": objective or "",
             "acceptance_criteria": list(acceptance_criteria),
@@ -122,32 +125,33 @@ def select_context_with_laya(
                 "relation": item.relation,
                 "distance": item.distance,
                 "path": item.path,
-                "content": _bounded_text(candidate.text[item.id], artifact_max_chars),
+                "content": content,
             },
         }
-        evaluation = evaluate_with_confidence(
-            provider,
-            state,
-            (RELEVANCE_QUESTION,),
-            policy=ConfidencePolicy(confidence_threshold),
-        )
-        answer = evaluation.result.answers["relevance"]
-        label = str(answer.value)
-        classifications[item.id] = label
-        confidences[item.id] = answer.confidence
-        metrics.decisions += 1
-        metrics.laya_latency_ms += evaluation.result.latency_ms or 0.0
+        pending.append(RelevanceInput(id=item.id, state=state, content=content))
 
-        if evaluation.escalated:
-            # Fail open: preserve context when System-1 is uncertain.
+    relevance = classify_relevance(
+        tuple(pending),
+        provider=provider,
+        question=RELEVANCE_QUESTION,
+        confidence_threshold=confidence_threshold,
+        cache=relevance_cache,
+    )
+    for item in pending:
+        result = relevance[item.id]
+        classifications[item.id] = result.label
+        confidences[item.id] = result.confidence
+        metrics.decisions += 0 if result.reused else 1
+        metrics.laya_latency_ms += result.latency_ms
+
+        if result.escalated:
             keep.add(item.id)
             escalated.append(item.id)
             metrics.escalated += 1
             continue
 
         metrics.confident += 1
-        metrics.avoided_llm_calls += 1
-        if label == "required" or (keep_useful and label == "useful"):
+        if result.label == "required" or (keep_useful and result.label == "useful"):
             keep.add(item.id)
 
     selected = _filtered_bundle(candidate, keep)

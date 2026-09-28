@@ -410,7 +410,6 @@ def test_installer_rejects_unknown_routing_tier():
     assert error.value.code == "installer.routing"
 
 
-
 def test_interactive_install_rendering_is_flow_only():
     data = {
         "project": {"id": "demo", "name": "Demo"},
@@ -435,9 +434,6 @@ def test_interactive_install_rendering_is_flow_only():
     assert "agora validate" not in result
     assert "agora status" not in result
     assert not preview.lstrip().startswith("{")
-
-
-
 
 
 def test_chat_adapters_are_created_as_thin_canonical_skill_pointers(tmp_path):

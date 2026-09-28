@@ -364,6 +364,13 @@ def execute_guided_preparation(
             runtime_limit_tokens=context_limit,
         )
         persist_context_manifest(root, decision.work, manifest)
+        if manifest.overflow:
+            raise ExecutorLaunchError(
+                "context.selected_overflow: bounded selected context "
+                f"(~{manifest.estimated_tokens} estimated tokens) exceeds explicitly configured "
+                f"runtime limit {manifest.runtime_limit_tokens}; reselect a larger-context runtime "
+                "or reduce optional context without dropping mandatory governance."
+            )
         record_context_event(
             root,
             work=decision.work,

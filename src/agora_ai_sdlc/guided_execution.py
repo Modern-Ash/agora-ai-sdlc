@@ -16,7 +16,11 @@ from agora_ai_sdlc.construction_reconciliation import (
 )
 from agora_ai_sdlc.execution_bundle import build_execution_bundle
 from agora_ai_sdlc.execution_context import persist_execution_context, select_execution_context
-from agora_ai_sdlc.execution_economics import record_context_event, record_decision_event, record_executor_event
+from agora_ai_sdlc.execution_economics import (
+    record_context_event,
+    record_decision_event,
+    record_executor_event,
+)
 from agora_ai_sdlc.executor_launch import ExecutorLaunchError, _session_failure_diagnostic, build_runtime_runner
 from agora_ai_sdlc.flow_decision_session import FlowDecisionSession
 from agora_ai_sdlc.guided import GuidedDecision, inspect_next

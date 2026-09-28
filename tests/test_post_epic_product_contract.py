@@ -1,7 +1,7 @@
+import tomllib
 from pathlib import Path
 from types import SimpleNamespace
 
-import tomllib
 import yaml
 
 from agora_ai_sdlc.context_manifest import build_context_manifest

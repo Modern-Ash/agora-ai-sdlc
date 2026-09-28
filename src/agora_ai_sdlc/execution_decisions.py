@@ -13,6 +13,7 @@ from agora_ai_sdlc.decision_plane import (
     evaluate_with_confidence,
 )
 from agora_ai_sdlc.execution_bundle import ExecutionBundle
+from agora_ai_sdlc.system0_decisions import resolve_system0, threshold_for
 
 BASE_EXECUTION_QUESTIONS = (
     DecisionQuestion(
@@ -110,40 +111,95 @@ def advise_execution(
     *,
     provider: DecisionProvider,
     confidence_threshold: float = 0.90,
+    confidence_thresholds: dict[str, float] | None = None,
 ) -> DecisionEvaluation:
-    """Return advisory Laya signals. Never mutate or authorize the bundle."""
+    """Return System-0 + advisory Laya signals without mutating authority."""
 
     state = execution_state(bundle)
-    base = evaluate_with_confidence(
-        provider,
-        state,
-        BASE_EXECUTION_QUESTIONS,
-        policy=ConfidencePolicy(confidence_threshold),
-    )
-    # Planner need is a new optional advisory dimension. Legacy/custom
-    # DecisionProviders that implement the established execution questions
-    # must continue to work; failure here means "no separate planner".
-    try:
-        planner = evaluate_with_confidence(
-            provider,
-            state,
-            (PLANNER_QUESTION,),
-            policy=ConfidencePolicy(confidence_threshold),
-        )
-    except Exception:  # noqa: BLE001 - optional advisory compatibility boundary
-        return base
+    system0 = resolve_system0(bundle)
+    questions = tuple(question for question in BASE_EXECUTION_QUESTIONS if question.id not in system0)
 
-    answers = dict(base.result.answers)
-    answers.update(planner.result.answers)
+    evaluations = []
+    for question in questions:
+        threshold = (
+            confidence_threshold
+            if confidence_thresholds is None
+            else threshold_for(question.id, confidence_thresholds)
+        )
+        evaluations.append(
+            evaluate_with_confidence(
+                provider,
+                state,
+                (question,),
+                policy=ConfidencePolicy(threshold),
+            )
+        )
+
+    answers = {}
+    accepted = []
+    escalated = []
+    provider_name = getattr(provider, "name", type(provider).__name__)
+    model = getattr(provider, "model", None)
+    latency = 0.0
+    metadata = {"system0": {name: answer.reason for name, answer in sorted(system0.items())}}
+
+    for evaluation in evaluations:
+        answers.update(evaluation.result.answers)
+        accepted.extend(evaluation.accepted)
+        escalated.extend(evaluation.escalated)
+        provider_name = evaluation.result.provider
+        model = evaluation.result.model
+        latency += evaluation.result.latency_ms or 0.0
+        metadata.update(evaluation.result.metadata)
+
+    # System-0 answers are projected as trusted deterministic floors, not Laya
+    # confidence claims. A synthetic confidence of 1.0 identifies certainty of
+    # the deterministic rule, while provenance remains explicit in metadata.
+    from agora_ai_sdlc.decision_plane import DecisionAnswer
+
+    for name, resolved in system0.items():
+        question = next(
+            (item for item in (*BASE_EXECUTION_QUESTIONS, PLANNER_QUESTION) if item.id == name),
+            None,
+        )
+        if question is None:
+            continue
+        answers[name] = DecisionAnswer(name, question.type, resolved.value, 1.0)
+        accepted.append(name)
+
+    if "planner_needed" not in system0:
+        try:
+            planner_threshold = (
+                confidence_threshold
+                if confidence_thresholds is None
+                else threshold_for("planner_needed", confidence_thresholds)
+            )
+            planner = evaluate_with_confidence(
+                provider,
+                state,
+                (PLANNER_QUESTION,),
+                policy=ConfidencePolicy(planner_threshold),
+            )
+            answers.update(planner.result.answers)
+            accepted.extend(planner.accepted)
+            escalated.extend(planner.escalated)
+            provider_name = planner.result.provider
+            model = planner.result.model
+            latency += planner.result.latency_ms or 0.0
+            metadata.update(planner.result.metadata)
+        except Exception:  # noqa: BLE001 - optional advisory compatibility boundary
+            pass
+
     result = DecisionResult(
-        provider=base.result.provider,
-        model=base.result.model,
+        provider=provider_name,
+        model=model,
         answers=answers,
-        latency_ms=(base.result.latency_ms or 0.0) + (planner.result.latency_ms or 0.0),
-        metadata=base.result.metadata,
+        latency_ms=latency,
+        metadata=metadata,
     )
     return DecisionEvaluation(
         result=result,
-        accepted=tuple(dict.fromkeys((*base.accepted, *planner.accepted))),
-        escalated=tuple(dict.fromkeys((*base.escalated, *planner.escalated))),
+        accepted=tuple(dict.fromkeys(accepted)),
+        escalated=tuple(dict.fromkeys(escalated)),
     )
+

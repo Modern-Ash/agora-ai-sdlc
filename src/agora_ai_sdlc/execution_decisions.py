@@ -6,6 +6,7 @@ from typing import Any
 
 from agora_ai_sdlc.decision_plane import (
     ConfidencePolicy,
+    DecisionAnswer,
     DecisionEvaluation,
     DecisionProvider,
     DecisionQuestion,
@@ -155,8 +156,6 @@ def advise_execution(
     # System-0 answers are projected as trusted deterministic floors, not Laya
     # confidence claims. A synthetic confidence of 1.0 identifies certainty of
     # the deterministic rule, while provenance remains explicit in metadata.
-    from agora_ai_sdlc.decision_plane import DecisionAnswer
-
     for name, resolved in system0.items():
         question = next(
             (item for item in (*BASE_EXECUTION_QUESTIONS, PLANNER_QUESTION) if item.id == name),

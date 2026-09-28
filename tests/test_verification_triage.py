@@ -1,5 +1,9 @@
 from agora_ai_sdlc.decision_plane import DecisionAnswer, DecisionResult
-from agora_ai_sdlc.verification import AcceptanceCoverage, VerificationCommand, VerificationReport
+from agora_ai_sdlc.verification import (
+    AcceptanceCoverage,
+    VerificationCommand,
+    VerificationReport,
+)
 from agora_ai_sdlc.verification_triage import triage_verification_failure
 
 

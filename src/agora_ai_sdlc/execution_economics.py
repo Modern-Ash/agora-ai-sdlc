@@ -230,7 +230,6 @@ def record_context_event(
         return None
 
 
-
 def summarize_economics(root: Path, work: str) -> dict[str, Any]:
     events = load_events(root, work)
     attempts: dict[str, int] = {}

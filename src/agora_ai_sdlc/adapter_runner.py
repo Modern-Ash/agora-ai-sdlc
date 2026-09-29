@@ -37,7 +37,7 @@ def _run(argv: tuple[str, ...], stdin: str) -> tuple[int, str]:
 _ROOT = Path(".")
 
 
-def _record(envelope, event: str, *, exit_code: int | None = None, reason: str | None = None) -> None:
+def _record(\n    envelope,\n    event: str,\n    *,\n    exit_code: int | None = None,\n    reason: str | None = None,\n    measurement: dict | None = None,\n) -> None:
     if envelope.binding is None:
         return
     context = dict(envelope.context or {})

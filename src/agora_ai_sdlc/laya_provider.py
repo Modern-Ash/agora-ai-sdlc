@@ -21,6 +21,9 @@ class LayaUnavailable(RuntimeError):
 
 class LayaDecisionProvider:
     name = "laya"
+    # Laya evaluates heterogeneous typed questions in one forward pass. The
+    # execution decision layer uses this marker to avoid a second planner call.
+    supports_joint_execution_questions = True
 
     def __init__(self, *, router: Any | None = None, model: str | None = None) -> None:
         self._router = router

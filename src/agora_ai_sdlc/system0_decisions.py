@@ -52,9 +52,7 @@ def resolve_system0(bundle: ExecutionBundle) -> dict[str, System0Answer]:
         answers["change_risk"] = System0Answer("moderate", "explicit-security-risk-floor")
         answers["validation_focus"] = System0Answer("security", "explicit-security-risk")
 
-    if bundle.stage == "operations" and (
-        governance.get("missing_evidence") or governance.get("missing_artifacts")
-    ):
+    if bundle.stage == "operations" and (governance.get("missing_evidence") or governance.get("missing_artifacts")):
         answers.setdefault(
             "validation_focus",
             System0Answer("operations", "operations-stage-readiness-gap"),

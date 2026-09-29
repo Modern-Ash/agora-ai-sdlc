@@ -89,6 +89,7 @@ def test_optional_overflow_is_reported_not_silently_pruned(tmp_path: Path):
     assert manifest.overflow is True
     assert manifest.selected_optional
 
+
 def test_sensitive_optional_file_content_is_never_materialized(tmp_path: Path):
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "a.py").write_text("print('ok')\n", encoding="utf-8")

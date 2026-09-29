@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+import io
 import os
 import time
 from collections.abc import Mapping
@@ -39,7 +41,12 @@ class LayaDecisionProvider:
                 'Laya decision capability is not installed. Install the full distribution with: pip install "agora-ai-sdlc[full]"'
             ) from error
         try:
-            self._router = Router()
+            # Hugging Face may emit model-download progress bars directly to
+            # stderr while constructing the router. Decision providers are a
+            # library boundary: they must not corrupt machine-readable CLI
+            # stdout/stderr contracts. Laya failures are still raised below.
+            with contextlib.redirect_stderr(io.StringIO()):
+                self._router = Router()
         except Exception as error:
             raise LayaUnavailable(f"unable to initialize Laya Router: {error}") from error
         return self._router

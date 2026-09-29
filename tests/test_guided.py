@@ -365,6 +365,7 @@ def test_bare_guided_projection_anchors_to_work_id_from_current_branch(monkeypat
     assert decision.work == "issue-15"
     assert decision.state == "construction"
 
+
 def test_normal_guided_render_never_exposes_core_cli():
     rendered = render(_sample_decision(), show_commands=False)
 

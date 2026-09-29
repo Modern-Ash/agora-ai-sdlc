@@ -43,6 +43,7 @@ def test_guided_prompt_uses_flow_progress_without_core_cli_plumbing(monkeypatch,
     assert "never report chain-of-thought" in prompt
     assert "--swarm delivery --work issue-26" in prompt
 
+
 def test_human_boundary_emits_blocked_event_before_runtime_work(monkeypatch, tmp_path):
     events = []
     human = GuidedDecision(
@@ -83,7 +84,6 @@ def test_human_boundary_emits_blocked_event_before_runtime_work(monkeypatch, tmp
     assert events[0].kind == "human-boundary"
     assert events[0].status == "blocked"
     assert events[0].facts["missing_approvals"] == ["product-owner"]
-
 
 
 def test_runtime_switch_does_not_invent_executor_actor(monkeypatch, tmp_path):

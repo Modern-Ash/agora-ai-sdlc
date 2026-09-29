@@ -234,6 +234,19 @@ def maybe_plan_skill(
     if policy.planner_tier is None:
         # none/template planning is already represented by the deterministic
         # execution bundle + phase guidance; no generative planner is needed.
+        record_decision_event(
+            root,
+            work=str(bundle.work or "unknown"),
+            route="system0" if policy.planner_mode == "none" else "template",
+            reason=f"planner-{policy.planner_mode}",
+            generative_call=False,
+            tier="system0",
+            measurement={
+                "call_avoided": True,
+                "avoidance_reason": f"planner-{policy.planner_mode}",
+                "planner_mode": policy.planner_mode,
+            },
+        )
         return None
 
     skill, phase = _skill_context(root, bundle.stage)

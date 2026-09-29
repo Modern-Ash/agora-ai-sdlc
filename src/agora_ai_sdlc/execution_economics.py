@@ -238,6 +238,8 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
     routes: dict[tuple[str, str, str, str], dict[str, int]] = {}
     decisions: dict[str, int] = {}
     generative_calls = 0
+    generative_calls_avoided = 0
+    avoidance_reasons: dict[str, int] = {}
     context_measurements: list[dict[str, Any]] = []
     escalations = 0
     unaccounted_paid_usage = 0
@@ -266,6 +268,10 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
                 decisions[route_name] = decisions.get(route_name, 0) + 1
                 if measurement.get("generative_call") is True:
                     generative_calls += 1
+                elif measurement.get("generative_call") is False and measurement.get("call_avoided") is True:
+                    generative_calls_avoided += 1
+                    avoidance_reason = str(measurement.get("avoidance_reason") or item.get("reason") or "unknown")
+                    avoidance_reasons[avoidance_reason] = avoidance_reasons.get(avoidance_reason, 0) + 1
         elif event == "context":
             measurement = item.get("measurement")
             if isinstance(measurement, dict):
@@ -293,6 +299,8 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
         "routes": route_summary,
         "decisions": dict(sorted(decisions.items())),
         "generative_calls_observed": generative_calls,
+        "generative_calls_avoided": generative_calls_avoided,
+        "avoidance_reasons": dict(sorted(avoidance_reasons.items())),
         "context_measurements": context_measurements,
         "escalations": escalations,
         "unaccounted_paid_usage": unaccounted_paid_usage,

@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 0.5.0 - 2026-09-29
+
+- Reduce System-1 inference by batching `planner_needed` with the existing Laya execution decision pass while preserving compatibility for legacy decision providers.
+- Record observed generative planner calls avoided by deterministic/template policy and expose explicit avoidance reasons without claiming estimated token or monetary savings.
+- Preserve provider-reported Claude token usage, transport it through the provider-neutral adapter boundary and aggregate trustworthy input/output/total usage in the economics ledger.
+- Add an explicit direct-execution token baseline and measured LLM Amplification Factor (AF); AF remains unknown when comparable provider-reported measurements are unavailable.
+- Complete `aisdlc economics` with baseline capture, provider-token reporting, AF in human/JSON output and strict rejection of incomplete or negative baseline values.
+- Make Laya a normal distribution dependency, synchronize `uv.lock`, and retain the compatibility extras without requiring users to discover an optional System-1 install.
+- Keep machine-readable CLI output clean by isolating third-party Laya/Hugging Face progress output during router initialization and deferred prediction.
+- Validate the release line with full `verify_all` on Python 3.11, 3.12 and 3.13 plus newest-supported Agora Core compatibility.
+
+
 ## 0.4.1 - 2026-09-28
 
 - Keep interactive installation entirely on the Agora Flow surface: human-readable preview/result and `aisdlc` as the only next command.

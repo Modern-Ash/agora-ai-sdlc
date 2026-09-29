@@ -95,8 +95,7 @@ def main(argv: list[str] | None = None) -> int:
         provider_usage = structured.get("usage")
         measurement = (
             {"provider_usage": dict(provider_usage)}
-            if isinstance(provider_usage, dict)
-            and provider_usage.get("basis") == "provider_reported_tokens"
+            if isinstance(provider_usage, dict) and provider_usage.get("basis") == "provider_reported_tokens"
             else None
         )
         _record(

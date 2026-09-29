@@ -44,7 +44,6 @@ def test_guided_prompt_uses_flow_progress_without_core_cli_plumbing(monkeypatch,
     assert "--swarm delivery --work issue-26" in prompt
 
 
-
 def test_human_boundary_emits_blocked_event_before_runtime_work(monkeypatch, tmp_path):
     events = []
     human = GuidedDecision(

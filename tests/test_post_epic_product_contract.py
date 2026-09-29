@@ -110,7 +110,6 @@ def test_post_epic_product_contract_is_one_flow_surface_with_bounded_observable_
     # Demo products are not architectural dependencies of this acceptance path.
     assert "agorix" not in public
 
-
 def _available_runtimes():
     return {
         "opencode": RuntimeDiscovery(

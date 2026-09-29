@@ -227,7 +227,6 @@ def test_paid_advisor_is_read_only_and_hands_back_advice(tmp_path, monkeypatch):
     assert events["escalations"] == 1
 
 
-
 def test_decision_metrics_count_observed_routes_without_claiming_savings(tmp_path):
     record_decision_event(
         tmp_path,

@@ -144,8 +144,26 @@ class ClaudeCodeAdapter(RuntimeAdapter):
         if not isinstance(data, dict) or "result" not in data:
             raise AdapterError("adapter.malformed_output", "Claude Code output has no result field")
         failed = bool(data.get("is_error"))
+        structured = {"is_error": failed, "subtype": str(data.get("subtype", ""))}
+        usage = data.get("usage")
+        if isinstance(usage, dict):
+            input_tokens = usage.get("input_tokens")
+            output_tokens = usage.get("output_tokens")
+            if (
+                isinstance(input_tokens, int)
+                and not isinstance(input_tokens, bool)
+                and input_tokens >= 0
+                and isinstance(output_tokens, int)
+                and not isinstance(output_tokens, bool)
+                and output_tokens >= 0
+            ):
+                structured["usage"] = {
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
+                    "basis": "provider_reported_tokens",
+                }
         return ExecutionOutcome(
             exit_code=1 if failed else 0,
             output=sanitize(str(data["result"])),
-            structured={"is_error": failed, "subtype": str(data.get("subtype", ""))},
+            structured=structured,
         )

@@ -1,8 +1,8 @@
 import sys
 import types
 
-from agora_ai_sdlc.decision_plane import DecisionQuestion
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider
+from agora_ai_sdlc.decision_plane import DecisionQuestion
 
 
 QUESTION = DecisionQuestion(

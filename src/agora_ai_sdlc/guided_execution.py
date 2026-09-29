@@ -336,12 +336,9 @@ def execute_guided_preparation(
         if progress_event is None:
             return
         try:
-            progress_event(
-                emitter.event(kind, status, stage, stage, facts={"summary": summary})
-            )
+            progress_event(emitter.event(kind, status, stage, stage, facts={"summary": summary}))
         except OSError:
             pass
-
 
     if decision.state == "construction":
         prepare_construction_scaffold(
@@ -479,9 +476,7 @@ def execute_guided_preparation(
                     f"repair-route={failure_triage.route}; "
                     f"confidence={failure_triage.confidence:.3f}."
                 )
-                repair_diagnostic = (
-                    f"{triage_note} {repair_diagnostic}" if repair_diagnostic else triage_note
-                )
+                repair_diagnostic = f"{triage_note} {repair_diagnostic}" if repair_diagnostic else triage_note
     before_snapshot = project_file_snapshot(root) if decision.state == "construction" else {}
     plan = None
     if supports_governed_runtime_plan(workspace):

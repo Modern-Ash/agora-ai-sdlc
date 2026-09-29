@@ -509,6 +509,7 @@ def test_explicit_issue_uses_deterministic_inception_without_executor(tmp_path):
     assert "PROPUESTA DE INCEPTION" in rendered
     assert "DETERMINISTIC_INCEPTION.md" in rendered
 
+
 def test_laya_can_remove_heuristic_gap_and_avoid_executor(tmp_path):
     workspace = FakeWorkspace(tmp_path)
     workspace._has_run = True

@@ -604,19 +604,13 @@ def prepare_start(
             )
             # Low-confidence answers fail open and preserve the original gap.
             effective_gaps = tuple(
-                gap.source
-                for gap in clarification_triage.gaps
-                if gap.escalated or gap.category != "none"
+                gap.source for gap in clarification_triage.gaps if gap.escalated or gap.category != "none"
             )
             record_decision_event(
                 root,
                 work=work_record.id,
                 route="laya",
-                reason=(
-                    "clarification-no-material-gap"
-                    if not effective_gaps
-                    else "clarification-material-gap"
-                ),
+                reason=("clarification-no-material-gap" if not effective_gaps else "clarification-material-gap"),
                 generative_call=bool(effective_gaps),
                 tier="system1",
                 measurement={

@@ -120,6 +120,12 @@ def advise_execution(
     state = execution_state(bundle)
     system0 = resolve_system0(bundle)
     questions = tuple(question for question in BASE_EXECUTION_QUESTIONS if question.id not in system0)
+    joint_planner = bool(
+        "planner_needed" not in system0
+        and getattr(provider, "supports_joint_execution_questions", False)
+    )
+    if joint_planner:
+        questions = (*questions, PLANNER_QUESTION)
 
     answers = {}
     accepted = []
@@ -163,7 +169,10 @@ def advise_execution(
         answers[name] = DecisionAnswer(name, question.type, resolved.value, 1.0)
         accepted.append(name)
 
-    if "planner_needed" not in system0:
+    metadata["provider_calls"] = 1 if questions else 0
+    metadata["planner_batched"] = joint_planner
+
+    if "planner_needed" not in system0 and not joint_planner:
         try:
             planner_threshold = (
                 confidence_threshold
@@ -183,6 +192,7 @@ def advise_execution(
             model = planner.result.model
             latency += planner.result.latency_ms or 0.0
             metadata.update(planner.result.metadata)
+            metadata["provider_calls"] += 1
         except Exception as error:  # noqa: BLE001 - optional advisory compatibility boundary
             metadata["planner_advisory_error"] = type(error).__name__
 

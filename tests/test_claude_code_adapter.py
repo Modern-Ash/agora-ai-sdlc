@@ -177,3 +177,37 @@ def test_diagnostics_do_not_leak_secrets(tmp_path):
 def test_live_version_probe_is_supported():
     health = ClaudeCodeAdapter().health()
     assert health.installed and health.responsive
+
+
+def test_output_preserves_provider_reported_token_usage():
+    outcome = adapter().parse_output(
+        0,
+        json.dumps(
+            {
+                "type": "result",
+                "result": "done",
+                "is_error": False,
+                "usage": {"input_tokens": 120, "output_tokens": 30},
+            }
+        ),
+    )
+
+    assert outcome.structured["usage"] == {
+        "input_tokens": 120,
+        "output_tokens": 30,
+        "basis": "provider_reported_tokens",
+    }
+
+
+def test_output_ignores_untrusted_or_incomplete_usage_shape():
+    for usage in (
+        {"input_tokens": 10},
+        {"input_tokens": "10", "output_tokens": 2},
+        {"input_tokens": -1, "output_tokens": 2},
+        {"input_tokens": True, "output_tokens": 2},
+    ):
+        outcome = adapter().parse_output(
+            0,
+            json.dumps({"result": "done", "is_error": False, "usage": usage}),
+        )
+        assert "usage" not in outcome.structured

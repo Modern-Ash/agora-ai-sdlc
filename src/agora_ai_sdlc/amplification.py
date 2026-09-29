@@ -111,3 +111,19 @@ def amplification_report(
         True,
         "measured",
     )
+
+
+def measurement_from_economics(summary: dict) -> TokenMeasurement | None:
+    """Build an AF numerator only from aggregated provider-reported usage."""
+
+    usage = summary.get("provider_usage")
+    if not isinstance(usage, dict) or usage.get("basis") != TOKEN_BASIS:
+        return None
+    try:
+        return TokenMeasurement(
+            input_tokens=int(usage["input_tokens"]),
+            output_tokens=int(usage["output_tokens"]),
+            basis=str(usage["basis"]),
+        )
+    except (KeyError, TypeError, ValueError):
+        return None

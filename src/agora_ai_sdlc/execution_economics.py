@@ -241,12 +241,31 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
     generative_calls_avoided = 0
     avoidance_reasons: dict[str, int] = {}
     context_measurements: list[dict[str, Any]] = []
+    provider_input_tokens = 0
+    provider_output_tokens = 0
+    provider_usage_events = 0
     escalations = 0
     unaccounted_paid_usage = 0
     for item in events:
         tier = str(item.get("tier") or "unknown")
         event = item.get("event")
         if event in {"attempt", "success", "failure"}:
+            measurement = item.get("measurement")
+            provider_usage = measurement.get("provider_usage") if isinstance(measurement, dict) else None
+            if (
+                event in {"success", "failure"}
+                and isinstance(provider_usage, dict)
+                and provider_usage.get("basis") == "provider_reported_tokens"
+                and isinstance(provider_usage.get("input_tokens"), int)
+                and not isinstance(provider_usage.get("input_tokens"), bool)
+                and provider_usage["input_tokens"] >= 0
+                and isinstance(provider_usage.get("output_tokens"), int)
+                and not isinstance(provider_usage.get("output_tokens"), bool)
+                and provider_usage["output_tokens"] >= 0
+            ):
+                provider_input_tokens += provider_usage["input_tokens"]
+                provider_output_tokens += provider_usage["output_tokens"]
+                provider_usage_events += 1
             key = (
                 tier,
                 str(item.get("purpose") or "unknown"),
@@ -299,6 +318,17 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
         "routes": route_summary,
         "decisions": dict(sorted(decisions.items())),
         "generative_calls_observed": generative_calls,
+        "provider_usage": (
+            {
+                "basis": "provider_reported_tokens",
+                "input_tokens": provider_input_tokens,
+                "output_tokens": provider_output_tokens,
+                "total_tokens": provider_input_tokens + provider_output_tokens,
+                "events": provider_usage_events,
+            }
+            if provider_usage_events
+            else None
+        ),
         "generative_calls_avoided": generative_calls_avoided,
         "avoidance_reasons": dict(sorted(avoidance_reasons.items())),
         "context_measurements": context_measurements,
@@ -313,11 +343,27 @@ def render_economics(root: Path, work: str) -> str:
     """Render a compact economics summary without inventing unknown cost/token data."""
 
     summary = summarize_economics(root, work)
+    from agora_ai_sdlc.amplification import amplification_report, measurement_from_economics
+
+    amplification = amplification_report(root, work, measurement_from_economics(summary))
     lines = [
         "Agora Flow | Economics",
         "",
         f"Work: {work}",
         f"Observed generative calls: {summary['generative_calls_observed']}",
+        f"Observed generative calls avoided: {summary['generative_calls_avoided']}",
+        (
+            f"Provider tokens: {summary['provider_usage']['total_tokens']} "
+            f"(input={summary['provider_usage']['input_tokens']}, "
+            f"output={summary['provider_usage']['output_tokens']})"
+            if summary["provider_usage"]
+            else "Provider tokens: unknown"
+        ),
+        (
+            f"LLM Amplification Factor: {amplification.factor:.4f}"
+            if amplification.comparable and amplification.factor is not None
+            else f"LLM Amplification Factor: unknown ({amplification.reason})"
+        ),
     ]
     decisions = summary["decisions"]
     if decisions:

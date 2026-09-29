@@ -114,7 +114,6 @@ class ProgressEmitter:
         )
 
 
-
 def legacy_callback(
     emitter: ProgressEmitter,
     sink,

@@ -37,7 +37,14 @@ def _run(argv: tuple[str, ...], stdin: str) -> tuple[int, str]:
 _ROOT = Path(".")
 
 
-def _record(\n    envelope,\n    event: str,\n    *,\n    exit_code: int | None = None,\n    reason: str | None = None,\n    measurement: dict | None = None,\n) -> None:
+def _record(
+    envelope,
+    event: str,
+    *,
+    exit_code: int | None = None,
+    reason: str | None = None,
+    measurement: dict | None = None,
+) -> None:
     if envelope.binding is None:
         return
     context = dict(envelope.context or {})
@@ -60,6 +67,7 @@ def _record(\n    envelope,\n    event: str,\n    *,\n    exit_code: int | None 
                 reason=reason,
                 exit_code=exit_code,
                 core_usage=usage,
+                measurement=measurement,
             ),
         )
     except (OSError, RuntimeError, ValueError):
@@ -83,11 +91,20 @@ def main(argv: list[str] | None = None) -> int:
         prepared = adapter.prepare_execution(payload)
         _record(envelope, "attempt")
         outcome = adapter.launch(prepared, _run)
+        structured = dict(outcome.structured or {})
+        provider_usage = structured.get("usage")
+        measurement = (
+            {"provider_usage": dict(provider_usage)}
+            if isinstance(provider_usage, dict)
+            and provider_usage.get("basis") == "provider_reported_tokens"
+            else None
+        )
         _record(
             envelope,
             "success" if outcome.exit_code == 0 else "failure",
             exit_code=int(outcome.exit_code),
             reason=None if outcome.exit_code == 0 else "runtime-exit",
+            measurement=measurement,
         )
     except (OSError, ValueError, json.JSONDecodeError) as error:
         print(str(error), file=sys.stderr)

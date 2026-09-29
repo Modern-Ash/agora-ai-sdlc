@@ -279,7 +279,6 @@ def test_context_measurement_rejects_unknown_basis(tmp_path):
     else:
         raise AssertionError("unknown measurement basis must not be persisted")
 
-
 def test_render_economics_labels_estimates_and_refuses_counterfactual_claims(tmp_path):
     record_decision_event(
         tmp_path,
@@ -303,7 +302,6 @@ def test_render_economics_labels_estimates_and_refuses_counterfactual_claims(tmp
     assert "laya: 1" in rendered
     assert "basis=estimated_tokens; source=estimated" in rendered
     assert "No counterfactual token or monetary savings are claimed" in rendered
-
 
 def test_runtime_pool_exposes_only_explicit_context_limit(tmp_path):
     path = tmp_path / "ai-sdlc" / "project.yaml"

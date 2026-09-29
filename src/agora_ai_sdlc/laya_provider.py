@@ -114,7 +114,9 @@ class LayaDecisionProvider:
                 if hasattr(router, "predict_batch"):
                     raw_results = router.predict_batch(payloads)
                 else:
-                    raw_results = [router.predict(item["state"], item["questions"], model=self.model) for item in payloads]
+                    raw_results = [
+                        router.predict(item["state"], item["questions"], model=self.model) for item in payloads
+                    ]
         except TypeError:
             with contextlib.redirect_stderr(io.StringIO()):
                 raw_results = [router.predict(item["state"], item["questions"]) for item in payloads]

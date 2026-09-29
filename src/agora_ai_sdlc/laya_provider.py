@@ -110,12 +110,14 @@ class LayaDecisionProvider:
         ]
         started = time.perf_counter()
         try:
-            if hasattr(router, "predict_batch"):
-                raw_results = router.predict_batch(payloads)
-            else:
-                raw_results = [router.predict(item["state"], item["questions"], model=self.model) for item in payloads]
+            with contextlib.redirect_stderr(io.StringIO()):
+                if hasattr(router, "predict_batch"):
+                    raw_results = router.predict_batch(payloads)
+                else:
+                    raw_results = [router.predict(item["state"], item["questions"], model=self.model) for item in payloads]
         except TypeError:
-            raw_results = [router.predict(item["state"], item["questions"]) for item in payloads]
+            with contextlib.redirect_stderr(io.StringIO()):
+                raw_results = [router.predict(item["state"], item["questions"]) for item in payloads]
         except Exception as error:
             raise DecisionPlaneError("decision.laya_predict_batch", str(error)) from error
         elapsed_ms = (time.perf_counter() - started) * 1000.0
@@ -163,10 +165,12 @@ class LayaDecisionProvider:
         router = self._get_router()
         started = time.perf_counter()
         try:
-            raw = router.predict(dict(state), payload, model=self.model)
+            with contextlib.redirect_stderr(io.StringIO()):
+                raw = router.predict(dict(state), payload, model=self.model)
         except TypeError:
             # Test doubles and older compatible Router implementations may not expose model=.
-            raw = router.predict(dict(state), payload)
+            with contextlib.redirect_stderr(io.StringIO()):
+                raw = router.predict(dict(state), payload)
         except Exception as error:
             raise DecisionPlaneError("decision.laya_predict", str(error)) from error
         latency_ms = (time.perf_counter() - started) * 1000.0

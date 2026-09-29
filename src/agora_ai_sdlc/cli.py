@@ -197,8 +197,12 @@ def main(argv: list[str] | None = None) -> int:
     economics.add_argument("--root", default=".", help="Project root")
     economics.add_argument("--work", required=True, help="Work id whose economic routing ledger should be summarized")
     economics.add_argument("--json", action="store_true", help="Print machine-readable economics summary")
-    economics.add_argument("--baseline-input-tokens", type=int, help="Provider-reported input tokens from direct execution")
-    economics.add_argument("--baseline-output-tokens", type=int, help="Provider-reported output tokens from direct execution")
+    economics.add_argument(
+        "--baseline-input-tokens", type=int, help="Provider-reported input tokens from direct execution"
+    )
+    economics.add_argument(
+        "--baseline-output-tokens", type=int, help="Provider-reported output tokens from direct execution"
+    )
     status = sub.add_parser("status", help="Show rich local/Core iteration status without invoking an LLM")
     status.add_argument("--root", default=".", help="Project root")
     status.add_argument("--swarm", help="Limit to one delivery swarm")
@@ -471,7 +475,9 @@ def main(argv: list[str] | None = None) -> int:
         root = Path(args.root).expanduser()
         baseline_values = (args.baseline_input_tokens, args.baseline_output_tokens)
         if any(value is not None for value in baseline_values):
-            if any(value is None for value in baseline_values) or any(value < 0 for value in baseline_values if value is not None):
+            if any(value is None for value in baseline_values) or any(
+                value < 0 for value in baseline_values if value is not None
+            ):
                 print("economics.baseline: both baseline token values must be non-negative integers", file=sys.stderr)
                 return 2
             save_baseline(root, args.work, TokenMeasurement(*baseline_values))

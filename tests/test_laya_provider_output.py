@@ -1,16 +1,7 @@
 import sys
 import types
 
-from agora_ai_sdlc.decision_plane import DecisionQuestion
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider
-
-
-QUESTION = DecisionQuestion(
-    id="route",
-    type="choice",
-    instructions="choose",
-    criteria={"local": "local"},
-)
 
 
 def test_router_initialization_does_not_leak_third_party_stderr(monkeypatch, capsys):
@@ -40,7 +31,15 @@ def test_deferred_predict_progress_does_not_leak_to_stderr(monkeypatch, capsys):
             }
 
     monkeypatch.setitem(sys.modules, "laya", types.SimpleNamespace(Router=NoisyRouter))
-    result = LayaDecisionProvider().decide({"work": "x"}, (QUESTION,))
+    from agora_ai_sdlc.decision_plane import DecisionQuestion
+
+    question = DecisionQuestion(
+        id="route",
+        type="choice",
+        instructions="choose",
+        criteria={"local": "local"},
+    )
+    result = LayaDecisionProvider().decide({"work": "x"}, (question,))
 
     assert result.answers["route"].value == "local"
     assert capsys.readouterr().err == ""

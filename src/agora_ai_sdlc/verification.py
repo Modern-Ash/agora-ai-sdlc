@@ -313,7 +313,6 @@ def _compact_human_diagnostic(command: VerificationCommand, max_chars: int = 120
         return value
     return "… " + value[-(max_chars - 2) :]
 
-
 def load_persisted_verification(root: Path, work: str | None) -> VerificationReport | None:
     """Load the latest bounded verification report without changing verification state."""
 
@@ -364,6 +363,7 @@ def load_persisted_verification(root: Path, work: str | None) -> VerificationRep
         all_executed_commands_passed=passed if isinstance(passed, bool) else None,
         report_path=str(path),
     )
+
 
 
 def persisted_verification_diagnostic(root: Path, work: str | None) -> str | None:

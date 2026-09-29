@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from agora_ai_sdlc import __version__
 from agora_ai_sdlc.flavor_manifest import (
     ManifestError,
     check_core_compatibility,
@@ -44,6 +45,7 @@ def test_golden_manifest_is_typed_and_immutable():
 def test_packaged_manifest_loads():
     manifest = load_packaged_manifest()
     assert manifest.id == "agora-ai-sdlc"
+    assert manifest.version == __version__
     assert manifest.policies == (
         "data-classification",
         "independent-review",

@@ -153,7 +153,6 @@ def record_executor_event(
     except OSError:
         return None
 
-
 def record_decision_event(
     root: Path,
     *,
@@ -228,6 +227,7 @@ def record_context_event(
         )
     except OSError:
         return None
+
 
 
 def summarize_economics(root: Path, work: str) -> dict[str, Any]:
@@ -336,7 +336,6 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
         "unaccounted_paid_usage": unaccounted_paid_usage,
         "events": len(events),
     }
-
 
 def render_economics(root: Path, work: str) -> str:
     """Render a compact economics summary without inventing unknown cost/token data."""

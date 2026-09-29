@@ -17,7 +17,13 @@ from typing import Any
 
 from agora_ai_sdlc.adapters import default_registry
 from agora_ai_sdlc.execution_bundle import ExecutionBundle
-from agora_ai_sdlc.execution_economics import (\n    EconomicsEvent,\n    core_budgets,\n    core_usage_snapshot,\n    record_decision_event,\n    record_event,\n)
+from agora_ai_sdlc.execution_economics import (
+    EconomicsEvent,
+    core_budgets,
+    core_usage_snapshot,
+    record_decision_event,
+    record_event,
+)
 from agora_ai_sdlc.execution_envelope import ExecutionEnvelope
 from agora_ai_sdlc.execution_policy import execution_policy_for
 from agora_ai_sdlc.execution_requirements import requirements_for, requirements_for_activity

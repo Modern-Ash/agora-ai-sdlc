@@ -366,7 +366,6 @@ def load_persisted_verification(root: Path, work: str | None) -> VerificationRep
     )
 
 
-
 def persisted_verification_diagnostic(root: Path, work: str | None) -> str | None:
     """Return a compact host-readable diagnosis from the latest executed verification."""
 

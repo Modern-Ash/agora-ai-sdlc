@@ -597,6 +597,7 @@ def test_low_confidence_no_gap_preserves_gap_and_launches_executor(tmp_path):
     assert result.semantic_gaps
 
 
+
 def test_prepare_start_forwards_explicit_opencode_model(tmp_path):
     workspace = FakeWorkspace(tmp_path)
     observed = {}

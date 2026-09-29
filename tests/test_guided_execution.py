@@ -86,7 +86,6 @@ def test_human_boundary_emits_blocked_event_before_runtime_work(monkeypatch, tmp
     assert events[0].facts["missing_approvals"] == ["product-owner"]
 
 
-
 def test_runtime_switch_does_not_invent_executor_actor(monkeypatch, tmp_path):
     captured = {}
     progress = []

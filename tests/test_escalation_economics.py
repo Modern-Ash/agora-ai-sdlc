@@ -366,7 +366,6 @@ def test_runtime_pool_rejects_invalid_context_limit(tmp_path):
         raise AssertionError("invalid context limit must fail closed")
 
 
-
 def test_context_limit_rejects_cheaper_candidate_before_selection(tmp_path):
     path = tmp_path / "ai-sdlc" / "project.yaml"
     path.parent.mkdir(parents=True)

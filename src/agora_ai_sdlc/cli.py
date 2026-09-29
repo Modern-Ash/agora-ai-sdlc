@@ -197,6 +197,8 @@ def main(argv: list[str] | None = None) -> int:
     economics.add_argument("--root", default=".", help="Project root")
     economics.add_argument("--work", required=True, help="Work id whose economic routing ledger should be summarized")
     economics.add_argument("--json", action="store_true", help="Print machine-readable economics summary")
+    economics.add_argument("--baseline-input-tokens", type=int, help="Provider-reported input tokens from direct execution")
+    economics.add_argument("--baseline-output-tokens", type=int, help="Provider-reported output tokens from direct execution")
     status = sub.add_parser("status", help="Show rich local/Core iteration status without invoking an LLM")
     status.add_argument("--root", default=".", help="Project root")
     status.add_argument("--swarm", help="Limit to one delivery swarm")
@@ -458,29 +460,28 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "economics":
-        from agora_ai_sdlc.execution_economics import summarize_economics
+        from agora_ai_sdlc.amplification import (
+            TokenMeasurement,
+            amplification_report,
+            measurement_from_economics,
+            save_baseline,
+        )
+        from agora_ai_sdlc.execution_economics import render_economics, summarize_economics
 
-        summary = summarize_economics(Path(args.root).expanduser(), args.work)
+        root = Path(args.root).expanduser()
+        baseline_values = (args.baseline_input_tokens, args.baseline_output_tokens)
+        if any(value is not None for value in baseline_values):
+            if any(value is None for value in baseline_values) or any(value < 0 for value in baseline_values if value is not None):
+                print("economics.baseline: both baseline token values must be non-negative integers", file=sys.stderr)
+                return 2
+            save_baseline(root, args.work, TokenMeasurement(*baseline_values))
+
+        summary = summarize_economics(root, args.work)
+        amplification = amplification_report(root, args.work, measurement_from_economics(summary))
         if args.json:
-            print(json.dumps(summary, sort_keys=True))
+            print(json.dumps({**summary, "amplification": amplification.to_dict()}, sort_keys=True))
         else:
-            print(f"Agora AI-SDLC execution economics · {args.work}")
-            print("Attempts:")
-            for tier, count in summary["attempts"].items():
-                print(f"  {tier}: {count}")
-            print("Successes:")
-            for tier, count in summary["successes"].items():
-                print(f"  {tier}: {count}")
-            print("Failures:")
-            for tier, count in summary["failures"].items():
-                print(f"  {tier}: {count}")
-            print("Routes:")
-            for route in summary["routes"]:
-                print(
-                    f"  {route['tier']} · {route['purpose']} · {route['agent']} · {route['model']}: "
-                    f"attempts={route['attempts']} successes={route['successes']} failures={route['failures']}"
-                )
-            print(f"Escalations: {summary['escalations']}")
+            print(render_economics(root, args.work))
         return 0
 
     if args.command == "runtimes" and args.capabilities:

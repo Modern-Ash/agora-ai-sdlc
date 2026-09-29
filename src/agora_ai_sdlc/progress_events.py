@@ -113,7 +113,6 @@ class ProgressEmitter:
             visibility=visibility,
         )
 
-
 def legacy_callback(
     emitter: ProgressEmitter,
     sink,

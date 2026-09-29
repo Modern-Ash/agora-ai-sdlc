@@ -154,7 +154,6 @@ def record_executor_event(
         return None
 
 
-
 def record_decision_event(
     root: Path,
     *,
@@ -229,6 +228,7 @@ def record_context_event(
         )
     except OSError:
         return None
+
 
 def summarize_economics(root: Path, work: str) -> dict[str, Any]:
     events = load_events(root, work)
@@ -338,7 +338,6 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
     }
 
 
-
 def render_economics(root: Path, work: str) -> str:
     """Render a compact economics summary without inventing unknown cost/token data."""
 
@@ -386,15 +385,10 @@ def render_economics(root: Path, work: str) -> str:
             before = measurement.get("before")
             after = measurement.get("after")
             reduction = measurement.get("reduction")
-            lines.append(
-                f"  - {before} -> {after}; reduction={reduction}; basis={basis}; source={source}"
-            )
+            lines.append(f"  - {before} -> {after}; reduction={reduction}; basis={basis}; source={source}")
 
     if summary["unaccounted_paid_usage"]:
-        lines.append(
-            f"Unaccounted paid usage events: {summary['unaccounted_paid_usage']} "
-            "(cost remains unknown)"
-        )
+        lines.append(f"Unaccounted paid usage events: {summary['unaccounted_paid_usage']} (cost remains unknown)")
     lines.append("")
     lines.append("No counterfactual token or monetary savings are claimed without a measured baseline.")
     return "\n".join(lines)

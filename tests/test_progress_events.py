@@ -79,7 +79,6 @@ def test_progress_facts_do_not_require_provider_output_or_prompt():
     assert "stdout" not in payload["facts"]
 
 
-
 def test_legacy_callback_maps_existing_progress_without_changing_execution_api():
     events = []
     callback = legacy_callback(

@@ -13,7 +13,6 @@ from agora_ai_sdlc.execution_decisions import DecisionEvaluation, advise_executi
 from agora_ai_sdlc.execution_policy import ExecutionPolicy, execution_policy_for
 from agora_ai_sdlc.laya_provider import LayaDecisionProvider
 
-
 QUESTION_SCHEMA = "execution-decisions/v2"
 
 

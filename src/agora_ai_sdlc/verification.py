@@ -313,8 +313,6 @@ def _compact_human_diagnostic(command: VerificationCommand, max_chars: int = 120
         return value
     return "… " + value[-(max_chars - 2) :]
 
-
-
 def load_persisted_verification(root: Path, work: str | None) -> VerificationReport | None:
     """Load the latest bounded verification report without changing verification state."""
 
@@ -339,9 +337,7 @@ def load_persisted_verification(root: Path, work: str | None) -> VerificationRep
             stdout=str(item.get("stdout") or ""),
             stderr=str(item.get("stderr") or ""),
             elapsed_seconds=(
-                float(item["elapsed_seconds"])
-                if isinstance(item.get("elapsed_seconds"), (int, float))
-                else None
+                float(item["elapsed_seconds"]) if isinstance(item.get("elapsed_seconds"), (int, float)) else None
             ),
         )
         for item in payload.get("commands", ())
@@ -367,6 +363,8 @@ def load_persisted_verification(root: Path, work: str | None) -> VerificationRep
         all_executed_commands_passed=passed if isinstance(passed, bool) else None,
         report_path=str(path),
     )
+
+
 
 def persisted_verification_diagnostic(root: Path, work: str | None) -> str | None:
     """Return a compact host-readable diagnosis from the latest executed verification."""

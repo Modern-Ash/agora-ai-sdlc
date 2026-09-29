@@ -272,8 +272,6 @@ def test_persisted_verification_diagnostic_compacts_failed_command(tmp_path: Pat
 
     assert diagnostic == "npm test: failed exit=1 diagnostic=AssertionError: expected 90 but got 100"
 
-
-
 def test_load_persisted_verification_rehydrates_bounded_typed_report(tmp_path: Path):
     target = tmp_path / ".agora" / "ai-sdlc" / "verification" / "issue-14" / "VERIFICATION.json"
     target.parent.mkdir(parents=True)

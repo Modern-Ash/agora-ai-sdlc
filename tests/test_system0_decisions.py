@@ -30,10 +30,7 @@ class RecordingProvider:
             "validation_focus": "functional",
             "planner_needed": "none",
         }
-        answers = {
-            q.id: DecisionAnswer(q.id, q.type, defaults[q.id], self.confidence)
-            for q in questions
-        }
+        answers = {q.id: DecisionAnswer(q.id, q.type, defaults[q.id], self.confidence) for q in questions}
         return DecisionResult(self.name, answers, model=self.model)
 
 

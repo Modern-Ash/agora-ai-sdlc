@@ -226,8 +226,6 @@ def test_paid_advisor_is_read_only_and_hands_back_advice(tmp_path, monkeypatch):
     assert events["attempts"]["paid-efficient"] == 1
     assert events["escalations"] == 1
 
-
-
 def test_decision_metrics_count_observed_routes_without_claiming_savings(tmp_path):
     record_decision_event(
         tmp_path,
@@ -281,8 +279,6 @@ def test_context_measurement_rejects_unknown_basis(tmp_path):
     else:
         raise AssertionError("unknown measurement basis must not be persisted")
 
-
-
 def test_render_economics_labels_estimates_and_refuses_counterfactual_claims(tmp_path):
     record_decision_event(
         tmp_path,
@@ -306,8 +302,6 @@ def test_render_economics_labels_estimates_and_refuses_counterfactual_claims(tmp
     assert "laya: 1" in rendered
     assert "basis=estimated_tokens; source=estimated" in rendered
     assert "No counterfactual token or monetary savings are claimed" in rendered
-
-
 
 def test_runtime_pool_exposes_only_explicit_context_limit(tmp_path):
     path = tmp_path / "ai-sdlc" / "project.yaml"
@@ -365,8 +359,6 @@ def test_runtime_pool_rejects_invalid_context_limit(tmp_path):
         assert "context_limit_tokens" in str(error)
     else:
         raise AssertionError("invalid context limit must fail closed")
-
-
 
 def test_context_limit_rejects_cheaper_candidate_before_selection(tmp_path):
     path = tmp_path / "ai-sdlc" / "project.yaml"
@@ -433,8 +425,6 @@ def test_unknown_context_limit_is_not_fabricated_as_a_blocker(tmp_path):
 
     assert selected is not None
     assert "runtime.context_limit_exceeded" not in selected.decision["considered"][0]["blockers"]
-
-
 
 def test_security_required_rejects_explicit_remote_candidate(tmp_path):
     path = tmp_path / "ai-sdlc" / "project.yaml"

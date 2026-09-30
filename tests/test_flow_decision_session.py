@@ -111,5 +111,5 @@ def test_diagnostics_are_bounded_and_explain_cache_provenance():
     assert diagnostic["snapshot_token"] == "sha256:core-a"
     assert diagnostic["provider"] == "fake-laya"
     assert diagnostic["model"] == "fake-checkpoint"
-    assert diagnostic["question_schema"] == "execution-decisions/v2"
+    assert diagnostic["question_schema"] == "execution-decisions/v3"
     assert "answers" not in diagnostic

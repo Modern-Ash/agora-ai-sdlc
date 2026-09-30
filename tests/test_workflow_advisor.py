@@ -433,3 +433,37 @@ def test_missing_artifacts_take_precedence_over_premature_human_approval(monkeyp
 
     assert advice.action == "prepare"
     assert advice.needs_runtime is True
+
+
+def test_system0_human_tier_does_not_block_missing_artifact_preparation(monkeypatch):
+    evaluation = SimpleNamespace(
+        result=SimpleNamespace(
+            answers={
+                "reasoning_tier": SimpleNamespace(value="human", confidence=1.0),
+                "validation_focus": SimpleNamespace(value="architecture", confidence=0.97),
+            },
+            metadata={"system0": {"reasoning_tier": "explicit-human-authority-boundary"}},
+        ),
+        accepted=("reasoning_tier", "validation_focus"),
+        escalated=(),
+    )
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.build_execution_bundle", lambda *args, **kwargs: object())
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.advise_execution", lambda *args, **kwargs: evaluation)
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor._free_runtime", lambda root: None)
+
+    advice = advise_workflow(
+        Path("."),
+        decision(
+            state="inception",
+            target="construction",
+            gate="inception-approved",
+            missing_artifacts=("plan", "user-stories", "nfr", "risk-register", "measurement-criteria", "bolt-plan"),
+            missing_approvals=("product-owner", "developer"),
+            ready_for_human_approval=True,
+        ),
+    )
+
+    assert advice.action == "prepare"
+    assert advice.needs_runtime is True
+    assert advice.source == "deterministic"
+    assert advice.reasoning_tier == "human"

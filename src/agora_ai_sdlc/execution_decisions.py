@@ -75,6 +75,21 @@ LLM_NEEDED_QUESTION = DecisionQuestion(
     },
 )
 
+REVIEWER_NEEDED_QUESTION = DecisionQuestion(
+    id="reviewer_needed",
+    type="choice",
+    instructions=(
+        "Choose the minimum review mode justified for the next bounded software-delivery action. "
+        "This is advisory only: it cannot satisfy review evidence, human approval or deterministic independent-review policy."
+    ),
+    criteria={
+        "none": "normal deterministic verification is sufficient",
+        "focused": "a focused generative review would materially improve validation",
+        "independent": "an independent reviewer should inspect the immutable candidate",
+        "human": "the review or judgement belongs to explicit human authority",
+    },
+)
+
 PLANNER_QUESTION = DecisionQuestion(
     id="planner_needed",
     type="choice",
@@ -93,7 +108,7 @@ PLANNER_QUESTION = DecisionQuestion(
 
 # Public base question set. Planner need remains an optional separately evaluated
 # dimension for legacy providers; llm_needed is part of the v3 base contract.
-EXECUTION_QUESTIONS = (*BASE_EXECUTION_QUESTIONS, LLM_NEEDED_QUESTION)
+EXECUTION_QUESTIONS = (*BASE_EXECUTION_QUESTIONS, LLM_NEEDED_QUESTION, REVIEWER_NEEDED_QUESTION)
 
 
 def execution_state(bundle: ExecutionBundle) -> dict[str, Any]:
@@ -173,7 +188,11 @@ def advise_execution(
 
     for name, resolved in system0.items():
         question = next(
-            (item for item in (*BASE_EXECUTION_QUESTIONS, LLM_NEEDED_QUESTION, PLANNER_QUESTION) if item.id == name),
+            (
+                item
+                for item in (*BASE_EXECUTION_QUESTIONS, LLM_NEEDED_QUESTION, REVIEWER_NEEDED_QUESTION, PLANNER_QUESTION)
+                if item.id == name
+            ),
             None,
         )
         if question is None:

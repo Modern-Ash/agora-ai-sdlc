@@ -30,6 +30,7 @@ class RecordingProvider:
             "validation_focus": "functional",
             "planner_needed": "none",
             "llm_needed": "yes",
+            "reviewer_needed": "none",
         }
         answers = {q.id: DecisionAnswer(q.id, q.type, defaults[q.id], self.confidence) for q in questions}
         return DecisionResult(self.name, answers, model=self.model)
@@ -45,7 +46,9 @@ def test_human_authority_is_resolved_before_laya():
     assert "reasoning_tier" not in provider.question_ids
     assert "planner_needed" not in provider.question_ids
     assert "llm_needed" not in provider.question_ids
+    assert "reviewer_needed" not in provider.question_ids
     assert evaluation.result.answers["llm_needed"].value == "no"
+    assert evaluation.result.answers["reviewer_needed"].value == "human"
     assert evaluation.result.metadata["system0"]["reasoning_tier"] == "explicit-human-authority-boundary"
 
 

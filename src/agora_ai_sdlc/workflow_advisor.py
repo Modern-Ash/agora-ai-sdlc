@@ -85,7 +85,17 @@ def advise_workflow(
     """
 
     # Authority-bearing decisions never go through Laya.
-    if decision.ready_for_human_approval and decision.missing_approvals:
+    if (
+        decision.ready_for_human_approval
+        and decision.missing_approvals
+        and not (
+            decision.missing_artifacts
+            or decision.missing_evidence
+            or decision.unsatisfied_criteria
+            or decision.clarification_issues
+            or decision.git_issues
+        )
+    ):
         return WorkflowAdvice(
             action="approve",
             summary="Review the completed evidence and explicitly confirm the required human approval in this wizard.",

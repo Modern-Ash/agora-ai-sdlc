@@ -329,8 +329,13 @@ def advise_workflow(
         )
         metadata = getattr(evaluated.result, "metadata", {}) or {}
         system0 = dict(metadata.get("system0", {}) or {})
-        accepted = set(evaluated.accepted)
-        escalated = set(evaluated.escalated)
+        escalated = set(getattr(evaluated, "escalated", ()) or ())
+        accepted_values = getattr(evaluated, "accepted", None)
+        accepted = (
+            set(accepted_values)
+            if accepted_values is not None
+            else set(getattr(evaluated.result, "answers", {})) - escalated
+        )
 
         answer = evaluated.result.answers.get("reasoning_tier")
         if answer is not None:

@@ -26,6 +26,7 @@ class Advisor:
             "security_review": "normal",
             "change_risk": "low",
             "validation_focus": "functional",
+            "llm_needed": "yes",
         }
         merged = {**defaults, **self.values}
         answers = {q.id: DecisionAnswer(q.id, "choice", merged[q.id], self.confidence) for q in questions}

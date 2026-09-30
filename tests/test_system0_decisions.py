@@ -29,6 +29,7 @@ class RecordingProvider:
             "change_risk": "low",
             "validation_focus": "functional",
             "planner_needed": "none",
+            "llm_needed": "yes",
         }
         answers = {q.id: DecisionAnswer(q.id, q.type, defaults[q.id], self.confidence) for q in questions}
         return DecisionResult(self.name, answers, model=self.model)
@@ -43,6 +44,8 @@ def test_human_authority_is_resolved_before_laya():
     assert evaluation.result.answers["reasoning_tier"].value == "human"
     assert "reasoning_tier" not in provider.question_ids
     assert "planner_needed" not in provider.question_ids
+    assert "llm_needed" not in provider.question_ids
+    assert evaluation.result.answers["llm_needed"].value == "no"
     assert evaluation.result.metadata["system0"]["reasoning_tier"] == "explicit-human-authority-boundary"
 
 
@@ -99,3 +102,22 @@ def test_question_thresholds_can_escalate_security_without_escalating_focus():
 
     assert "security_review" in evaluation.escalated
     assert "validation_focus" in evaluation.accepted
+
+
+def test_deterministic_action_resolves_llm_needed_without_asking_laya():
+    provider = RecordingProvider()
+    work = bundle(next_action="verify")
+
+    evaluation = advise_execution(work, provider=provider)
+
+    assert evaluation.result.answers["llm_needed"].value == "no"
+    assert "llm_needed" not in provider.question_ids
+    assert evaluation.result.metadata["system0"]["llm_needed"] == "deterministic-action"
+
+
+def test_unresolved_action_asks_laya_for_llm_need():
+    provider = RecordingProvider()
+    evaluation = advise_execution(bundle(next_action="inspect-next"), provider=provider)
+
+    assert "llm_needed" in provider.question_ids
+    assert evaluation.result.answers["llm_needed"].value == "yes"

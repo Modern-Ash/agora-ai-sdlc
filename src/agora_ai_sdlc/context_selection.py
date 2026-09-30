@@ -10,6 +10,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 from agora_ai_sdlc.context_graph import ContextBundle, Graph, context_bundle
+from agora_ai_sdlc.context_need import ContextNeedCache, ContextNeedDecision, decide_context_need
 from agora_ai_sdlc.context_relevance import (
     RelevanceCache,
     RelevanceInput,
@@ -41,6 +42,7 @@ class ContextSelection:
     confidences: Mapping[str, float]
     escalated: tuple[str, ...]
     metrics: DecisionMetrics
+    context_need: ContextNeedDecision | None = None
 
     def snapshot(self) -> dict:
         return {
@@ -50,6 +52,17 @@ class ContextSelection:
             "confidences": dict(self.confidences),
             "escalated": list(self.escalated),
             "metrics": self.metrics.snapshot(),
+            "context_need": (
+                {
+                    "value": self.context_need.value,
+                    "confidence": self.context_need.confidence,
+                    "source": self.context_need.source,
+                    "escalated": self.context_need.escalated,
+                    "reused": self.context_need.reused,
+                }
+                if self.context_need is not None
+                else None
+            ),
         }
 
 
@@ -90,12 +103,35 @@ def select_context_with_laya(
     keep_useful: bool = True,
     artifact_max_chars: int = 2800,
     relevance_cache: RelevanceCache | None = None,
+    action: str | None = None,
+    context_need_cache: ContextNeedCache | None = None,
 ) -> ContextSelection:
     """Prune a deterministic candidate bundle with local Laya relevance decisions.
 
     Low-confidence classifications fail open: the artifact is retained for the
     generative executor instead of being silently discarded.
     """
+
+    context_need = decide_context_need(
+        action=action,
+        objective=objective,
+        acceptance_criteria=acceptance_criteria,
+        provider=provider,
+        confidence_threshold=confidence_threshold,
+        cache=context_need_cache,
+    )
+    if context_need.value == "none":
+        candidate = context_bundle(graph, root, direction=direction, max_depth=0, max_tokens=None)
+        metrics = DecisionMetrics(candidate_context_tokens=0, selected_context_tokens=0)
+        return ContextSelection(
+            candidate=candidate,
+            selected=candidate,
+            classifications={},
+            confidences={},
+            escalated=(),
+            metrics=metrics,
+            context_need=context_need,
+        )
 
     candidate = context_bundle(
         graph,
@@ -176,4 +212,5 @@ def select_context_with_laya(
         confidences=confidences,
         escalated=tuple(escalated),
         metrics=metrics,
+        context_need=context_need,
     )

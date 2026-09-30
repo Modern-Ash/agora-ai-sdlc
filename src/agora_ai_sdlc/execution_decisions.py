@@ -132,7 +132,9 @@ def advise_execution(
 
     state = execution_state(bundle)
     system0 = resolve_system0(bundle)
-    questions = tuple(question for question in (*BASE_EXECUTION_QUESTIONS, LLM_NEEDED_QUESTION) if question.id not in system0)
+    questions = tuple(
+        question for question in (*BASE_EXECUTION_QUESTIONS, LLM_NEEDED_QUESTION) if question.id not in system0
+    )
     joint_planner = bool(
         "planner_needed" not in system0 and getattr(provider, "supports_joint_execution_questions", False)
     )

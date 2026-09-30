@@ -384,7 +384,7 @@ def advise_workflow(
     if recommended is None and source == "laya" and tier in {"local", "standard"} and not escalation:
         recommended = _free_runtime(root)
 
-    if tier == "human" and not escalation:
+    if tier == "human" and not escalation and not needs_preparation:
         return WorkflowAdvice(
             action="review",
             summary="The next step needs human judgement; stay in this wizard and inspect the evidence/options.",

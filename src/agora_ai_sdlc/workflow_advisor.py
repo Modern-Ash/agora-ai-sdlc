@@ -317,22 +317,29 @@ def advise_workflow(
             provider=provider,
             confidence_threshold=confidence_threshold,
         )
+        system0 = dict(evaluated.result.metadata.get("system0", {}) or {})
+        accepted = set(evaluated.accepted)
+        escalated = set(evaluated.escalated)
+
         answer = evaluated.result.answers.get("reasoning_tier")
         if answer is not None:
             tier = str(answer.value)
             confidence = answer.confidence
-            source = "laya"
-            escalation = "reasoning_tier" in evaluated.escalated
+            if "reasoning_tier" in system0:
+                source = "deterministic"
+            elif "reasoning_tier" in accepted:
+                source = "laya"
+            escalation = "reasoning_tier" in escalated
         security = evaluated.result.answers.get("security_review")
-        if security is not None:
+        if security is not None and ("security_review" in accepted or "security_review" in system0):
             security_review = str(security.value)
             security_confidence = security.confidence
         risk = evaluated.result.answers.get("change_risk")
-        if risk is not None:
+        if risk is not None and ("change_risk" in accepted or "change_risk" in system0):
             change_risk = str(risk.value)
             change_risk_confidence = risk.confidence
         focus = evaluated.result.answers.get("validation_focus")
-        if focus is not None:
+        if focus is not None and ("validation_focus" in accepted or "validation_focus" in system0):
             validation_focus = str(focus.value)
             validation_focus_confidence = focus.confidence
 

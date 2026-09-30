@@ -189,7 +189,6 @@ def record_decision_event(
         return None
 
 
-
 def record_advisory_decision_event(
     root: Path,
     *,

@@ -19,6 +19,7 @@ DEFAULT_THRESHOLDS = {
     "validation_focus": 0.80,
     "planner_needed": 0.90,
     "llm_needed": 0.90,
+    "reviewer_needed": 0.90,
 }
 
 
@@ -38,6 +39,7 @@ def resolve_system0(bundle: ExecutionBundle) -> dict[str, System0Answer]:
         answers["reasoning_tier"] = System0Answer("human", "explicit-human-authority-boundary")
         answers["planner_needed"] = System0Answer("none", "human-authority-does-not-use-ai-planner")
         answers["llm_needed"] = System0Answer("no", "human-authority-does-not-use-generative-executor")
+        answers["reviewer_needed"] = System0Answer("human", "explicit-human-authority-boundary")
 
     deterministic_actions = {
         "governed-transition",

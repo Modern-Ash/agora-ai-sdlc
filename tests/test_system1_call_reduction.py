@@ -19,6 +19,7 @@ class CountingProvider:
             "change_risk": "low",
             "validation_focus": "functional",
             "planner_needed": "none",
+            "llm_needed": "yes",
         }
         return DecisionResult(
             provider=self.name,

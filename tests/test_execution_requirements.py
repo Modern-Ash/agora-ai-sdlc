@@ -10,6 +10,7 @@ DEFAULTS = {
     "security_review": "normal",
     "change_risk": "low",
     "validation_focus": "functional",
+    "llm_needed": "yes",
 }
 
 
@@ -119,3 +120,22 @@ def test_independent_review_adds_isolated_reviewer_and_no_approval_in_output():
 def test_questions_carry_no_provider_names():
     text = json.dumps([q.as_laya() for q in EXECUTION_QUESTIONS]).lower()
     assert not any(name in text for name in ("ollama", "claude", "codex", "opencode", "anthropic", "openai"))
+
+
+def test_confident_laya_no_projects_llm_need_without_changing_authority():
+    req = requirements_for(bundle(), Provider({"llm_needed": "no"}))
+    assert req.llm_needed == "no"
+    assert req.executable_by_agent
+    assert req.required_capabilities == ("workspace.read", "workspace.write", "shell.execute")
+
+
+def test_uncertain_laya_no_fails_open_to_generative_need():
+    req = requirements_for(bundle(), Provider({"llm_needed": "no"}, per={"llm_needed": 0.2}))
+    assert req.llm_needed == "yes"
+    assert "llm_needed" in req.advisory["escalated"]
+
+
+def test_human_authority_never_requires_generative_executor():
+    req = requirements_for(bundle(next_action="human-approval", human=True), Provider())
+    assert req.llm_needed == "no"
+    assert req.human_authority_required

@@ -18,6 +18,7 @@ DEFAULT_THRESHOLDS = {
     "change_risk": 0.90,
     "validation_focus": 0.80,
     "planner_needed": 0.90,
+    "llm_needed": 0.90,
 }
 
 
@@ -36,6 +37,20 @@ def resolve_system0(bundle: ExecutionBundle) -> dict[str, System0Answer]:
     if bundle.next_action == "human-approval" or governance.get("human_approval_required"):
         answers["reasoning_tier"] = System0Answer("human", "explicit-human-authority-boundary")
         answers["planner_needed"] = System0Answer("none", "human-authority-does-not-use-ai-planner")
+        answers["llm_needed"] = System0Answer("no", "human-authority-does-not-use-generative-executor")
+
+    deterministic_actions = {
+        "governed-transition",
+        "verify",
+        "advance-criterion",
+        "mark-deployed",
+        "accept-criteria",
+        "submit-pr",
+        "prepare-local-operations",
+        "publish-local-artifacts",
+    }
+    if bundle.next_action in deterministic_actions:
+        answers.setdefault("llm_needed", System0Answer("no", "deterministic-action"))
 
     risk_text = " ".join(str(item).casefold() for item in bundle.risks)
     security_markers = (

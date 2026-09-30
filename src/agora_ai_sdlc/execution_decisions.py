@@ -62,6 +62,19 @@ BASE_EXECUTION_QUESTIONS = (
     ),
 )
 
+LLM_NEEDED_QUESTION = DecisionQuestion(
+    id="llm_needed",
+    type="choice",
+    instructions=(
+        "Decide whether the next bounded software-delivery action requires generative model reasoning. "
+        "Choose no only when deterministic machinery, explicit templates or direct mechanical execution are sufficient."
+    ),
+    criteria={
+        "no": "the bounded action is mechanically executable without generative reasoning",
+        "yes": "implementation, explanation, synthesis or unresolved reasoning requires a generative executor",
+    },
+)
+
 PLANNER_QUESTION = DecisionQuestion(
     id="planner_needed",
     type="choice",
@@ -78,9 +91,9 @@ PLANNER_QUESTION = DecisionQuestion(
     },
 )
 
-# Backward-compatible public question set. Planner need is an optional,
-# separately evaluated advisory dimension so existing DecisionProviders remain valid.
-EXECUTION_QUESTIONS = BASE_EXECUTION_QUESTIONS
+# Public base question set. Planner need remains an optional separately evaluated
+# dimension for legacy providers; llm_needed is part of the v3 base contract.
+EXECUTION_QUESTIONS = (*BASE_EXECUTION_QUESTIONS, LLM_NEEDED_QUESTION)
 
 
 def execution_state(bundle: ExecutionBundle) -> dict[str, Any]:
@@ -119,7 +132,7 @@ def advise_execution(
 
     state = execution_state(bundle)
     system0 = resolve_system0(bundle)
-    questions = tuple(question for question in BASE_EXECUTION_QUESTIONS if question.id not in system0)
+    questions = tuple(question for question in EXECUTION_QUESTIONS if question.id not in system0)
     joint_planner = bool(
         "planner_needed" not in system0 and getattr(provider, "supports_joint_execution_questions", False)
     )
@@ -160,7 +173,7 @@ def advise_execution(
 
     for name, resolved in system0.items():
         question = next(
-            (item for item in (*BASE_EXECUTION_QUESTIONS, PLANNER_QUESTION) if item.id == name),
+            (item for item in (*BASE_EXECUTION_QUESTIONS, LLM_NEEDED_QUESTION, PLANNER_QUESTION) if item.id == name),
             None,
         )
         if question is None:

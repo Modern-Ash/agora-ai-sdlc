@@ -72,13 +72,13 @@ def test_low_confidence_none_fails_open_to_bounded():
 def test_context_need_cache_reuses_unchanged_action_snapshot():
     provider = Provider("bounded")
     cache = ContextNeedCache()
-    kwargs = dict(
-        action="implement",
-        objective="change code",
-        acceptance_criteria=("tests pass",),
-        provider=provider,
-        cache=cache,
-    )
+    kwargs = {
+        "action": "implement",
+        "objective": "change code",
+        "acceptance_criteria": ("tests pass",),
+        "provider": provider,
+        "cache": cache,
+    }
     first = decide_context_need(**kwargs)
     second = decide_context_need(**kwargs)
     assert provider.calls == 1

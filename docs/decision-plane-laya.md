@@ -158,6 +158,13 @@ Context selection records:
 The token estimator remains provider-neutral and approximate. Savings should be treated as a benchmark
 signal, not a billing claim.
 
+For Agorix dogfood, the economics ledger also records observed System-1 advisory evidence:
+accepted/escalated answer counts, acceptance and low-confidence rates, per-question mean confidence,
+Laya latency, provider-call count and cache hits when reported. These measurements describe the
+decision plane itself. An accepted Laya answer is **not** counted as an avoided LLM call unless a
+separate A/B or replay baseline establishes that counterfactual. Provider-reported tokens remain the
+only token usage included in billing-like totals.
+
 ## Python API
 
 The core contract is `DecisionProvider`. The current implementation is

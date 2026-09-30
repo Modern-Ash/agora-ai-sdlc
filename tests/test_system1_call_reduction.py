@@ -20,6 +20,7 @@ class CountingProvider:
             "validation_focus": "functional",
             "planner_needed": "none",
             "llm_needed": "yes",
+            "reviewer_needed": "none",
         }
         return DecisionResult(
             provider=self.name,

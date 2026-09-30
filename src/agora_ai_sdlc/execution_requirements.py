@@ -27,6 +27,7 @@ FOCI = ("functional", "security", "performance", "architecture", "operations")
 PLANNER_NEEDS = ("none", "template", "local", "generative", "frontier")
 SECURITY = ("normal", "required")
 LLM_NEEDS = ("no", "yes")
+REVIEWER_NEEDS = ("none", "focused", "independent", "human")
 
 _READ = ("workspace.read",)
 _ACTIVITY_CAPABILITIES: Mapping[str, tuple[str, ...]] = {
@@ -64,6 +65,7 @@ class ExecutionRequirements:
     advisory: Mapping[str, Any] = field(default_factory=dict)
     planner_needed: str = "none"
     llm_needed: str = "yes"
+    reviewer_needed: str = "none"
 
     @property
     def executable_by_agent(self) -> bool:
@@ -81,6 +83,7 @@ class ExecutionRequirements:
             "human_authority_required": self.human_authority_required,
             "planner_needed": self.planner_needed,
             "llm_needed": self.llm_needed,
+            "reviewer_needed": self.reviewer_needed,
             "executable_by_agent": self.executable_by_agent,
             "advisory": dict(self.advisory),
         }
@@ -133,13 +136,20 @@ def project_requirements(
     human = activity == "human.authority" or tier == "human"
     planner_needed = _accepted_value(evaluation, "planner_needed", PLANNER_NEEDS) or "none"
     llm_needed = _accepted_value(evaluation, "llm_needed", LLM_NEEDS) or "yes"
+    advisory_reviewer = _accepted_value(evaluation, "reviewer_needed", REVIEWER_NEEDS) or "none"
+    reviewer_needed = _max(
+        REVIEWER_NEEDS,
+        "independent" if independent_review_required else "none",
+        advisory_reviewer,
+    )
     if human:
         planner_needed = "none"
         llm_needed = "no"
+        reviewer_needed = "human"
     capabilities = set() if human else set(_ACTIVITY_CAPABILITIES[activity])
     if not human and security == "required":
         capabilities.update(("workspace.read", "git.read"))
-    if not human and independent_review_required:
+    if not human and reviewer_needed == "independent":
         capabilities.add("isolated_reviewer")
     unknown = capabilities - set(CAPABILITY_IDS)
     if unknown:
@@ -167,6 +177,7 @@ def project_requirements(
         human_authority_required=human,
         planner_needed=planner_needed,
         llm_needed=llm_needed,
+        reviewer_needed=reviewer_needed,
         advisory=advisory,
     )
 
@@ -212,5 +223,6 @@ def requirements_for_activity(activity: str, *, tier: str = "local") -> Executio
         human_authority_required=human,
         planner_needed="none",
         llm_needed="no" if human else "yes",
+        reviewer_needed="human" if human else "none",
         advisory={"provider": None, "model": None, "accepted": [], "escalated": [], "confidence": {}},
     )

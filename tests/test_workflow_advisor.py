@@ -404,3 +404,32 @@ def test_low_confidence_secondary_answers_are_not_presented_as_effective(monkeyp
     assert advice.security_review is None
     assert advice.change_risk is None
     assert advice.validation_focus is None
+
+
+def test_missing_artifacts_take_precedence_over_premature_human_approval(monkeypatch):
+    evaluation = SimpleNamespace(
+        result=SimpleNamespace(
+            answers={"reasoning_tier": SimpleNamespace(value="local", confidence=0.97)},
+            metadata={"system0": {}},
+        ),
+        accepted=("reasoning_tier",),
+        escalated=(),
+    )
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.build_execution_bundle", lambda *args, **kwargs: object())
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.advise_execution", lambda *args, **kwargs: evaluation)
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor._free_runtime", lambda root: None)
+
+    advice = advise_workflow(
+        Path("."),
+        decision(
+            state="inception",
+            target="construction",
+            gate="inception-approved",
+            missing_artifacts=("plan", "user-stories", "nfr", "risk-register", "measurement-criteria", "bolt-plan"),
+            missing_approvals=("product-owner", "developer"),
+            ready_for_human_approval=True,
+        ),
+    )
+
+    assert advice.action == "prepare"
+    assert advice.needs_runtime is True

@@ -53,6 +53,7 @@ def test_human_approval_never_uses_laya(monkeypatch):
         Path("."),
         decision(
             ready_for_human_approval=True,
+            missing_artifacts=(),
             missing_approvals=("product-owner",),
         ),
     )
@@ -372,7 +373,7 @@ def test_system0_human_tier_is_not_attributed_to_laya(monkeypatch):
 
     advice = advise_workflow(Path("."), decision())
 
-    assert advice.action == "review"
+    assert advice.action == "prepare"
     assert advice.reasoning_tier == "human"
     assert advice.source == "deterministic"
     assert advice.change_risk is None

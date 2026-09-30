@@ -208,8 +208,7 @@ def record_advisory_decision_event(
     result = getattr(evaluation, "result", None)
     answers = getattr(result, "answers", {}) or {}
     confidence = {
-        str(name): round(float(getattr(answer, "confidence", 0.0)), 6)
-        for name, answer in sorted(answers.items())
+        str(name): round(float(getattr(answer, "confidence", 0.0)), 6) for name, answer in sorted(answers.items())
     }
     metadata = dict(getattr(result, "metadata", {}) or {})
     measurement = {

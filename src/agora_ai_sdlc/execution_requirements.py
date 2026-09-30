@@ -26,6 +26,7 @@ RISKS = ("low", "moderate", "high")
 FOCI = ("functional", "security", "performance", "architecture", "operations")
 PLANNER_NEEDS = ("none", "template", "local", "generative", "frontier")
 SECURITY = ("normal", "required")
+LLM_NEEDS = ("no", "yes")
 
 _READ = ("workspace.read",)
 _ACTIVITY_CAPABILITIES: Mapping[str, tuple[str, ...]] = {
@@ -62,6 +63,7 @@ class ExecutionRequirements:
     human_authority_required: bool
     advisory: Mapping[str, Any] = field(default_factory=dict)
     planner_needed: str = "none"
+    llm_needed: str = "yes"
 
     @property
     def executable_by_agent(self) -> bool:
@@ -78,6 +80,7 @@ class ExecutionRequirements:
             "required_capabilities": list(self.required_capabilities),
             "human_authority_required": self.human_authority_required,
             "planner_needed": self.planner_needed,
+            "llm_needed": self.llm_needed,
             "executable_by_agent": self.executable_by_agent,
             "advisory": dict(self.advisory),
         }
@@ -129,8 +132,10 @@ def project_requirements(
 
     human = activity == "human.authority" or tier == "human"
     planner_needed = _accepted_value(evaluation, "planner_needed", PLANNER_NEEDS) or "none"
+    llm_needed = _accepted_value(evaluation, "llm_needed", LLM_NEEDS) or "yes"
     if human:
         planner_needed = "none"
+        llm_needed = "no"
     capabilities = set() if human else set(_ACTIVITY_CAPABILITIES[activity])
     if not human and security == "required":
         capabilities.update(("workspace.read", "git.read"))
@@ -161,6 +166,7 @@ def project_requirements(
         required_capabilities=tuple(name for name in CAPABILITY_IDS if name in capabilities),
         human_authority_required=human,
         planner_needed=planner_needed,
+        llm_needed=llm_needed,
         advisory=advisory,
     )
 
@@ -205,5 +211,6 @@ def requirements_for_activity(activity: str, *, tier: str = "local") -> Executio
         required_capabilities=tuple(name for name in CAPABILITY_IDS if name in capabilities),
         human_authority_required=human,
         planner_needed="none",
+        llm_needed="no" if human else "yes",
         advisory={"provider": None, "model": None, "accepted": [], "escalated": [], "confidence": {}},
     )

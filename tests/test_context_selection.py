@@ -22,6 +22,19 @@ class RelevanceProvider:
     name = "laya"
 
     def decide(self, state, questions):
+        if questions[0].id == "context_needed":
+            return DecisionResult(
+                provider="laya",
+                answers={
+                    "context_needed": DecisionAnswer(
+                        question="context_needed",
+                        type="choice",
+                        value="bounded",
+                        confidence=0.99,
+                    )
+                },
+                model="typed-decisions",
+            )
         artifact = state["candidate"]["id"]
         mapping = {
             "REQ-001": ("required", 0.98),
@@ -73,3 +86,39 @@ def test_laya_prunes_confident_irrelevant_context_and_keeps_uncertain_context():
     assert selection.metrics.decisions == 2
     assert selection.metrics.confident == 1
     assert selection.metrics.escalated == 1
+
+
+def test_context_need_none_skips_per_artifact_relevance():
+    class NoContextProvider(RelevanceProvider):
+        def __init__(self):
+            self.relevance_calls = 0
+
+        def decide(self, state, questions):
+            if questions[0].id == "context_needed":
+                return DecisionResult(
+                    provider="laya",
+                    answers={
+                        "context_needed": DecisionAnswer(
+                            question="context_needed",
+                            type="choice",
+                            value="none",
+                            confidence=0.99,
+                        )
+                    },
+                    model="typed-decisions",
+                )
+            self.relevance_calls += 1
+            return super().decide(state, questions)
+
+    provider = NoContextProvider()
+    selection = select_context_with_laya(
+        graph(),
+        "REQ-001",
+        provider=provider,
+        action="explain-static-result",
+    )
+
+    assert selection.context_need is not None
+    assert selection.context_need.value == "none"
+    assert provider.relevance_calls == 0
+    assert selection.metrics.candidate_context_tokens == 0

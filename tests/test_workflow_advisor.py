@@ -352,3 +352,55 @@ def test_failed_construction_verification_returns_to_agent_repair(monkeypatch, t
     assert advice.action == "prepare"
     assert advice.needs_runtime is True
     assert advice.source == "deterministic"
+
+
+def test_system0_human_tier_is_not_attributed_to_laya(monkeypatch):
+    evaluation = SimpleNamespace(
+        result=SimpleNamespace(
+            answers={
+                "reasoning_tier": SimpleNamespace(value="human", confidence=1.0),
+                "change_risk": SimpleNamespace(value="high", confidence=0.02),
+                "validation_focus": SimpleNamespace(value="architecture", confidence=0.97),
+            },
+            metadata={"system0": {"reasoning_tier": "explicit-human-authority-boundary"}},
+        ),
+        accepted=("reasoning_tier", "validation_focus"),
+        escalated=("change_risk",),
+    )
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.build_execution_bundle", lambda *args, **kwargs: object())
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.advise_execution", lambda *args, **kwargs: evaluation)
+
+    advice = advise_workflow(Path("."), decision())
+
+    assert advice.action == "review"
+    assert advice.reasoning_tier == "human"
+    assert advice.source == "deterministic"
+    assert advice.change_risk is None
+    assert advice.change_risk_confidence is None
+    assert advice.validation_focus == "architecture"
+
+
+def test_low_confidence_secondary_answers_are_not_presented_as_effective(monkeypatch):
+    evaluation = SimpleNamespace(
+        result=SimpleNamespace(
+            answers={
+                "reasoning_tier": SimpleNamespace(value="local", confidence=0.97),
+                "security_review": SimpleNamespace(value="required", confidence=0.10),
+                "change_risk": SimpleNamespace(value="high", confidence=0.02),
+                "validation_focus": SimpleNamespace(value="architecture", confidence=0.30),
+            },
+            metadata={"system0": {}},
+        ),
+        accepted=("reasoning_tier",),
+        escalated=("security_review", "change_risk", "validation_focus"),
+    )
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.build_execution_bundle", lambda *args, **kwargs: object())
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor.advise_execution", lambda *args, **kwargs: evaluation)
+    monkeypatch.setattr("agora_ai_sdlc.workflow_advisor._free_runtime", lambda root: None)
+
+    advice = advise_workflow(Path("."), decision())
+
+    assert advice.source == "laya"
+    assert advice.security_review is None
+    assert advice.change_risk is None
+    assert advice.validation_focus is None

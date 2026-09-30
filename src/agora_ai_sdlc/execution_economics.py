@@ -189,6 +189,59 @@ def record_decision_event(
         return None
 
 
+
+def record_advisory_decision_event(
+    root: Path,
+    *,
+    work: str,
+    evaluation: Any,
+    confidence_threshold: float,
+    cache_hit: bool = False,
+) -> str | None:
+    """Record one observed System-1 advisory evaluation for dogfood measurement.
+
+    This records only facts returned by the decision plane. It does not claim that
+    an accepted advisory answer avoided a generative call; that counterfactual must
+    be established separately by an A/B or replay baseline.
+    """
+
+    result = getattr(evaluation, "result", None)
+    answers = getattr(result, "answers", {}) or {}
+    confidence = {
+        str(name): round(float(getattr(answer, "confidence", 0.0)), 6)
+        for name, answer in sorted(answers.items())
+    }
+    metadata = dict(getattr(result, "metadata", {}) or {})
+    measurement = {
+        "source": "observed",
+        "provider": getattr(result, "provider", None),
+        "model": getattr(result, "model", None),
+        "latency_ms": float(getattr(result, "latency_ms", 0.0) or 0.0),
+        "confidence_threshold": float(confidence_threshold),
+        "accepted": sorted(str(value) for value in getattr(evaluation, "accepted", ())),
+        "escalated": sorted(str(value) for value in getattr(evaluation, "escalated", ())),
+        "confidence": confidence,
+        "provider_calls": int(metadata.get("provider_calls", 0) or 0),
+        "cache_hit": bool(cache_hit),
+    }
+    try:
+        return record_event(
+            root,
+            EconomicsEvent(
+                "advisory-decision",
+                work,
+                None,
+                None,
+                getattr(result, "model", None),
+                purpose="decision-plane",
+                reason="system1-advisory",
+                measurement=measurement,
+            ),
+        )
+    except OSError:
+        return None
+
+
 def record_context_event(
     root: Path,
     *,
@@ -246,6 +299,13 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
     provider_usage_events = 0
     escalations = 0
     unaccounted_paid_usage = 0
+    advisory_decisions = 0
+    advisory_accepted = 0
+    advisory_escalated = 0
+    advisory_latency_ms = 0.0
+    advisory_provider_calls = 0
+    advisory_cache_hits = 0
+    advisory_confidence: dict[str, list[float]] = {}
     for item in events:
         tier = str(item.get("tier") or "unknown")
         event = item.get("event")
@@ -291,6 +351,20 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
                     generative_calls_avoided += 1
                     avoidance_reason = str(measurement.get("avoidance_reason") or item.get("reason") or "unknown")
                     avoidance_reasons[avoidance_reason] = avoidance_reasons.get(avoidance_reason, 0) + 1
+        elif event == "advisory-decision":
+            measurement = item.get("measurement")
+            if isinstance(measurement, dict):
+                advisory_decisions += 1
+                advisory_accepted += len(measurement.get("accepted") or ())
+                advisory_escalated += len(measurement.get("escalated") or ())
+                advisory_latency_ms += float(measurement.get("latency_ms") or 0.0)
+                advisory_provider_calls += int(measurement.get("provider_calls") or 0)
+                advisory_cache_hits += int(measurement.get("cache_hit") is True)
+                confidence = measurement.get("confidence")
+                if isinstance(confidence, dict):
+                    for name, value in confidence.items():
+                        if isinstance(value, (int, float)) and not isinstance(value, bool):
+                            advisory_confidence.setdefault(str(name), []).append(float(value))
         elif event == "context":
             measurement = item.get("measurement")
             if isinstance(measurement, dict):
@@ -334,6 +408,29 @@ def summarize_economics(root: Path, work: str) -> dict[str, Any]:
         "context_measurements": context_measurements,
         "escalations": escalations,
         "unaccounted_paid_usage": unaccounted_paid_usage,
+        "advisory": {
+            "decisions": advisory_decisions,
+            "accepted": advisory_accepted,
+            "escalated": advisory_escalated,
+            "acceptance_rate": (
+                advisory_accepted / (advisory_accepted + advisory_escalated)
+                if advisory_accepted + advisory_escalated
+                else None
+            ),
+            "low_confidence_rate": (
+                advisory_escalated / (advisory_accepted + advisory_escalated)
+                if advisory_accepted + advisory_escalated
+                else None
+            ),
+            "latency_ms": round(advisory_latency_ms, 3),
+            "provider_calls": advisory_provider_calls,
+            "cache_hits": advisory_cache_hits,
+            "mean_confidence": {
+                name: round(sum(values) / len(values), 6)
+                for name, values in sorted(advisory_confidence.items())
+                if values
+            },
+        },
         "events": len(events),
     }
 
@@ -364,6 +461,17 @@ def render_economics(root: Path, work: str) -> str:
             else f"LLM Amplification Factor: unknown ({amplification.reason})"
         ),
     ]
+    advisory = summary["advisory"]
+    if advisory["decisions"]:
+        lines.append(
+            "Laya/System-1 advisory: "
+            f"{advisory['decisions']} evaluations; "
+            f"accepted={advisory['accepted']}; escalated={advisory['escalated']}; "
+            f"acceptance_rate={advisory['acceptance_rate']:.2%}; "
+            f"latency_ms={advisory['latency_ms']:.3f}; "
+            f"provider_calls={advisory['provider_calls']}; cache_hits={advisory['cache_hits']}"
+        )
+
     decisions = summary["decisions"]
     if decisions:
         lines.append("Decision routes:")

@@ -327,7 +327,8 @@ def advise_workflow(
             provider=provider,
             confidence_threshold=confidence_threshold,
         )
-        system0 = dict(evaluated.result.metadata.get("system0", {}) or {})
+        metadata = getattr(evaluated.result, "metadata", {}) or {}
+        system0 = dict(metadata.get("system0", {}) or {})
         accepted = set(evaluated.accepted)
         escalated = set(evaluated.escalated)
 

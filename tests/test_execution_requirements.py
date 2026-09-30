@@ -11,6 +11,7 @@ DEFAULTS = {
     "change_risk": "low",
     "validation_focus": "functional",
     "llm_needed": "yes",
+    "reviewer_needed": "none",
 }
 
 
@@ -139,3 +140,26 @@ def test_human_authority_never_requires_generative_executor():
     req = requirements_for(bundle(next_action="human-approval", human=True), Provider())
     assert req.llm_needed == "no"
     assert req.human_authority_required
+
+
+def test_focused_reviewer_is_advisory_without_isolated_reviewer_capability():
+    req = requirements_for(bundle(), Provider({"reviewer_needed": "focused"}))
+    assert req.reviewer_needed == "focused"
+    assert "isolated_reviewer" not in req.required_capabilities
+
+
+def test_deterministic_independent_review_is_a_floor_laya_cannot_lower():
+    req = requirements_for(
+        bundle(),
+        Provider({"reviewer_needed": "none"}),
+        independent_review_required=True,
+    )
+    assert req.reviewer_needed == "independent"
+    assert "isolated_reviewer" in req.required_capabilities
+
+
+def test_laya_can_tighten_review_to_independent_but_not_satisfy_evidence():
+    req = requirements_for(bundle(), Provider({"reviewer_needed": "independent"}))
+    assert req.reviewer_needed == "independent"
+    assert "isolated_reviewer" in req.required_capabilities
+    assert "approval" not in json.dumps(req.to_dict()).lower()
